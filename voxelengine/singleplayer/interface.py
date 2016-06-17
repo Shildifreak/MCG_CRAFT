@@ -6,7 +6,7 @@ import warnings
 import sys, os, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 warnings.warn("adding %s to sys.path to work around bug in pyglet" %PATH,Warning)
-sys.path.append(PATH)
+sys.path.append(os.path.dirname(PATH.rstrip(os.path.sep)))
 
 class Blockworld(object):
    

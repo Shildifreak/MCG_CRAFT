@@ -8,10 +8,17 @@ ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
            "for" ,"back","left","right","jump","fly","inv","shift",]
 
 class Vector(tuple):
-    def __add__(self,other):
+    def _assert_same_length(self,other):
         if len(self) != len(other):
             raise ValueError("incompatible length adding vectors")
+        
+    def __add__(self,other):
+        self._assert_same_length(other)
         return Vector(map(lambda (s,o):s+o,zip(self,other)))
+
+    def __sub__(self,other):
+        self._assert_same_length(other)
+        return Vector(map(lambda (s,o):s-o,zip(self,other)))
 
     def __mul__(self,other):
         if isinstance(other,(float,int)):
@@ -30,6 +37,9 @@ class Vector(tuple):
 
     def __radd__(self,other):
         return self+other
+
+    def __rsub__(self,other):
+        return Vector(other)-self
 
     def __rmul__(self,other):
         return self*other
