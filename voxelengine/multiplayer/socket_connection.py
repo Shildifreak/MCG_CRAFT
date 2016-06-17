@@ -88,6 +88,8 @@ class server(template):
             else:
                 self.msgcache[addr]+=data
                 msg = self.msgcache[addr]
+                if msg.startswith("PING"):
+                    print "got",msg
                 if msg == "PING"+self.key:
                     self.send("PONG"+self.name, addr, False)
                 elif msg == "hi":

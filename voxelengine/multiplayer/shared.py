@@ -11,13 +11,13 @@ class Vector(tuple):
     def __add__(self,other):
         if len(self) != len(other):
             raise ValueError("incompatible length adding vectors")
-        return Vector(map(lambda (a,b):a+b,zip(self,other)))
+        return Vector(map(lambda (s,o):s+o,zip(self,other)))
 
     def __mul__(self,other):
         if isinstance(other,(float,int)):
             return Vector(map(lambda x: x*other,self))
         else:
-            raise NotImplementedError()
+            return Vector(map(lambda (s,o):s*o,zip(self,other)))
 
     def __rshift__(self,other):
         return Vector([i>>other for i in self])

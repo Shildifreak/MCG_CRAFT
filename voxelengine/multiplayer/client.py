@@ -22,7 +22,7 @@ import socket_connection
 reload(socket_connection)
 from shared import *
 
-TICKS_PER_SEC = 20
+TICKS_PER_SEC = 60
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -241,7 +241,7 @@ class Window(pyglet.window.Window):
             c = self.client.receive(0.001)
             if not c:
                 break
-            print c
+            #print c
             c = c.split(" ")
             def test(name,argc):
                 if name == c[0]:
@@ -491,27 +491,10 @@ def setup():
 
 
 def main():
-    servers = socket_connection.search_servers(key="MCG_CRAFT")
+    servers = socket_connection.search_servers(key="voxelgame")
     if servers:
         print "SELECT SERVER"
         addr = servers[select([i[1] for i in servers])[0]][0]
-        with socket_connection.client(addr) as client:
-            window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
-                            resizable=True,client=client)
-            # Hide the mouse cursor and prevent the mouse from leaving the window.
-            window.set_exclusive_mouse(True)
-            setup()
-            pyglet.app.run()
-    else:
-        print("No Server found.")
-        time.sleep(1)
-
-def autoclient():
-    while True:
-        servers = []
-        while not servers:
-            servers = socket_connection.search_servers(key="MCG_CRAFT")
-        addr = servers[0][0]
         try:
             with socket_connection.client(addr) as client:
                 window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
@@ -520,11 +503,21 @@ def autoclient():
                 window.set_exclusive_mouse(True)
                 setup()
                 pyglet.app.run()
-                time.sleep(10)
         except Exception as e:
-            if e.message != "Disconnect" :
+            if e.message != "Disconnect" and e.message != "Server went down.":
                 raise
+            else:
+                print e.message
+        finally:
             window.on_close()
+    else:
+        print("No Server found.")
+        time.sleep(1)
+
+def autoclient():
+    while True:
+        main()
+        time.sleep(10)
 
 if __name__ == '__main__':
     #autoclient()

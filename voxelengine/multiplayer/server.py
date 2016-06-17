@@ -7,8 +7,6 @@ reload(socket_connection)
 from shared import *
 
 CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
-RENDERDISTANCE = 16
-SPEED = 5
 
 DIMENSION = 3
 DOASYNCLOAD = True
@@ -16,9 +14,13 @@ MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
 
 class _Chunkdict(dict):
-    def __missing__(position):
-        chunk = Chunk()
-        self[position] = chunk
+    def __init__(self,world,*args,**kwargs):
+        dict.__init__(self,*args,**kwargs)
+        self.world = world
+
+    def __missing__(self, chunkposition):
+        chunk = Chunk(self.world,chunkposition)
+        self[chunkposition] = chunk
         return chunk
 
 class World(object):
@@ -27,47 +29,51 @@ class World(object):
         self.chunk_priority_func = chunk_priority_func
         self.loading_queue = []
         self.load_thread_count = 0
-        self.chunks = _Chunkdict()
+        self.chunks = _Chunkdict(self)
 
     def __getitem__(self, position):
         return self.get_block(position)
 
-    def get_block(self, position, level = float("inf"), wait = True): # required level, onmiss ("load","asyncload","none")
+    def get_block(self, position, minlevel = None, load_on_miss = True):
         """
         generate and wait are passed to get_chunk...
         """
-        chunk = self.get_chunk(position, generate, wait)
-        if chunk not in ("loading",None):
-            return chunk[position]
+        chunk = self.get_chunk(position, minlevel, load_on_miss)
+        if chunk == None:
+            return
+        return chunk[position]
 
-    def get_chunk(self, position, generate = True, wait = True):
+    def get_chunk(self, position, minlevel = None, load_on_miss = True):
         """
         accepts floating point position
-        generate ... whether to generate chunk if it isn't yet
         """
+        if minlevel == None:
+            minlevel = len(self.worldgenerators)
         position = position.normalize()
-        try:
-            while True:
-                chunk = self.chunks[position>>CHUNKSIZE]
-                if chunk != "async_loading":
-                    break
-                if not wait:
-                    return "loading"
-                time.sleep(0.05)
-        except KeyError:
-            if not generate:
-                return None
-            chunk = self.load_chunk(position)
+        chunk = self.chunks[position>>CHUNKSIZE]
+        if chunk.initlevel < minlevel:
+            if not load_on_miss:
+                return
+            self.load_chunk(chunk,minlevel)
         return chunk
 
-    def load_chunk(self, position):
-        chunk = Chunk(self, position>>CHUNKSIZE)
-        self.worldgenerator(chunk)
-        self.chunks[position>>CHUNKSIZE] = chunk
-        return chunk
-
+    def load_chunk(self, chunk, minlevel, wait_if_locked=True):
+        if minlevel > len(self.worldgenerators):
+            raise ValueError("the requested initlevel %i cannot be provided" %minlevel)
+        if not chunk.lock.acquire(wait_if_locked):
+            return False
+        if chunk.initlevel == 0:
+            if False: #try to load from file
+                pass
+            else: #fill with airblocks
+                chunk.blocks = tuple([_BlockData() for _ in xrange((1<<CHUNKSIZE)**DIMENSION)])
+        while chunk.initlevel < minlevel:
+            self.worldgenerators[chunk.initlevel-1](chunk)
+            chunk.initlevel+=1
+        chunk.lock.release()
+        return True
+        
     def async_load_chunk(self, position):
-        self.chunks[position>>CHUNKSIZE] = "async_loading"
         self.loading_queue.append(position)
         if self.load_thread_count < MAX_LOAD_THREADS:
             thread.start_new_thread(self._async_load_loop,())
@@ -86,7 +92,7 @@ class World(object):
                     position = self.loading_queue.pop(0)
                 except IndexError:
                     continue
-            self.load_chunk(position)
+            self.get_chunk(position) # does exactly what we need so why don't use it
         self.load_thread_count -= 1
         return
 
@@ -109,12 +115,12 @@ class Chunk(object):
     def __init__(self,world,position):
         self.world = world
         self.position = position
-        #self.blocks = tuple([BlockData() for _ in xrange((1<<CHUNKSIZE)**DIMENSION)])
         self.blocks = None
         self.observers = set() #if empty and chunk not altered, it should be removed
         self.entities = set()
         self.altered = False
-        self.initlevel = None
+        self.initlevel = 0
+        self.lock = thread.allocate_lock()
 
     def __iter__(self):
         for dx in range(1<<CHUNKSIZE):
@@ -150,20 +156,21 @@ class BlockInterface(object):
         return self.data.id
 
     def set_id(self, new_id):
-        self.set_visible(False)
+        #M# self.set_visible(False)
         self.data.id = new_id
         self.chunk.altered = True
-        if not self.chunk.isinit:
+        if not self.chunk.observers:
+            self.data.visible = None
             return
         for dn in NEIGHBOURS+[Vector([0,0,0])]:
-            b = self.chunk.world.__getitem__(self.position+dn,False)
+            b = self.chunk.world.get_block(self.position+dn,load_on_miss=False)
             if b:
-                b.update_visibility()
+                b._update_visibility()
 
-    def _get_visible(self):
+    def get_visible(self):
         if self.data.visible == None:
             self.data.visible = False
-            self.update_visibility()
+            self._update_visibility()
         return self.data.visible
 
     def _set_visible(self, visible):
@@ -176,22 +183,22 @@ class BlockInterface(object):
         visible = False
         if self.get_id() != 0:
             for dn in NEIGHBOURS:
-                b = self.chunk.world.__getitem__(self.position+dn,False)
+                b = self.chunk.world.get_block(self.position+dn,load_on_miss=False)
                 if b and b.get_id() == 0:
                     visible = True
-        self.set_visible(visible)
+        self._set_visible(visible)
 
 class Entity(object):
+    SPEED = 5
     def __init__(self, world):
         self.world = world
         self.position = None
         self.rotation = None
-        self.speed = SPEED
 
     def set_position(self, position):
-        #remove from chunk of old position
+        #M# remove from chunk of old position & tell everyone
         self.position = position
-        #add to chunk of new position
+        #M# add to chunk of new position & tell everyone
 
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -211,57 +218,63 @@ class Entity(object):
         return Vector((dx, dy, dz))
 
 class Player(Entity):
+    RENDERDISTANCE = 16
     def __init__(self,world):
         Entity.__init__(self,world)
-        self.inbox = []
         self.outbox = []
-        self.set_position(Vector([128,0,0]))
+        self.set_position(Vector([0,0,0]))
         self.rotation = (0,0)
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = dict([(a,False) for a in ACTIONS])
         self.observed_chunks = set()
-        self.lc = set()
-        self.uc = set()
+        self._lc = set()
+        self._uc = set()
         thread.start_new_thread(self._update_chunks_loop,())
         self.last_update = time.time()
 
     def set_position(self,position):
         Entity.set_position(self,position)
+        for msg in self.outbox:
+            if msg.startswith("goto"):
+                self.outbox.remove(msg)
         self.outbox.append("goto %s %s %s" %self.position)
 
     def _update_chunks_loop(self):
-        while True:
-            radius=RENDERDISTANCE
-            position = self.position.normalize()
-            chunks = set()
-            for dx in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
-                for dy in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
-                    time.sleep(0.01)
-                    for dz in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
-                        chunkpos = position+(dx,dy,dz)
-                        chunk = self.world.get_chunk(chunkpos,not DOASYNCLOAD)
-                        if chunk == None:
-                            self.world.async_load_chunk(chunkpos)
-                        elif chunk == "loading":
-                            pass
-                        else:
-                            chunks.add(chunk)
-            self.uc = self.observed_chunks.difference(chunks)
-            lc = chunks.difference(self.observed_chunks)
-            self.lc = sorted(lc,key=self.chunk_priority_func,reverse=True)
+        try:
+            while True:
+                radius=self.RENDERDISTANCE
+                position = self.position.normalize()
+                chunks = set()
+                for dx in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
+                    for dy in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
+                        time.sleep(0.01)
+                        for dz in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
+                            chunkpos = position+(dx,dy,dz)
+                            chunk = self.world.get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
+                            if chunk == None:
+                                self.world.async_load_chunk(chunkpos)
+                            elif chunk == "loading":
+                                pass
+                            else:
+                                chunks.add(chunk)
+                self._uc = self.observed_chunks.difference(chunks)
+                lc = chunks.difference(self.observed_chunks)
+                self._lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
+        except Exception as e:
+            print("some error in _update_chunks_loop, most likely because the player disconnected, I should find a way to handle this nicely")
 
-    def update_chunks(self):
+    def _update_chunks(self):
         # unload chunks
-        if self.uc:
-            chunk = self.uc.pop()
+        if self._uc:
+            chunk = self._uc.pop()
             if chunk in self.observed_chunks:
                 self.observed_chunks.remove(chunk)
                 chunk.observers.remove(self)
                 self.outbox.append("delarea %s %s %s %s"
                                %((1<<CHUNKSIZE,)+tuple(chunk.position<<CHUNKSIZE)))
         # load chunks
-        if self.lc:
-            chunk = self.lc.pop()
+        if self._lc:
+            chunk = self._lc.pop()
             if not chunk in self.observed_chunks:
                 self.observed_chunks.add(chunk)
                 startpos = None
@@ -285,53 +298,19 @@ class Player(Entity):
                 chunk.observers.add(self)
 
     def _chunk_priority_func(self,chunk):
-        return self.priority_func(chunk.position<<CHUNKSIZE)
+        return self._priority_func(chunk.position<<CHUNKSIZE)
 
-    def priority_func(self,position):
+    def _priority_func(self,position):
         dist = position+(Vector([1,1,1])<<(CHUNKSIZE-1))+(self.position*-1)
         return sum(map(abs,dist))
 
-    def handle(self,cmd):
-        if cmd == "tick":
-            self.sentcount = 0
-        if cmd == "right click":
-            v = hit_test(lambda v:self.world[v].get_id()!=0,self.position,
-                         self.get_sight_vector())[1]
-            if v:
-                self.world[v].set_id("GRASS")
-        if cmd == "left click":
-            v = hit_test(lambda v:self.world[v].get_id()!=0,self.position,
-                         self.get_sight_vector())[0]
-            if v:
-                self.world[v].set_id(0)
-        if cmd.startswith("rot"):
-            x,y = map(float,cmd.split(" ")[1:])
-            self.rotation = x,y
-        if cmd.startswith("keys"):
-            action_states = int(cmd.split(" ")[1])
-            for i,a in enumerate(ACTIONS):
-                self.action_states[a] = bool(action_states & (1<<(i+1)))
+    def _update(self):
+        """internal update method, automatically called by game loop"""
+        self._update_chunks()
 
-    def update(self):
-        # react to input
-        while self.inbox:
-            self.handle(self.inbox.pop(0))
-        # Movement
-        ds = min(1,SPEED*(time.time()-self.last_update))
-        self.last_update = time.time()
-        vx,vy,vz = self.get_sight_vector()*ds
-        mx,my,mz = 0,0,0
-        if self.sentcount <= MSGS_PER_TICK:
-            if self.action_states["for"]:
-                mx += vx; mz += vz
-            if self.action_states["back"]:
-                mx -= vx; mz -= vz
-            if self.action_states["right"]:
-                mx -= vz; mz += vx
-            if self.action_states["left"]:
-                mx += vz; mz -= vx
-        self.set_position(self.position+(mx,my,mz))
-        self.update_chunks()
+    def handle_input(self,msg):
+        """dummi method, replace in subclass, or monkeypatch Player class to allow input handling"""
+        pass
         
     def notice(self,block_interface):
         position = block_interface.position
@@ -344,20 +323,22 @@ class Player(Entity):
 
 class Game(object):
 
-    def __init__(self,worldgenerators,name="MCG-CRAFT",playerclass=Player):
+    def __init__(self,worldgenerators,name="MCG-CRAFT",gamename="",playerclass=Player):
         self.playerclass = playerclass
         self.players = {}
         self.world = World(worldgenerators,self._test_priority)
-        self.socket_server = socket_connection.server(key="MCG_CRAFT",on_connect=self._on_connect,
+        self.world[Vector([0,0,0])]
+        self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
                                                       on_disconnect=self._on_disconnect,name=name)
+        print "ready"
 
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self,*args):
         self.quit()
     
-    def quit(self)
+    def quit(self):
         """quit the game"""
         self.socket_server.close()
 
@@ -365,15 +346,15 @@ class Game(object):
         """get a list of all players in the game"""
         return self.players.values()
 
-    def test_priority(self,position):
+    def _test_priority(self,position):
         """priority for generating new chunk based on position"""
         if self.players:
-            return min([player.priority_func(position) for player in self.get_players()])
+            return min([player._priority_func(position) for player in self.get_players()])
         return 0
 
     def _on_connect(self,addr):
         print(addr, "connected")
-        self.players[addr] = playerclass(self.world)
+        self.players[addr] = self.playerclass(self.world)
 
     def _on_disconnect(self,addr):
         print(addr, "disconnected")
@@ -381,31 +362,38 @@ class Game(object):
         del self.players[addr]
 
     def update(self):
+        print "tick",time.time()
         """communicate with clients"""
-        for msg, addr in self.server_socket.receive():
-            if addr in players:
-                players[addr].inbox.append(msg)
-            else:
-                print "Fehler"
-        for addr,player in players.items():
+        #send stuff
+        print 1
+        for addr,player in self.players.items():
             while player.outbox:
                 msg = player.outbox.pop(0)
                 player.sentcount += 1
-                server.send(msg,addr)
+                self.socket_server.send(msg,addr)
                 if player.sentcount >= MSGS_PER_TICK:
                     break
+        #receive stuff
+        print 2
+        for msg, addr in self.socket_server.receive():
+            if addr in self.players:
+                self.players[addr].handle_input(msg)
+            else:
+                print "Fehler"
+        #internal player update
+        print 3
+        for player in self.get_players():
+            player._update()
+
+def simple_terrain_generator(chunk):
+    if chunk.position[1] >= 1:
+        return # nothing to do in the sky by now
+    for block in chunk:
+        if block.position[1] < -2:
+            block.set_id("GRASS")
 
 if __name__ == "__main__":
-    def wg1(chunk):
-        # remember: I think it would be a bad idea to use block.set_id in here
-        if chunk.position[1] >= 1:
-            return # nothing to do in the sky by now
-        for block in chunk:
-            if block.position[1] < -2:
-                block.set_id("GRASS")
 
-    with Game([wg1]) as g:
+    with Game([simple_terrain_generator]) as g:
         while True:
-            g.update():
-            for player in g.get_players():
-                player.update()
+            g.update()
