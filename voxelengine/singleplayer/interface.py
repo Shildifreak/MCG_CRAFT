@@ -83,6 +83,11 @@ class Blockworld(object):
                        "left": (lambda:self.keystates[main.key.LEFT]),
                        "right": (lambda:self.keystates[main.key.RIGHT]),
                        "space": (lambda:self.keystates[main.key.SPACE]),
+                       "shift": (lambda:self.keystates[main.key.LSHIFT]),
+                       "w": (lambda:self.keystates[main.key.W]),
+                       "a": (lambda:self.keystates[main.key.A]),
+                       "s": (lambda:self.keystates[main.key.S]),
+                       "d": (lambda:self.keystates[main.key.D]),
                        "leftclick": (lambda:self.mousestates.get(main.mouse.LEFT,False)),
                        "rightclick": (lambda:self.mousestates.get(main.mouse.RIGHT,False)),
                        }
