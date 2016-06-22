@@ -3,7 +3,7 @@ import sys
 sys.path.append("..")
 import interface
 
-def display(f,xmax=80,zmax=None):
+def display(f,xmax=80,zmax=None,fill=True):
     if zmax == None:
         zmax = xmax
     b = interface.Blockworld()
@@ -14,7 +14,7 @@ def display(f,xmax=80,zmax=None):
         for z in range(-zmax,zmax+1):
             yt = int(f(x,z))
             yn = min([int(f(x+dx,z+dz)) for dx in (-1,1) for dz in (-1,1)])
-            for y in range(yn+1,yt)+[yt]:
+            for y in (range(yn+1,yt)if fill else [])+[yt]:
                 b.set_block((x,y,z),0)
 
     while b.is_init():

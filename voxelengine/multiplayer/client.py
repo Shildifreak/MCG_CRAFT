@@ -19,7 +19,6 @@ from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
 import socket_connection
-reload(socket_connection)
 from shared import *
 
 TICKS_PER_SEC = 60
@@ -60,7 +59,7 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
-TEXTURE_PATH = 'texture.png'
+TEXTURE_PATH = os.path.join(PATH,'texture.png')
 
 import textures
 TEXTURES = [None]
@@ -489,30 +488,40 @@ def setup():
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
     setup_fog()
 
-
-def main():
-    servers = socket_connection.search_servers(key="voxelgame")
-    if servers:
-        print "SELECT SERVER"
-        addr = servers[select([i[1] for i in servers])[0]][0]
-        try:
-            with socket_connection.client(addr) as client:
-                window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
-                                resizable=True,client=client)
-                # Hide the mouse cursor and prevent the mouse from leaving the window.
-                window.set_exclusive_mouse(True)
-                setup()
-                pyglet.app.run()
-        except Exception as e:
-            if e.message != "Disconnect" and e.message != "Server went down.":
-                raise
-            else:
-                print e.message
-        finally:
+def show_on_window(client):
+    window = None
+    try:
+        window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
+                        resizable=True,client=client)
+        # Hide the mouse cursor and prevent the mouse from leaving the window.
+        window.set_exclusive_mouse(True)
+        setup()
+        pyglet.app.run()
+    except Exception as e:
+        raise
+        if e.message != "Disconnect" and e.message != "Server went down.":
+            raise
+        else:
+            print e.message
+    finally:
+        if window:
             window.on_close()
+
+def main(socket_client = None):
+    if socket_client == None:
+        servers = socket_connection.search_servers(key="voxelgame")
+        if servers:
+            print "SELECT SERVER"
+            addr = servers[select([i[1] for i in servers])[0]][0]
+            with socket_connection.client(addr) as socket_client:
+                show_on_window(socket_client)
+        else:
+            print("No Server found.")
+            time.sleep(1)
+
     else:
-        print("No Server found.")
-        time.sleep(1)
+        print "doing something clienty"
+        show_on_window(socket_client)
 
 def autoclient():
     while True:

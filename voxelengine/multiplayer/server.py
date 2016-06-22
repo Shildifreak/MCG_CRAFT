@@ -323,13 +323,17 @@ class Player(Entity):
 
 class Game(object):
 
-    def __init__(self,worldgenerators,name="MCG-CRAFT",gamename="",playerclass=Player):
+    def __init__(self,worldgenerators,name="MCG-CRAFT",gamename="",playerclass=Player,socket_server=None):
         self.playerclass = playerclass
         self.players = {}
         self.world = World(worldgenerators,self._test_priority)
         self.world[Vector([0,0,0])]
-        self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
-                                                      on_disconnect=self._on_disconnect,name=name)
+        if socket_server == None:
+            self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
+                                                          on_disconnect=self._on_disconnect,name=name)
+        else:
+            self.socket_server = socket_server
+            self._on_connect(None)
         print "ready"
 
     def __enter__(self):
@@ -362,10 +366,10 @@ class Game(object):
         del self.players[addr]
 
     def update(self):
-        print "tick",time.time()
+        #print "tick",time.time()
         """communicate with clients"""
         #send stuff
-        print 1
+        #print 1
         for addr,player in self.players.items():
             while player.outbox:
                 msg = player.outbox.pop(0)
@@ -374,14 +378,14 @@ class Game(object):
                 if player.sentcount >= MSGS_PER_TICK:
                     break
         #receive stuff
-        print 2
+        #print 2
         for msg, addr in self.socket_server.receive():
             if addr in self.players:
                 self.players[addr].handle_input(msg)
             else:
                 print "Fehler"
         #internal player update
-        print 3
+        #print 3
         for player in self.get_players():
             player._update()
 

@@ -38,5 +38,5 @@ def g(x,z):
     y = sum([a*math.sin(fx*x+fz*z)*math.cos(ffx*x+ffz*z) for a,fx,fz,ffx,ffz in waves])
     return y
 
-from display2d import display
+from display3d import display
 display(g)

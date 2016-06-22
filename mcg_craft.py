@@ -2,11 +2,18 @@ from voxelengine.multiplayer.server import *
 
 class MC_PLAYER(Player):
     SPEED = 5
+    AIRRESISTANCE = 0.9
     RENDERDISTANCE = 16
-    JUMPSPEED = 3
-    GRAVITY = 1
+    JUMPSPEED = 10
+    GRAVITY = 30
+    SLIDING = 0.001
+    HEIGHT = 1.8
+    EYE_LEVEL = 1.6
+    WIDTH = 0.4
+
+    HITBOX = [(dx,dy,dz) for dx in (WIDTH,-WIDTH) for dy in (HEIGHT-EYE_LEVEL,-EYE_LEVEL) for dz in (WIDTH,-WIDTH)]
+    
     velocity = Vector([0,0,0])
-    SLIDING = 0
 
     def handle_input(self,cmd):
         if cmd == "tick":
@@ -32,15 +39,15 @@ class MC_PLAYER(Player):
                 self.action_states[a] = bool(action_states & (1<<(i+1)))
 
     def onground(self):
-        #M# integrate playersize
-        return self.world[(self.position+(0,-2,0)).normalize()].get_id() not in ("AIR",0)
+        for relpos in self.HITBOX:
+            block_pos = (self.position+relpos+(0,-0.2,0)).normalize()
+            if self.world[block_pos].get_id() not in ("AIR",0):
+                return True
+        return False
 
     def collide(self,position):
-        #M# integrate hitbox
-        head = (0,0,0)
-        feet = (0,-1.8,0)
         blocks = set()
-        for relpos in (head,feet):
+        for relpos in self.HITBOX:
             block_pos = (position+relpos).normalize()
             if self.world[block_pos].get_id() not in ("AIR",0):
                 blocks.add(block_pos)
@@ -51,32 +58,39 @@ class MC_PLAYER(Player):
         return self.collide(new_position).difference(self.collide(previous_position))
 
     def update(self):
+        #M# make sliding depend on block?
         if self.sentcount <= MSGS_PER_TICK: # freeze player if client doesnt respond
             dt = time.time()-self.last_update
             # slow time down for player if server is pretty slow
             dt = min(dt,1)
             self.last_update = time.time()
+            nv = Vector([0,0,0])
+            sx,sy,sz = self.get_sight_vector()*self.SPEED
+            if self.action_states["for"]:
+                nv += ( sx,0, sz)
+            if self.action_states["back"]:
+                nv += (-sx,0,-sz)
+            if self.action_states["right"]:
+                nv += (-sz,0, sx)
+            if self.action_states["left"]:
+                nv += ( sz,0,-sx)
             if self.onground():
-                sx,sy,sz = self.get_sight_vector()*self.SPEED
-                self.velocity *= (self.SLIDING,0,self.SLIDING) #M# make slide depend on Block?
-                if self.action_states["for"]:
-                    self.velocity += ( sx,0, sz)
-                if self.action_states["back"]:
-                    self.velocity += (-sx,0,-sz)
-                if self.action_states["right"]:
-                    self.velocity += (-sz,0, sx)
-                if self.action_states["left"]:
-                    self.velocity += ( sz,0,-sx)
+                s = 0.5*self.SLIDING**dt
+                self.velocity *= (1,0,1) #M# stop falling
                 if self.action_states["jump"]:
                     self.velocity += (0,self.JUMPSPEED,0)
             else:
+                s = 0.5*self.AIRRESISTANCE**dt
                 self.velocity -= Vector([0,1,0])*self.GRAVITY*dt
-            steps = int(math.ceil(max(map(abs,self.velocity*dt))))*10
+            sv = s*Vector([1,0,1])+(0,1,0) #no slowing down in y
+            self.velocity = sv*self.velocity + ((1,1,1)-sv)*nv
+            
+            steps = int(math.ceil(max(map(abs,self.velocity*dt))*10)) # 10 steps per block
             pos = self.position
             for step in range(steps):
                 for i in range(DIMENSION):
-                    mask          = tuple([int(i==j) for j in range(DIMENSION)])
-                    inverted_mask = tuple([int(i!=j) for j in range(DIMENSION)])
+                    mask          = Vector([int(i==j) for j in range(DIMENSION)])
+                    inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
                     new = pos + self.velocity*dt*mask*(1.0/steps)
                     if self.collide_difference(new,pos):
                         self.velocity *= inverted_mask
@@ -84,9 +98,31 @@ class MC_PLAYER(Player):
                         pos = new
             self.set_position(pos)
 
-if __name__ == "__main__":
-    with Game([simple_terrain_generator],playerclass=MC_PLAYER) as g:
+def main(socket_server=None):
+    with Game([simple_terrain_generator],playerclass=MC_PLAYER,socket_server=socket_server) as g:
         while True:
             g.update()
             for player in g.get_players():
                 player.update()
+            if not g.get_players():
+                time.sleep(0.5)
+            time.sleep(0.01) #wichtig damit das threading Zeug klappt
+            
+def singleplayer_client_thread(socket_client):
+    import voxelengine.multiplayer.client as client
+    client.main(socket_client)
+    thread.interrupt_main()
+
+if __name__ == "__main__":
+    if select(["open server","play alone"])[0]:
+        #Singleplayer
+        import voxelengine.multiplayer.local_connection as local_connection
+        connector = local_connection.Connector()
+        try:
+            thread.start_new_thread(singleplayer_client_thread,(connector.client,))
+            main(connector.server)
+        except KeyboardInterrupt:
+            print "window closed"
+    else:
+        #Multiplayer
+        main()

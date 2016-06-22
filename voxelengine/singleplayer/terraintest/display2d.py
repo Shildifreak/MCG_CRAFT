@@ -6,7 +6,7 @@ def colorfilter(y):
     c = int(ty)
     return (c,c,c)
 
-def display(f,xmax=80,zmax=None):
+def display(f,xmax=80,zmax=None,fill="dummy"):
     if zmax == None:
         zmax = xmax
 

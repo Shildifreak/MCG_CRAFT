@@ -56,6 +56,10 @@ def f3(x,z,s=10):
     return y11*p11+y22*p22+y12*p12+y21*p21
 
 def f4(x,z):
+    y = 0
+    y += 2*f3(x,z,9)
+    y += 2.5*f3(x,z,20)
+    y += 3.5*f3(x,z,50)
     return sum((n**0.3)*f3(x,z,n) for n in (9,20,50))
 
 def f5(x,z,sealevel=-5):
