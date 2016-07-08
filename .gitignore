@@ -1,4 +1,5 @@
 dist/
 build/
+saves/
 *.pyc
 .fuse_hidden*

@@ -67,6 +67,9 @@ class World(object):
                 pass
             else: #fill with airblocks
                 chunk.blocks = tuple([_BlockData() for _ in xrange((1<<CHUNKSIZE)**DIMENSION)])
+                #M# new
+                #default_id = simple_chunkdefault(position)
+                #chunk.blocks = [(None,default_id)]*
         while chunk.initlevel < minlevel:
             self.worldgenerators[chunk.initlevel-1](chunk)
             chunk.initlevel+=1
@@ -112,6 +115,7 @@ class World(object):
 # idea: every chunk may require chunks around him to be at a level >= (his level - 1)
 
 class Chunk(object):
+    # Should have standartblock
     def __init__(self,world,position):
         self.world = world
         self.position = position
@@ -388,6 +392,13 @@ class Game(object):
         #print 3
         for player in self.get_players():
             player._update()
+
+def simple_chunkdefault(chunk):
+    #M# new
+    if chunk.position[1] >= 1:
+        return 0
+    else:
+        return "GRASS"
 
 def simple_terrain_generator(chunk):
     if chunk.position[1] >= 1:

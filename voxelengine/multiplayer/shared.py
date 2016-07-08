@@ -2,6 +2,12 @@ import sys
 if sys.version >= "3":
     raw_input = input
 
+import textures
+TEXTURES = [None]
+BLOCK_ID_BY_NAME = {"AIR":0}
+for name, transparency, top, bottom, side in textures.textures:
+    BLOCK_ID_BY_NAME[name] = (len(TEXTURES)<<1)+(not transparency)
+
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
            "inv9","inv0",

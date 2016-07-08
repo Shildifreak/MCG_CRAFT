@@ -59,14 +59,10 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
-TEXTURE_PATH = os.path.join(PATH,'texture.png')
-
-import textures
-TEXTURES = [None]
-BLOCK_ID_BY_NAME = {"AIR":0}
-for name, top, bottom, side in textures.textures:
-    BLOCK_ID_BY_NAME[name] = len(TEXTURES)
+for name, transparency, top, bottom, side in textures.textures:
     TEXTURES.append(tex_coords(top, bottom, side))
+
+TEXTURE_PATH = os.path.join(PATH,'texture.png')
 
 FACES = [
     ( 0, 1, 0),
@@ -122,7 +118,7 @@ class Model(object):
             block_id = BLOCK_ID_BY_NAME[id_or_name]
         if block_id == 0:
             return
-        texture_data = list(TEXTURES[block_id])
+        texture_data = list(TEXTURES[block_id>>1]) #without transparency bit
         vertex_data = cube_vertices(x, y, z, 0.5)
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
