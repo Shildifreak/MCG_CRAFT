@@ -14,22 +14,23 @@ class MC_PLAYER(Player):
     HITBOX = [(dx,dy,dz) for dx in (WIDTH,-WIDTH) for dy in (HEIGHT-EYE_LEVEL,-EYE_LEVEL) for dz in (WIDTH,-WIDTH)]
     
     velocity = Vector([0,0,0])
+    flying = False
 
     def handle_input(self,cmd):
         if cmd == "tick":
             self.sentcount = 0
         if cmd == "right click":
-            v = hit_test(lambda v:self.world[v].get_id()!=0,self.position,
+            v = hit_test(lambda v:self.world[v]!=0,self.position,
                          self.get_sight_vector())[1]
             if v:
-                self.world[v].set_id("GRASS")
+                self.world[v] = BLOCK_ID_BY_NAME["GRASS"]
                 if v in self.collide(self.position):
-                    self.world[v].set_id(0)
+                    self.world[v] = BLOCK_ID_BY_NAME["AIR"]
         if cmd == "left click":
-            v = hit_test(lambda v:self.world[v].get_id()!=0,self.position,
+            v = hit_test(lambda v:self.world[v]!=0,self.position,
                          self.get_sight_vector())[0]
             if v:
-                self.world[v].set_id(0)
+                self.world[v] = BLOCK_ID_BY_NAME["AIR"]
         if cmd.startswith("rot"):
             x,y = map(float,cmd.split(" ")[1:])
             self.rotation = x,y
@@ -41,7 +42,7 @@ class MC_PLAYER(Player):
     def onground(self):
         for relpos in self.HITBOX:
             block_pos = (self.position+relpos+(0,-0.2,0)).normalize()
-            if self.world[block_pos].get_id() not in ("AIR",0):
+            if self.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
                 return True
         return False
 
@@ -49,7 +50,7 @@ class MC_PLAYER(Player):
         blocks = set()
         for relpos in self.HITBOX:
             block_pos = (position+relpos).normalize()
-            if self.world[block_pos].get_id() not in ("AIR",0):
+            if self.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
                 blocks.add(block_pos)
         return blocks
 
@@ -58,6 +59,11 @@ class MC_PLAYER(Player):
         return self.collide(new_position).difference(self.collide(previous_position))
 
     def update(self):
+        if self.flying:
+            if self.action_states["for"]:
+                print self.position
+                self.set_position(self.position+self.get_sight_vector()*0.2)
+            return
         #M# make sliding depend on block?
         if self.sentcount <= MSGS_PER_TICK: # freeze player if client doesnt respond
             dt = time.time()-self.last_update

@@ -2,11 +2,22 @@ import sys
 if sys.version >= "3":
     raw_input = input
 
+import struct
+import zlib
+
+# maybe in own config.py?
+CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
+DIMENSION = 3
+TEXTURE_SIDE_LENGTH = 16
+
 import textures
-TEXTURES = [None]
 BLOCK_ID_BY_NAME = {"AIR":0}
-for name, transparency, top, bottom, side in textures.textures:
-    BLOCK_ID_BY_NAME[name] = (len(TEXTURES)<<1)+(not transparency)
+TRANSPARENCY = [True] #this first value is for air
+SOLIDITY = [False] #this as well #M# maybe make air a normal block in the textures.py
+for i, (name, transparency, solidity, top, bottom, side) in enumerate(textures.textures):
+    BLOCK_ID_BY_NAME[name] = i+1
+    TRANSPARENCY.append(transparency)
+    SOLIDITY.append(solidity)
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
@@ -98,3 +109,89 @@ def select(options):
             print "Please enter one of the above NUMBERS to select:",
         except IndexError:
             print "Please enter ONE OF THE ABOVE numbers to select:",
+
+class Chunk(object):
+    """
+    Not threadsave!
+    #_compressed_data   -either one of these must exist when using chunk, if both exist they must be konsistent
+    #_decompressed_data /
+    blockformat: format string as specified by struct module
+    using blockformat="H" and with 1 bit for transparency 32767 is highest possible block_id
+    """
+    blockformat = "H"
+    byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime
+    
+    def init_data(self):
+        """fill chunk with zeros"""
+        c = (1<<CHUNKSIZE)**3*self.byte_per_block
+        self.decompressed_data = bytearray(c)
+        self._compressed_data = None
+    
+    @property
+    def compressed_data(self):
+        """Compressed version of the blocks in the chunk. Use this for load/store and sending to client."""
+        if not self._compressed_data:
+            self._compressed_data = zlib.compress(buffer(self._decompressed_data))
+        return self._compressed_data
+    @compressed_data.setter
+    def compressed_data(self,data):
+        self._compressed_data = data
+        self._decompressed_data = None    
+
+    @property
+    def decompressed_data(self):
+        self._load_decompressed()
+        return buffer(self._decompressed_data)
+    @decompressed_data.setter
+    def decompressed_data(self,data):
+        self._decompressed_data = bytearray(data)
+        self._compressed_data = None
+
+    def _load_decompressed(self):
+        if not self._decompressed_data:
+            self._decompressed_data = bytearray(zlib.decompress(self._compressed_data))
+
+    def __setitem__(self,key,value):
+        """allow for setting slices so e.g. filling chunk by hightmap becomes easier"""
+        self._load_decompressed()
+        if isinstance(key,slice):
+            s = self.byte_per_block
+            vs = struct.pack(self.blockformat,value)
+            start,stop,step = key.indices(len(self._decompressed_data)//s)
+            l = len(xrange(start,stop,step))
+            start = s*start
+            stop  = s*stop
+            step  = s*step
+            for o,v in enumerate(vs):
+                self._decompressed_data[start+o:stop+o:step] = v*l
+        else:
+            struct.pack_into(self.blockformat,self._decompressed_data,key*self.byte_per_block,value)
+        self._compressed_data = None
+
+    def __getitem__(self,index):
+        self._load_decompressed()
+        return struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0]
+
+    def get_block(self,position):
+        return self[self.pos_to_i(position)]
+
+    def set_block(self,position,value):
+        self[self.pos_to_i(position)] = value
+
+    def pos_to_i(self, position):
+        # reorder to y-first for better compression
+        position = position%(1<<CHUNKSIZE)
+        i = reduce(lambda x,y:(x<<CHUNKSIZE)+y,position)
+        return i
+
+    def compress(self):
+        """make sure data is saved ONLY in compressed form, thereby saving memory"""
+        self.compressed_data #calling property makes sure _compressed_data is set
+        self._decompressed_data = None
+
+    def __iter__(self):
+        """iterate over positions in chunk, very pointless maybe remove""" #M#
+        for dx in range(1<<CHUNKSIZE):
+            for dy in range(1<<CHUNKSIZE):
+                for dz in range(1<<CHUNKSIZE):
+                    yield Vector([dx,dy,dz])

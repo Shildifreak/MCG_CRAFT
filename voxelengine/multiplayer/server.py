@@ -6,12 +6,24 @@ import socket_connection
 reload(socket_connection)
 from shared import *
 
-CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
-
-DIMENSION = 3
 DOASYNCLOAD = True
 MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
+
+# TODO:
+# (maybe add optional visibility filter to server)
+
+# ABOUT:
+# initlevels: (managing multi-chunk-structures)
+# inf (finished): finished, Entities may be here, can be send to client, ...
+#   4 (structs) : postmulti-single-chunk-structures
+#   3 (structs) : multi-chunk-structures
+#   2 (structs) : premulti-single-chunk-structures
+#   1 (terrain) : terrain build
+#   0 (plain)   : nothing generated yet
+#  -1 (vacuum)  : not even air
+# idea: every chunk may require chunks around him to be at a level of at least (his level - 1)
+
 
 class _Chunkdict(dict):
     def __init__(self,world,*args,**kwargs):
@@ -19,7 +31,7 @@ class _Chunkdict(dict):
         self.world = world
 
     def __missing__(self, chunkposition):
-        chunk = Chunk(self.world,chunkposition)
+        chunk = ServerChunk(self.world,chunkposition)
         self[chunkposition] = chunk
         return chunk
 
@@ -33,15 +45,27 @@ class World(object):
 
     def __getitem__(self, position):
         return self.get_block(position)
+    
+    def __setitem__(self, position, block_id):
+        self.set_block(position, block_id)
 
     def get_block(self, position, minlevel = None, load_on_miss = True):
         """
-        generate and wait are passed to get_chunk...
+        minlevel and load_on_miss are passed to get_chunk...
         """
         chunk = self.get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
-            return
-        return chunk[position]
+            return None
+        return chunk.get_block(position)
+
+    def set_block(self, position, block_id, minlevel = None, load_on_miss = True):
+        chunk = self.get_chunk(position, minlevel, load_on_miss)
+        if chunk == None:
+            return False
+        chunk.set_block(position,block_id)
+        for observer in chunk.observers:
+            observer.notice(position,block_id)
+        return True
 
     def get_chunk(self, position, minlevel = None, load_on_miss = True):
         """
@@ -62,16 +86,14 @@ class World(object):
             raise ValueError("the requested initlevel %i cannot be provided" %minlevel)
         if not chunk.lock.acquire(wait_if_locked):
             return False
-        if chunk.initlevel == 0:
-            if False: #try to load from file
+        if chunk.initlevel == -1:
+            if False: #M# try to load from file
                 pass
             else: #fill with airblocks
-                chunk.blocks = tuple([_BlockData() for _ in xrange((1<<CHUNKSIZE)**DIMENSION)])
-                #M# new
-                #default_id = simple_chunkdefault(position)
-                #chunk.blocks = [(None,default_id)]*
+                chunk.init_data()
+            chunk.initlevel = 0
         while chunk.initlevel < minlevel:
-            self.worldgenerators[chunk.initlevel-1](chunk)
+            self.worldgenerators[chunk.initlevel](chunk)
             chunk.initlevel+=1
         chunk.lock.release()
         return True
@@ -85,8 +107,8 @@ class World(object):
         self.load_thread_count += 1
         while self.loading_queue:
             if self.chunk_priority_func:
-                position = min(self.loading_queue, key=self.chunk_priority_func)
                 try:
+                    position = min(self.loading_queue, key=self.chunk_priority_func)
                     self.loading_queue.remove(position)
                 except ValueError:
                     continue
@@ -100,97 +122,20 @@ class World(object):
         return
 
     def save(self):
+        #M# doesn't work either
         for position,chunk in self.chunks.items():
             if chunk.altered:
                 pass #do something savy and unload if without observers
 
-# think about how to handle empty chunks
-# initlevels: (managing multi-chunk-structures)
-# inf (finished): finished, Entities may be here, can be send to client, ...
-#   4 (structs) : postmulti-single-chunk-structures
-#   3 (structs) : multi-chunk-structures
-#   2 (structs) : premulti-single-chunk-structures
-#   1 (terrain) : terrain build
-#   0 (plain)   : nothing generated yet
-# idea: every chunk may require chunks around him to be at a level >= (his level - 1)
-
-class Chunk(object):
-    # Should have standartblock
-    def __init__(self,world,position):
+class ServerChunk(Chunk):
+    def __init__(self, world, position):
         self.world = world
-        self.position = position
-        self.blocks = None
+        self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
         self.entities = set()
-        self.altered = False
-        self.initlevel = 0
+        self.altered = False #M# not tracked yet
+        self.initlevel = -1
         self.lock = thread.allocate_lock()
-
-    def __iter__(self):
-        for dx in range(1<<CHUNKSIZE):
-            for dy in range(1<<CHUNKSIZE):
-                for dz in range(1<<CHUNKSIZE):
-                    yield self[Vector([dx,dy,dz])]
-
-    def __getitem__(self, position):
-        position = position%(1<<CHUNKSIZE)
-        i = reduce(lambda x,y:(x<<CHUNKSIZE)+y,position)
-        data = self.blocks[i]
-        return BlockInterface(data,self,(self.position<<CHUNKSIZE)+position)
-
-class _BlockData(object):
-    def __init__(self):
-        self.visible = None
-        self.id = 0
-
-NEIGHBOURS = [Vector([ 1, 0, 0]),
-              Vector([ 0, 1, 0]),
-              Vector([ 0, 0, 1]),
-              Vector([-1, 0, 0]),
-              Vector([ 0,-1, 0]),
-              Vector([ 0, 0,-1])]
-
-class BlockInterface(object):
-    def __init__(self, data, chunk, position):
-        self.data = data
-        self.chunk = chunk
-        self.position = position
-
-    def get_id(self):
-        return self.data.id
-
-    def set_id(self, new_id):
-        #M# self.set_visible(False)
-        self.data.id = new_id
-        self.chunk.altered = True
-        if not self.chunk.observers:
-            self.data.visible = None
-            return
-        for dn in NEIGHBOURS+[Vector([0,0,0])]:
-            b = self.chunk.world.get_block(self.position+dn,load_on_miss=False)
-            if b:
-                b._update_visibility()
-
-    def get_visible(self):
-        if self.data.visible == None:
-            self.data.visible = False
-            self._update_visibility()
-        return self.data.visible
-
-    def _set_visible(self, visible):
-        if self.data.visible != visible:
-            self.data.visible = visible
-            for observer in self.chunk.observers:
-                observer.notice(self)
-
-    def _update_visibility(self):
-        visible = False
-        if self.get_id() != 0:
-            for dn in NEIGHBOURS:
-                b = self.chunk.world.get_block(self.position+dn,load_on_miss=False)
-                if b and b.get_id() == 0:
-                    visible = True
-        self._set_visible(visible)
 
 class Entity(object):
     SPEED = 5
@@ -274,13 +219,14 @@ class Player(Entity):
             if chunk in self.observed_chunks:
                 self.observed_chunks.remove(chunk)
                 chunk.observers.remove(self)
-                self.outbox.append("delarea %s %s %s %s"
-                               %((1<<CHUNKSIZE,)+tuple(chunk.position<<CHUNKSIZE)))
+                self.outbox.append("delarea %s %s %s"
+                               %(tuple(chunk.position)))
         # load chunks
         if self._lc:
             chunk = self._lc.pop()
             if not chunk in self.observed_chunks:
                 self.observed_chunks.add(chunk)
+                """
                 startpos = None
                 sequenz_id = 0
                 count = 0
@@ -299,6 +245,8 @@ class Player(Entity):
                                 startpos = b.position
                                 sequenz_id = b_id
                                 count = 1
+                """
+                self.outbox.append("setarea %s %s %s "%(chunk.position[0],chunk.position[1],chunk.position[2])+chunk.compressed_data) #Send chunksize only once
                 chunk.observers.add(self)
 
     def _chunk_priority_func(self,chunk):
@@ -316,14 +264,13 @@ class Player(Entity):
         """dummi method, replace in subclass, or monkeypatch Player class to allow input handling"""
         pass
         
-    def notice(self,block_interface):
-        position = block_interface.position
-        if block_interface.get_visible():
-            self.outbox.append("set %s %s %s %s" %(position[0],position[1],
-                                    position[2],block_interface.get_id()))
-        else:
-            self.outbox.append("del %s %s %s" %(position[0],position[1],
-                                    position[2]))
+    def notice(self,position,block_id):
+        #position = block_interface.position
+        #if block_interface.get_visible():
+        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block_id))
+        #else:
+        #    self.outbox.append("del %s %s %s" %(position[0],position[1],
+        #                            position[2]))
 
 class Game(object):
 
@@ -393,19 +340,12 @@ class Game(object):
         for player in self.get_players():
             player._update()
 
-def simple_chunkdefault(chunk):
-    #M# new
-    if chunk.position[1] >= 1:
-        return 0
-    else:
-        return "GRASS"
-
 def simple_terrain_generator(chunk):
-    if chunk.position[1] >= 1:
+    if chunk.position[1] >= 0:
         return # nothing to do in the sky by now
-    for block in chunk:
-        if block.position[1] < -2:
-            block.set_id("GRASS")
+    for position in chunk:
+        if chunk.position[1]*(1<<CHUNKSIZE)+position[1] <= -2:
+            chunk.set_block(position,BLOCK_ID_BY_NAME["GRASS"])
 
 if __name__ == "__main__":
 

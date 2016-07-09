@@ -5,7 +5,7 @@ import sys, os
 import inspect
 import warnings
 from collections import deque
-
+import itertools
 
 # Adding directory with pyglet to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -36,7 +36,7 @@ def cube_vertices(x, y, z, n):
         x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
     ]
 
-def tex_coord(x, y, n=16):
+def tex_coord(x, y, n=TEXTURE_SIDE_LENGTH):
     """ Return the bounding vertices of the texture square.
 
     """
@@ -59,10 +59,13 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
-for name, transparency, top, bottom, side in textures.textures:
+TEXTURES = [None]
+for _, _, _, top, bottom, side in textures.textures:
     TEXTURES.append(tex_coords(top, bottom, side))
 
 TEXTURE_PATH = os.path.join(PATH,'texture.png')
+
+# TODO: only display blocks which need to be displayed -> fast algorithm needed
 
 FACES = [
     ( 0, 1, 0),
@@ -72,6 +75,42 @@ FACES = [
     ( 0, 0, 1),
     ( 0, 0,-1),
 ]
+
+#M# zwei Dinge mit dem selben Namen :(
+NEIGHBOURS = [Vector([ 1, 0, 0]),
+              Vector([ 0, 1, 0]),
+              Vector([ 0, 0, 1]),
+              Vector([-1, 0, 0]),
+              Vector([ 0,-1, 0]),
+              Vector([ 0, 0,-1])]
+
+class SimpleChunk(object):
+    blocks = {}
+    def get_block(self,position):
+        return self.blocks.get(position,0)
+
+    def set_block(self,position,value):
+        if value == 0:
+            del self.blocks[position]
+        else:
+            self.blocks[position] = value
+
+def iterchunk():
+    return itertools.product(*(xrange(CHUNKSIZE),)*DIMENSION)
+
+def iterframe():
+    for de in (-1,1<<CHUNKSIZE):
+        for d1 in range(CHUNKSIZE):
+            for d2 in range(CHUNKSIZE):
+                yield (de,d1,d2)
+                yield (d1,de,d2)
+                yield (d1,d2,de)
+
+class Chunkdict(dict):
+    def __missing__(self, chunkposition):
+        chunk = SimpleChunk()
+        self[chunkposition] = chunk
+        return chunk
 
 class Model(object):
 
@@ -84,23 +123,29 @@ class Model(object):
         self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture())
 
         self.blocks = {}
+        self.chunks = Chunkdict()
 
         self.queue = deque()
 
     def add_block(self,position, id_or_name):
+        """for immediate execution use private method"""
         self.queue.append((self._add_block,(position,id_or_name)))
 
     def remove_block(self, position):
+        """for immediate execution use private method"""
         self.queue.append((self._remove_block,(position,)))
 
     def clear(self):
+        """for immediate execution use private method"""
         self.queue.append((self._clear,()))
 
-    def del_area(self, position, chunksize):
-        self.queue.append((self._del_area,(position,chunksize)))
+    def del_area(self, position):
+        """for immediate execution use private method"""
+        self.queue.append((self._del_area,(position,)))
 
-    def set_area(self, position, chunksize, blocknumber, block_id):
-        self.queue.append((self._set_area,(position,chunksize,blocknumber,block_id)))
+    def set_area(self, position, compressed_blocks):
+        """for immediate execution use private method"""
+        self.queue.append((self._set_area,(position,compressed_blocks)))
 
     def process_queue(self):
         start = time.clock()
@@ -108,17 +153,27 @@ class Model(object):
             func,args = self.queue.popleft()
             func(*args)
 
-    def _add_block(self, position, id_or_name):
+    def update_visibility(self, position):
+        if self.get_block(position) != 0:
+            for dn in NEIGHBOURS:
+                b = self.get_block(position+dn)
+                if b == 0: #M# test for transparency here!
+                    self.show(position)
+                    return
+        self.hide(position)
+    
+    def update_visibility_around(self,position):
+        for dn in NEIGHBOURS:
+            self.update_visibility(position+dn)
+    
+    def show(self,position):
         if position in self.blocks:
-            self.remove_block(position)
+            self.hide(position)
         x, y, z = position
-        try:
-            block_id = int(id_or_name)
-        except ValueError:
-            block_id = BLOCK_ID_BY_NAME[id_or_name]
+        block_id = self.get_block(position)
         if block_id == 0:
             return
-        texture_data = list(TEXTURES[block_id>>1]) #without transparency bit
+        texture_data = list(TEXTURES[block_id])
         vertex_data = cube_vertices(x, y, z, 0.5)
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
@@ -126,32 +181,51 @@ class Model(object):
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
 
-    def _remove_block(self, position):
+    def hide(self,position):
         if not position in self.blocks:
             return False
         self.blocks.pop(position).delete()
 
+    def _add_block(self, position, block_id):
+        self._set_block(position,block_id)
+        self.update_visibility(position)
+        self.update_visibility_around(position)
+
+    def _remove_block(self, position):
+        self._set_block(position,0)
+        self.hide(position)
+        self.update_visibility_around(position)
+
     def _clear(self):
         for position in self.blocks.keys():
-            self.remove_block(position)
+            self.hide(position)
+        self.blocks = {}
+        self.chunks = Chunkdict()
 
-    def _del_area(self, position, chunksize):
-        for dx in range(chunksize):
-            for dy in range(chunksize):
-                for dz in range(chunksize):
-                    self.remove_block(position+(dx,dy,dz))
+    def _del_area(self, position):
+        for relpos in iterchunk():
+            self.hide((position<<CHUNKSIZE)+relpos)
+        for relpos in iterframe():
+            self.update_visibility((position<<CHUNKSIZE)+relpos)
+        del self.chunks[position]
 
-    def _set_area(self, position, chunksize, blocknumber, block_id):
-        chunkpos = (position>>chunksize)<<chunksize
-        x,y,z = position%(1<<chunksize)
-        for i in range(blocknumber):
-            self.add_block(chunkpos+(x,y,z),block_id)
-            z += 1
-            x += z//(1<<chunksize); z%=(1<<chunksize)
-            y += x//(1<<chunksize); x%=(1<<chunksize)
+    def _set_area(self, position, compressed_blocks):
+        c = Chunk()
+        self.chunks[position] = c
+        c.compressed_data = compressed_blocks
 
-    def block_at(self,position):
-        return position in self.blocks
+        for i,relpos in enumerate(c):
+            if c[i] != 0:
+                self.show((position<<CHUNKSIZE)+relpos)
+        for relpos in iterframe():
+            self.update_visibility((position<<CHUNKSIZE)+relpos)
+
+    def get_block(self,position):
+        return self.chunks[position>>CHUNKSIZE].get_block(position)
+
+    def _set_block(self,position,block_id):
+        """this does not update the screen!"""
+        return self.chunks[position>>CHUNKSIZE].set_block(position,block_id)
 
 class Window(pyglet.window.Window):
 
@@ -196,7 +270,7 @@ class Window(pyglet.window.Window):
         self.client = client
 
         # some blocks to see if client works as intended
-        self.model.add_block((1,2,3),"GRASS")
+        self.model.add_block(Vector([1,2,3]),BLOCK_ID_BY_NAME["GRASS"])
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)
@@ -249,19 +323,16 @@ class Window(pyglet.window.Window):
             elif test("del",4):
                 position = Vector(map(int,c[1:4]))
                 self.model.remove_block(position)
-            elif test("delarea",5):
-                chunksize = int(c[1])
-                position = Vector(map(int,c[2:5]))
-                self.model.del_area(position,chunksize)
+            elif test("delarea",4):
+                position = Vector(map(int,c[1:4]))
+                self.model.del_area(position)
             elif test("set",5):
                 position = Vector(map(int,c[1:4]))
-                self.model.add_block(position,c[4])
-            elif test("setarea",7):
+                self.model.add_block(position,int(c[4]))
+            elif c[0] == "setarea": # no test here because compressed block may contain whitespace
                 position = Vector(map(int,c[1:4]))
-                chunksize = int(c[4])
-                blocknumber = int(c[5])
-                block_id = c[6]
-                self.model.set_area(position,chunksize,blocknumber,block_id)
+                compressed_blocks = c[4]
+                self.model.set_area(position,compressed_blocks)
             elif test("goto",4):
                 position = Vector(map(float,c[1:4]))
                 self.position = position
@@ -430,7 +501,7 @@ class Window(pyglet.window.Window):
 
         """
         vector = self.get_sight_vector()
-        block = hit_test(self.model.block_at, self.position, vector)[0]
+        block = hit_test(self.model.get_block, self.position, vector)[0]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
