@@ -1,4 +1,5 @@
 from voxelengine.multiplayer.server import *
+from noise import f4 as terrainfunction
 
 class MC_PLAYER(Player):
     SPEED = 5
@@ -15,6 +16,7 @@ class MC_PLAYER(Player):
     
     velocity = Vector([0,0,0])
     flying = False
+    spawnpoint = Vector([0,int(terrainfunction(0,0)+2),0])
 
     def handle_input(self,cmd):
         if cmd == "tick":
@@ -104,8 +106,22 @@ class MC_PLAYER(Player):
                         pos = new
             self.set_position(pos)
 
+def terrain_generator(chunk):
+    x,y,z = chunk.position<<CHUNKSIZE
+    for dx in xrange(1<<CHUNKSIZE):
+        for dz in xrange(1<<CHUNKSIZE):            
+            h = int(terrainfunction(x+dx,z+dz))
+            if y <= h:
+                if h < y+(1<<CHUNKSIZE):
+                    i = chunk.pos_to_i(Vector([dx,h,dz]))
+                    n = (h-y)
+                else:
+                    i = chunk.pos_to_i(Vector([dx,15,dz]))
+                    n = 15
+                chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
+
 def main(socket_server=None):
-    with Game([simple_terrain_generator],playerclass=MC_PLAYER,socket_server=socket_server) as g:
+    with Game([terrain_generator],playerclass=MC_PLAYER,socket_server=socket_server) as g:
         while True:
             g.update()
             for player in g.get_players():

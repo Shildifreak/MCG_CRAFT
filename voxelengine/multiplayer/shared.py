@@ -149,7 +149,11 @@ class Chunk(object):
 
     def _load_decompressed(self):
         if not self._decompressed_data:
-            self._decompressed_data = bytearray(zlib.decompress(self._compressed_data))
+            try:
+                self._decompressed_data = bytearray(zlib.decompress(self._compressed_data))
+            except:
+                print self._compressed_data
+                raise
 
     def __setitem__(self,key,value):
         """allow for setting slices so e.g. filling chunk by hightmap becomes easier"""

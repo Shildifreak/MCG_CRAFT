@@ -11,6 +11,7 @@ MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
 
 # TODO:
+# deloading with bigger radius than loading
 # (maybe add optional visibility filter to server)
 
 # ABOUT:
@@ -168,10 +169,11 @@ class Entity(object):
 
 class Player(Entity):
     RENDERDISTANCE = 16
+    spawnpoint = Vector([0,0,0])
     def __init__(self,world):
         Entity.__init__(self,world)
         self.outbox = []
-        self.set_position(Vector([0,0,0]))
+        self.set_position(self.spawnpoint)
         self.rotation = (0,0)
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = dict([(a,False) for a in ACTIONS])

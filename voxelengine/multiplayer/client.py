@@ -85,9 +85,11 @@ NEIGHBOURS = [Vector([ 1, 0, 0]),
               Vector([ 0, 0,-1])]
 
 class SimpleChunk(object):
-    blocks = {}
+    def __init__(self):
+        self.blocks = {}
+
     def get_block(self,position):
-        return self.blocks.get(position,0)
+        return self.blocks.get(position,0 if self.blocks else None)
 
     def set_block(self,position,value):
         if value == 0:
@@ -96,12 +98,12 @@ class SimpleChunk(object):
             self.blocks[position] = value
 
 def iterchunk():
-    return itertools.product(*(xrange(CHUNKSIZE),)*DIMENSION)
+    return itertools.product(*(xrange(1<<CHUNKSIZE),)*DIMENSION)
 
 def iterframe():
     for de in (-1,1<<CHUNKSIZE):
-        for d1 in range(CHUNKSIZE):
-            for d2 in range(CHUNKSIZE):
+        for d1 in xrange(1<<CHUNKSIZE):
+            for d2 in xrange(1<<CHUNKSIZE):
                 yield (de,d1,d2)
                 yield (d1,de,d2)
                 yield (d1,d2,de)
@@ -154,12 +156,13 @@ class Model(object):
             func(*args)
 
     def update_visibility(self, position):
-        if self.get_block(position) != 0:
+        if self.get_block(position):
             for dn in NEIGHBOURS:
                 b = self.get_block(position+dn)
-                if b == 0: #M# test for transparency here!
-                    self.show(position)
-                    return
+                if b != None:
+                    if b == 0: #M# test for transparency here!
+                        self.show(position)
+                        return
         self.hide(position)
     
     def update_visibility_around(self,position):
@@ -171,7 +174,7 @@ class Model(object):
             self.hide(position)
         x, y, z = position
         block_id = self.get_block(position)
-        if block_id == 0:
+        if not block_id:
             return
         texture_data = list(TEXTURES[block_id])
         vertex_data = cube_vertices(x, y, z, 0.5)
@@ -203,11 +206,12 @@ class Model(object):
         self.chunks = Chunkdict()
 
     def _del_area(self, position):
+        self.chunks[position] = SimpleChunk()
         for relpos in iterchunk():
             self.hide((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
             self.update_visibility((position<<CHUNKSIZE)+relpos)
-        del self.chunks[position]
+        del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
     def _set_area(self, position, compressed_blocks):
         c = Chunk()
@@ -215,8 +219,8 @@ class Model(object):
         c.compressed_data = compressed_blocks
 
         for i,relpos in enumerate(c):
-            if c[i] != 0:
-                self.show((position<<CHUNKSIZE)+relpos)
+            if c[i] != 0: #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
+                self.update_visibility((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
             self.update_visibility((position<<CHUNKSIZE)+relpos)
 
@@ -310,8 +314,14 @@ class Window(pyglet.window.Window):
             c = self.client.receive(0.001)
             if not c:
                 break
-            #print c
+            if c.startswith("setarea"):
+                c = c.split(" ",4)
+                position = Vector(map(int,c[1:4]))
+                compressed_blocks = c[4]
+                self.model.set_area(position,compressed_blocks)
+                continue
             c = c.split(" ")
+            #M# maybe define this function somewhere else
             def test(name,argc):
                 if name == c[0]:
                     if len(c) == argc:
@@ -329,10 +339,6 @@ class Window(pyglet.window.Window):
             elif test("set",5):
                 position = Vector(map(int,c[1:4]))
                 self.model.add_block(position,int(c[4]))
-            elif c[0] == "setarea": # no test here because compressed block may contain whitespace
-                position = Vector(map(int,c[1:4]))
-                compressed_blocks = c[4]
-                self.model.set_area(position,compressed_blocks)
             elif test("goto",4):
                 position = Vector(map(float,c[1:4]))
                 self.position = position

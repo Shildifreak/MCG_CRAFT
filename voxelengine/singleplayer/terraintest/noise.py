@@ -66,5 +66,6 @@ def f5(x,z,sealevel=-5):
     y = f4(x,z)
     return y if y>sealevel else sealevel
 
-from display3d import display
-display(f5,80)
+if __name__ == "__main__":
+    from display3d import display
+    display(f5,80)
