@@ -5,17 +5,18 @@ from noise import f4 as heightfunction
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
 # make sliding depend on block?
 
-GRAVITY = 30
+GRAVITY = 35
 AIRRESISTANCE = 0.9
 SLIDING = 0.001
 
 def init_player(player):
     player.velocity = Vector([0,0,0])
-    player.flying = False
+    player.flying = True
     player.last_update = time.time()
 
     player.SPEED = 5
     player.JUMPSPEED = 10
+    player.RENDERDISTANCE = 8
     
     height = 1.8
     eye_level = 1.6

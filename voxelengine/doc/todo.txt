@@ -1,4 +1,7 @@
-entities
+entities -> in Chunks eintragen
+         -> anzeigen
 compress benutzen wenn ein Chunk nicht mehr aktiv gebraucht wird
+laden/entladen mit unterschiedlicher Entfernung
+id vs name mess aufräumen
 transparency
 test if multi init level chunkgeneration works

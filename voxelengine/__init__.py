@@ -322,7 +322,6 @@ class Player(Entity):
                 radius=self.RENDERDISTANCE
                 if not world:
                     time.sleep(0.1)
-                    print "no world"
                     continue
                 chunks = set()
                 for dx in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
@@ -532,8 +531,8 @@ def terrain_generator_from_heightfunc(heightfunc):
                         i = chunk.pos_to_i(Vector([dx,h,dz]))
                         n = (h-y)
                     else:
-                        i = chunk.pos_to_i(Vector([dx,15,dz]))
-                        n = 15
+                        i = chunk.pos_to_i(Vector([dx,(1<<CHUNKSIZE)-1,dz]))
+                        n = (1<<CHUNKSIZE)-1
                     chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
     return terrain_generator
 

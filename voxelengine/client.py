@@ -331,7 +331,7 @@ class Window(pyglet.window.Window):
                         return True
                     print "Falsche Anzahl von Argumenten bei %s" %name
                 return False
-            if test("clear",0):
+            if test("clear",1):
                 self.model.clear()
             elif test("del",4):
                 position = Vector(map(int,c[1:4]))
