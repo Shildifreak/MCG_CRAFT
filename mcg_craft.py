@@ -1,6 +1,9 @@
 from voxelengine.multiplayer.server import *
 from noise import f4 as terrainfunction
 
+#TODO:
+# server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
+
 class MC_PLAYER(Player):
     SPEED = 5
     AIRRESISTANCE = 0.9
