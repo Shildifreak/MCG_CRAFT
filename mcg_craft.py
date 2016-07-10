@@ -1,5 +1,5 @@
 from voxelengine import *
-from noise import f4 as terrainfunction
+from noise import f4 as heightfunction
 
 #TODO:
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
@@ -99,23 +99,11 @@ def update_player(player):
                 pos = new
     player.set_position(pos)
 
-def terrain_generator(chunk):
-    x,y,z = chunk.position<<CHUNKSIZE
-    for dx in xrange(1<<CHUNKSIZE):
-        for dz in xrange(1<<CHUNKSIZE):            
-            h = int(terrainfunction(x+dx,z+dz))
-            if y <= h:
-                if h < y+(1<<CHUNKSIZE):
-                    i = chunk.pos_to_i(Vector([dx,h,dz]))
-                    n = (h-y)
-                else:
-                    i = chunk.pos_to_i(Vector([dx,15,dz]))
-                    n = 15
-                chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
+terrain_generator = terrain_generator_from_heightfunc(heightfunction)
 
 if __name__ == "__main__":
     multiplayer = not select(["open server","play alone"])[0]
-    spawnpoint = (0,int(terrainfunction(0,0)+2),0)
+    spawnpoint = (0,int(heightfunction(0,0)+2),0)
 
     w = World([terrain_generator])
 

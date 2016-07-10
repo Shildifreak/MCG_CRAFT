@@ -1,0 +1,4 @@
+entities
+compress benutzen wenn ein Chunk nicht mehr aktiv gebraucht wird
+transparency
+test if multi init level chunkgeneration works
