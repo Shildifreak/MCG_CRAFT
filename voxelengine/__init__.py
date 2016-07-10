@@ -1,9 +1,56 @@
+#* encoding: utf-8 *#
+
+# voxelengine: a pyglet based voxel engine module for Python
+#
+# Copyright (C) 2015 - 2016  Joram Brenz
+# email: joram.brenz@online.de
+#
+# This software is provided 'as-is', without any express or implied
+# warranty.  In no event will the authors be held liable for any damages
+# arising from the use of this software.
+#
+# Permission is granted to anyone to use this software for any purpose,
+# including commercial applications, and to alter it and redistribute it
+# freely, subject to the following restrictions:
+#
+# 1. The origin of this software must not be misrepresented; you must not
+#    claim that you wrote the original software. If you use this software
+#    in a product, an acknowledgment in the product documentation would be
+#    appreciated but is not required.
+# 2. Altered source versions must be plainly marked as such, and must not be
+#    misrepresented as being the original software.
+# 3. This notice may not be removed or altered from any source distribution.
+
+
+"""
+a pyglet based voxel engine module for Python
+
+Dieses Modul soll eine einfache Möglichkeit bieten um 3D/Würfel basierte
+Programme zu schreiben.
+
+This module is designed to provide a simple interface for 3D voxel based
+applications.
+
+Beispiel/Example:
+>>> import voxelengine
+>>> w = voxelengine.World()
+>>> with voxelengine.Game( spawnpoint=(w,(0,0,0)) ) as g:
+>>>     w.set_block((1,2,3),"GRASS")
+
+"""
+
+__version__ = '0.1.0'
+
+
 import math
 import time
 import thread
 
-import socket_connection
-reload(socket_connection)
+import sys,os,inspect
+# Adding directory modules to path
+PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+sys.path.append(os.path.join(PATH,"modules"))
+
 from shared import *
 
 DOASYNCLOAD = True
@@ -11,6 +58,8 @@ MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
 
 # TODO:
+# players attribut für welt -> für ladepriorität benutzen
+# change order of xyz to yxz in Chunkformat
 # deloading with bigger radius than loading
 # (maybe add optional visibility filter to server)
 
@@ -37,40 +86,51 @@ class _Chunkdict(dict):
         return chunk
 
 class World(object):
-    def __init__(self, worldgenerators = [], chunk_priority_func = None):
+    def __init__(self, worldgenerators = []):
+        """create new World instance"""
         self.worldgenerators = worldgenerators #[level1generation,level2generation,...]?
-        self.chunk_priority_func = chunk_priority_func
         self.loading_queue = []
         self.load_thread_count = 0
         self.chunks = _Chunkdict(self)
+        self.chunk_priority_func = None #M#
 
     def __getitem__(self, position):
         return self.get_block(position)
-    
+
     def __setitem__(self, position, block_id):
         self.set_block(position, block_id)
 
-    def get_block(self, position, minlevel = None, load_on_miss = True):
+    def get_block(self, position, minlevel = None, load_on_miss = True): #M# position vector?
+        """ get ID of block at position
+
+        args (Argumente):
+            position    : (x,y,z)
+        kwargs (optionale Argumente):
+            minlevel    : required initlevel of chunk (defaults to max)
+            load_on_miss: whether to load chunk if necessary
+                          if False requests for unloaded chunks return None
         """
-        minlevel and load_on_miss are passed to get_chunk...
-        """
-        chunk = self.get_chunk(position, minlevel, load_on_miss)
+        position = Vector(position)
+        chunk = self._get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
             return None
         return chunk.get_block(position)
 
     def set_block(self, position, block_id, minlevel = None, load_on_miss = True):
-        chunk = self.get_chunk(position, minlevel, load_on_miss)
+        """set ID of block at position"""
+        position = Vector(position)
+        chunk = self._get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
             return False
         chunk.set_block(position,block_id)
         for observer in chunk.observers:
-            observer.notice(position,block_id)
+            observer._notice(position,block_id)
         return True
 
-    def get_chunk(self, position, minlevel = None, load_on_miss = True):
+    def _get_chunk(self, position, minlevel = None, load_on_miss = True):
         """
         accepts floating point position
+        (minlevel, load_on_miss see get_block)
         """
         if minlevel == None:
             minlevel = len(self.worldgenerators)
@@ -79,10 +139,10 @@ class World(object):
         if chunk.initlevel < minlevel:
             if not load_on_miss:
                 return
-            self.load_chunk(chunk,minlevel)
+            self._load_chunk(chunk,minlevel)
         return chunk
 
-    def load_chunk(self, chunk, minlevel, wait_if_locked=True):
+    def _load_chunk(self, chunk, minlevel, wait_if_locked=True):
         if minlevel > len(self.worldgenerators):
             raise ValueError("the requested initlevel %i cannot be provided" %minlevel)
         if not chunk.lock.acquire(wait_if_locked):
@@ -99,7 +159,7 @@ class World(object):
         chunk.lock.release()
         return True
         
-    def async_load_chunk(self, position):
+    def _async_load_chunk(self, position):
         self.loading_queue.append(position)
         if self.load_thread_count < MAX_LOAD_THREADS:
             thread.start_new_thread(self._async_load_loop,())
@@ -118,17 +178,29 @@ class World(object):
                     position = self.loading_queue.pop(0)
                 except IndexError:
                     continue
-            self.get_chunk(position) # does exactly what we need so why don't use it
+            self._get_chunk(position) # does exactly what we need so why don't use it
         self.load_thread_count -= 1
         return
 
+    def get_entities(self):
+        """return list of entities in world"""
+        raise NotImplementedError()
+
     def save(self):
+        """not implemented yet"""
+        raise NotImplementedError()
         #M# doesn't work either
         for position,chunk in self.chunks.items():
             if chunk.altered:
                 pass #do something savy and unload if without observers
 
 class ServerChunk(Chunk):
+    """The (Server)Chunk class is only relevant when writing a world generator
+    
+    you can iterate over the positions in a chunk by:
+    >>> for position in chunk:
+    >>>     ...
+    """
     def __init__(self, world, position):
         self.world = world
         self.position = position # used for sending chunk to player
@@ -138,6 +210,14 @@ class ServerChunk(Chunk):
         self.initlevel = -1
         self.lock = thread.allocate_lock()
 
+    def __iter__(self):
+        """iterate over positions in chunk"""
+        p = self.position<<CHUNKSIZE
+        for dx in range(1<<CHUNKSIZE):
+            for dy in range(1<<CHUNKSIZE):
+                for dz in range(1<<CHUNKSIZE):
+                    yield p+(dx,dy,dz)
+
 class Entity(object):
     SPEED = 5
     def __init__(self, world):
@@ -145,7 +225,12 @@ class Entity(object):
         self.position = None
         self.rotation = None
 
+    def get_position(self):
+        """return position of entity"""
+        return self.position
+
     def set_position(self, position):
+        """set position of entity"""
         #M# remove from chunk of old position & tell everyone
         self.position = position
         #M# add to chunk of new position & tell everyone
@@ -167,29 +252,53 @@ class Entity(object):
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
 
+    def get_focused_pos(self,max_distance=8):
+        """ Line of sight search from current position. If a block is
+        intersected it is returned, along with the block previously in the line
+        of sight. If no block is found, return (None, None).
+
+        max_distance : How many blocks away to search for a hit.
+        """ 
+        return hit_test(lambda v:self.world.get_block(v)!=0,self.position,
+                        self.get_sight_vector())
+
 class Player(Entity):
+    """a player is an Entity with some additional methods"""
     RENDERDISTANCE = 16
-    spawnpoint = Vector([0,0,0])
-    def __init__(self,world):
+    def __init__(self,world,spawnpoint):
         Entity.__init__(self,world)
         self.outbox = []
-        self.set_position(self.spawnpoint)
+        self.set_position(Vector(spawnpoint))
         self.rotation = (0,0)
         self.sentcount = 0 # number of msgs sent to player since he last sent something
-        self.action_states = dict([(a,False) for a in ACTIONS])
+        self.action_states = {}
+        self.was_pressed_set = set()
         self.observed_chunks = set()
         self._lc = set()
         self._uc = set()
         thread.start_new_thread(self._update_chunks_loop,())
-        self.last_update = time.time()
 
     def set_position(self,position):
+        """set position of camera/player"""
         Entity.set_position(self,position)
         for msg in self.outbox:
             if msg.startswith("goto"):
                 self.outbox.remove(msg)
         self.outbox.append("goto %s %s %s" %self.position)
 
+    def is_pressed(self,key):
+        """return whether key is pressed """
+        return self.action_states.get(key,False)
+
+    def was_pressed(self,key):
+        """return whether key was pressed since last update"""
+        return key in self.was_pressed_set
+
+    def is_active(self):
+        """indicates whether client responds (fast enough)"""
+        return self.sentcount <= MSGS_PER_TICK
+
+    # it follows a long list of private methods that make sure a player acts like one
     def _update_chunks_loop(self):
         try:
             while True:
@@ -201,9 +310,9 @@ class Player(Entity):
                         time.sleep(0.01)
                         for dz in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
                             chunkpos = position+(dx,dy,dz)
-                            chunk = self.world.get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
+                            chunk = self.world._get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
                             if chunk == None:
-                                self.world.async_load_chunk(chunkpos)
+                                self.world._async_load_chunk(chunkpos)
                             elif chunk == "loading":
                                 pass
                             else:
@@ -212,6 +321,7 @@ class Player(Entity):
                 lc = chunks.difference(self.observed_chunks)
                 self._lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
         except Exception as e:
+            raise
             print("some error in _update_chunks_loop, most likely because the player disconnected, I should find a way to handle this nicely")
 
     def _update_chunks(self):
@@ -261,46 +371,115 @@ class Player(Entity):
     def _update(self):
         """internal update method, automatically called by game loop"""
         self._update_chunks()
+        self.was_pressed_set.clear()
 
-    def handle_input(self,msg):
-        """dummi method, replace in subclass, or monkeypatch Player class to allow input handling"""
-        pass
-        
-    def notice(self,position,block_id):
-        #position = block_interface.position
-        #if block_interface.get_visible():
+    def _handle_input(self,msg):
+        """do something so is_pressed and was_pressed work"""
+        if msg == "tick":
+            self.sentcount = 0
+        if msg.startswith("rot"):
+            x,y = map(float,msg.split(" ")[1:])
+            self.rotation = x,y
+        if msg in ("right click","left click"):
+            self.was_pressed_set.add(msg)
+        if msg.startswith("keys"):
+            action_states = int(msg.split(" ")[1])
+            for i,a in enumerate(ACTIONS):
+                new_state = bool(action_states & (1<<(i+1)))
+                if new_state and not self.is_pressed(a):
+                    self.was_pressed_set.add(a)
+                self.action_states[a] = new_state
+
+
+    def _notice(self,position,block_id):
+        """send blockinformation to client"""
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block_id))
-        #else:
-        #    self.outbox.append("del %s %s %s" %(position[0],position[1],
-        #                            position[2]))
 
 class Game(object):
+    """
+    Ein Game Objekt sorgt für die Kommunikation mit dem/den Klienten.
+    Bei Mehrbenutzerprogrammen muss jeder Benutzer sich mittels des
+    Programms voxelengine/client.py verbinden.
 
-    def __init__(self,worldgenerators,name="MCG-CRAFT",gamename="",playerclass=Player,socket_server=None):
-        self.playerclass = playerclass
+    Es ist empfehlenswert Game mit einem with Statement zu benutzen:
+    >>> with Game(*args,*kwargs) as g:
+    >>>     ...
+
+    args (Argumente):
+        spawnpoint : (world, (x,y,z)) where to place new players
+
+    kwargs (optionale Argumente):
+        wait       : wait for players to disconnect before leaving with
+        multiplayer: True  - open world to lan
+                     False - open client with direct connection
+        texturepath: specify path to custom texture.png
+        textureinfo: see voxelengine/multiplayer/texture.py
+        name       : name of the server
+        (socket_server : only use this if you know what you're doing)
+
+    (bei Benutzung ohne "with", am Ende unbedingt Game.quit() aufrufen)
+    """
+
+    def __init__(self,
+                 spawnpoint,
+                 wait=True,
+                 multiplayer=False,
+                 texturepath=None,
+                 textureinfo=None,
+                 name="MCG-CRAFT",
+                 socket_server=None, #only use this if you know what you're doing
+                 ):
+        self.spawnpoint = spawnpoint
+        self.wait = wait
+        self.texturepath = texturepath
+        self.textureinfo = textureinfo
+
         self.players = {}
-        self.world = World(worldgenerators,self._test_priority)
-        self.world[Vector([0,0,0])]
+        self.new_players = set()
+        #M# set priority function somewhere self.world = World(worldgenerators,self._test_priority)
+        #M# why?: self.world[Vector([0,0,0])]
         if socket_server == None:
-            self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
-                                                          on_disconnect=self._on_disconnect,name=name)
+            if multiplayer:
+                import socket_connection
+                self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
+                                                              on_disconnect=self._on_disconnect,name=name)
+            else:
+                def singleplayer_client_thread(socket_client):
+                    import client
+                    client.main(socket_client)
+                    self._on_disconnect(None)
+                import local_connection
+                connector = local_connection.Connector()
+                thread.start_new_thread(singleplayer_client_thread,(connector.client,))
+                self.socket_server = connector.server
+                self._on_connect(None)
         else:
             self.socket_server = socket_server
-            self._on_connect(None)
         print "ready"
 
     def __enter__(self):
+        """for use with "with" statement"""
         return self
 
     def __exit__(self,*args):
+        """for use with "with" statement"""
+        while self.wait and self.get_players():
+            self.update()
+            time.sleep(0.01) #wichtig damit das threading Zeug klappt
         self.quit()
     
     def quit(self):
         """quit the game"""
         self.socket_server.close()
 
+    def get_new_players(self):
+        """get set of players connected since last call to this function"""
+        ret = self.new_players
+        self.new_players = set()
+        return ret
+
     def get_players(self):
-        """get a list of all players in the game"""
+        """get a list of connected players"""
         return self.players.values()
 
     def _test_priority(self,position):
@@ -310,8 +489,10 @@ class Game(object):
         return 0
 
     def _on_connect(self,addr):
+        """place at worldspawn"""
         print(addr, "connected")
-        self.players[addr] = self.playerclass(self.world)
+        self.players[addr] = Player(*self.spawnpoint)
+        self.new_players.add(Player)
 
     def _on_disconnect(self,addr):
         print(addr, "disconnected")
@@ -319,10 +500,8 @@ class Game(object):
         del self.players[addr]
 
     def update(self):
-        #print "tick",time.time()
-        """communicate with clients"""
-        #send stuff
-        #print 1
+        """communicate with clients
+        call regularly to make sure internal updates are performed"""
         for addr,player in self.players.items():
             while player.outbox:
                 msg = player.outbox.pop(0)
@@ -330,27 +509,35 @@ class Game(object):
                 self.socket_server.send(msg,addr)
                 if player.sentcount >= MSGS_PER_TICK:
                     break
-        #receive stuff
-        #print 2
+        for player in self.get_players():
+            player._update() #call to player._update() has to be before call to player._handle_input()
         for msg, addr in self.socket_server.receive():
             if addr in self.players:
-                self.players[addr].handle_input(msg)
+                self.players[addr]._handle_input(msg)
             else:
                 print "Fehler"
-        #internal player update
-        #print 3
-        for player in self.get_players():
-            player._update()
+        time.sleep(0.01) #wichtig damit das threading Zeug klappt
 
-def simple_terrain_generator(chunk):
+def _simple_terrain_generator(chunk):
+    """a very simple terrain generator -> flat map"""
     if chunk.position[1] >= 0:
         return # nothing to do in the sky by now
     for position in chunk:
         if chunk.position[1]*(1<<CHUNKSIZE)+position[1] <= -2:
             chunk.set_block(position,BLOCK_ID_BY_NAME["GRASS"])
 
+def terrain_generator_from_heightfunc(heightfunc):
+    """does what it is called - can be used as decorator"""
+    def terrain_generator(chunk):
+        pass
+        #M#
+    return terrain_generator
+
 if __name__ == "__main__":
 
-    with Game([simple_terrain_generator]) as g:
-        while True:
-            g.update()
+    w = World([_simple_terrain_generator])
+    settings = {"spawnpoint" : (w,(0,0,0)),
+                "multiplayer": False,
+                }
+    with Game(**settings) as g:
+        w.set_block((1,2,3),BLOCK_ID_BY_NAME["GRASS"])

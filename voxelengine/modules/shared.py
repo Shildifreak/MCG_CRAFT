@@ -67,7 +67,7 @@ class Vector(tuple):
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position. If a block is
     intersected it is returned, along with the block previously in the line
-    of sight. If no block is found, return None, None.
+    of sight. If no block is found, return (None, None).
 
     Parameters
     ----------
@@ -192,10 +192,3 @@ class Chunk(object):
         """make sure data is saved ONLY in compressed form, thereby saving memory"""
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
-
-    def __iter__(self):
-        """iterate over positions in chunk, very pointless maybe remove""" #M#
-        for dx in range(1<<CHUNKSIZE):
-            for dy in range(1<<CHUNKSIZE):
-                for dz in range(1<<CHUNKSIZE):
-                    yield Vector([dx,dy,dz])

@@ -7,9 +7,9 @@ import warnings
 from collections import deque
 import itertools
 
-# Adding directory with pyglet to python path
+# Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-sys.path.append(os.path.dirname(PATH.rstrip(os.path.sep)))
+sys.path.append(os.path.join(PATH,"modules"))
 
 import pyglet
 from pyglet import image
@@ -66,7 +66,7 @@ TEXTURES = [None]
 for _, _, _, top, bottom, side in textures.textures:
     TEXTURES.append(tex_coords(top, bottom, side))
 
-TEXTURE_PATH = os.path.join(PATH,'texture.png')
+TEXTURE_PATH = os.path.join(PATH,"modules","texture.png")
 
 # TODO: only display blocks which need to be displayed -> fast algorithm needed
 
@@ -221,7 +221,7 @@ class Model(object):
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
 
-        for i,relpos in enumerate(c):
+        for i,relpos in enumerate(iterchunk()):
             if c[i] != 0: #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
                 self.update_visibility((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
@@ -576,7 +576,7 @@ def show_on_window(client):
     except Exception as e:
         raise
         if e.message != "Disconnect" and e.message != "Server went down.":
-            raise
+            print e.message#raise
         else:
             print e.message
     finally:

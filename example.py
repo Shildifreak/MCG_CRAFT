@@ -2,9 +2,7 @@
 
 import voxelengine
 
-help(voxelengine)
-
-w = voxelengine.Blockworld()
+w = voxelengine.World()
 
 with voxelengine.Game( spawnpoint=(w,(0,0,0)) ) as g:
-    """hier könnte dein Programm stehen"""
+    w.set_block((-1,-2,-3),1)

@@ -1,113 +1,103 @@
-from voxelengine.multiplayer.server import *
+from voxelengine import *
 from noise import f4 as terrainfunction
 
 #TODO:
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
+# make sliding depend on block?
 
-class MC_PLAYER(Player):
-    SPEED = 5
-    AIRRESISTANCE = 0.9
-    RENDERDISTANCE = 16
-    JUMPSPEED = 10
-    GRAVITY = 30
-    SLIDING = 0.001
-    HEIGHT = 1.8
-    EYE_LEVEL = 1.6
-    WIDTH = 0.4
+GRAVITY = 30
+AIRRESISTANCE = 0.9
+SLIDING = 0.001
 
-    HITBOX = [(dx,dy,dz) for dx in (WIDTH,-WIDTH) for dy in (HEIGHT-EYE_LEVEL,-EYE_LEVEL) for dz in (WIDTH,-WIDTH)]
+def init_player(player):
+    player.velocity = Vector([0,0,0])
+    player.flying = False
+    player.last_update = time.time()
+
+    player.SPEED = 5
+    player.JUMPSPEED = 10
     
-    velocity = Vector([0,0,0])
-    flying = False
-    spawnpoint = Vector([0,int(terrainfunction(0,0)+2),0])
+    height = 1.8
+    eye_level = 1.6
+    width = 0.4
+    player.HITBOX = [(dx,dy,dz) for dx in (width,-width)
+                                for dy in (height-eye_level,-eye_level)
+                                for dz in (width,-width)]
 
-    def handle_input(self,cmd):
-        if cmd == "tick":
-            self.sentcount = 0
-        if cmd == "right click":
-            v = hit_test(lambda v:self.world[v]!=0,self.position,
-                         self.get_sight_vector())[1]
-            if v:
-                self.world[v] = BLOCK_ID_BY_NAME["GRASS"]
-                if v in self.collide(self.position):
-                    self.world[v] = BLOCK_ID_BY_NAME["AIR"]
-        if cmd == "left click":
-            v = hit_test(lambda v:self.world[v]!=0,self.position,
-                         self.get_sight_vector())[0]
-            if v:
-                self.world[v] = BLOCK_ID_BY_NAME["AIR"]
-        if cmd.startswith("rot"):
-            x,y = map(float,cmd.split(" ")[1:])
-            self.rotation = x,y
-        if cmd.startswith("keys"):
-            action_states = int(cmd.split(" ")[1])
-            for i,a in enumerate(ACTIONS):
-                self.action_states[a] = bool(action_states & (1<<(i+1)))
+def onground(player):
+    for relpos in player.HITBOX:
+        block_pos = (player.position+relpos+(0,-0.2,0)).normalize()
+        if player.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
+            return True
+    return False
 
-    def onground(self):
-        for relpos in self.HITBOX:
-            block_pos = (self.position+relpos+(0,-0.2,0)).normalize()
-            if self.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
-                return True
-        return False
+def collide(player,position):
+    blocks = set()
+    for relpos in player.HITBOX:
+        block_pos = (position+relpos).normalize()
+        if player.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
+            blocks.add(block_pos)
+    return blocks
 
-    def collide(self,position):
-        blocks = set()
-        for relpos in self.HITBOX:
-            block_pos = (position+relpos).normalize()
-            if self.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
-                blocks.add(block_pos)
-        return blocks
+def collide_difference(player,new_position,previous_position):
+    """return blocks player collides with excluding the ones he already collides with"""
+    return collide(player,new_position).difference(collide(player,previous_position))
 
-    def collide_difference(self,new_position,previous_position):
-        """return blocks player collides with excluding the ones he already collides with"""
-        return self.collide(new_position).difference(self.collide(previous_position))
+def update_player(player):
+    if not player.is_active(): # freeze player if client doesnt respond
+        return
+    if player.was_pressed("right click"):
+        v = player.get_focused_pos()[1]
+        if v:
+            player.world[v] = BLOCK_ID_BY_NAME["GRASS"]
+            if v in collide(player,player.position):
+                player.world[v] = BLOCK_ID_BY_NAME["AIR"]
+    if player.was_pressed("left click"):
+        v = player.get_focused_pos()[0]
+        if v:
+            player.world[v] = BLOCK_ID_BY_NAME["AIR"]
 
-    def update(self):
-        if self.flying:
-            if self.action_states["for"]:
-                print self.position
-                self.set_position(self.position+self.get_sight_vector()*0.2)
-            return
-        #M# make sliding depend on block?
-        if self.sentcount <= MSGS_PER_TICK: # freeze player if client doesnt respond
-            dt = time.time()-self.last_update
-            # slow time down for player if server is pretty slow
-            dt = min(dt,1)
-            self.last_update = time.time()
-            nv = Vector([0,0,0])
-            sx,sy,sz = self.get_sight_vector()*self.SPEED
-            if self.action_states["for"]:
-                nv += ( sx,0, sz)
-            if self.action_states["back"]:
-                nv += (-sx,0,-sz)
-            if self.action_states["right"]:
-                nv += (-sz,0, sx)
-            if self.action_states["left"]:
-                nv += ( sz,0,-sx)
-            if self.onground():
-                s = 0.5*self.SLIDING**dt
-                self.velocity *= (1,0,1) #M# stop falling
-                if self.action_states["jump"]:
-                    self.velocity += (0,self.JUMPSPEED,0)
+    if player.flying:
+        if player.is_pressed("for"):
+            player.set_position(player.position+player.get_sight_vector()*0.2)
+        return
+    
+    dt = time.time()-player.last_update
+    dt = min(dt,1) # min slows time down for players if server is pretty slow
+    player.last_update = time.time()
+    nv = Vector([0,0,0])
+    sx,sy,sz = player.get_sight_vector()*player.SPEED
+    if player.is_pressed("for"):
+        nv += ( sx,0, sz)
+    if player.is_pressed("back"):
+        nv += (-sx,0,-sz)
+    if player.is_pressed("right"):
+        nv += (-sz,0, sx)
+    if player.is_pressed("left"):
+        nv += ( sz,0,-sx)
+    if onground(player):
+        s = 0.5*SLIDING**dt
+        player.velocity *= (1,0,1) #M# stop falling
+        if player.is_pressed("jump"):
+            player.velocity += (0,player.JUMPSPEED,0)
+    else:
+        s = 0.5*AIRRESISTANCE**dt
+        player.velocity -= Vector([0,1,0])*GRAVITY*dt
+    sv = s*Vector([1,0,1])+(0,1,0) #no slowing down in y
+    player.velocity = sv*player.velocity + ((1,1,1)-sv)*nv
+    
+    steps = int(math.ceil(max(map(abs,player.velocity*dt))*10)) # 10 steps per block
+    pos = player.position
+    for step in range(steps):
+        for i in range(DIMENSION):
+            mask          = Vector([int(i==j) for j in range(DIMENSION)])
+            inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
+            new = pos + player.velocity*dt*mask*(1.0/steps)
+            if collide_difference(player,new,pos):
+                player.velocity *= inverted_mask
             else:
-                s = 0.5*self.AIRRESISTANCE**dt
-                self.velocity -= Vector([0,1,0])*self.GRAVITY*dt
-            sv = s*Vector([1,0,1])+(0,1,0) #no slowing down in y
-            self.velocity = sv*self.velocity + ((1,1,1)-sv)*nv
-            
-            steps = int(math.ceil(max(map(abs,self.velocity*dt))*10)) # 10 steps per block
-            pos = self.position
-            for step in range(steps):
-                for i in range(DIMENSION):
-                    mask          = Vector([int(i==j) for j in range(DIMENSION)])
-                    inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
-                    new = pos + self.velocity*dt*mask*(1.0/steps)
-                    if self.collide_difference(new,pos):
-                        self.velocity *= inverted_mask
-                    else:
-                        pos = new
-            self.set_position(pos)
+                pos = new
+    player.set_position(pos)
 
 def terrain_generator(chunk):
     x,y,z = chunk.position<<CHUNKSIZE
@@ -123,31 +113,23 @@ def terrain_generator(chunk):
                     n = 15
                 chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
 
-def main(socket_server=None):
-    with Game([terrain_generator],playerclass=MC_PLAYER,socket_server=socket_server) as g:
-        while True:
-            g.update()
-            for player in g.get_players():
-                player.update()
-            if not g.get_players():
-                time.sleep(0.5)
-            time.sleep(0.01) #wichtig damit das threading Zeug klappt
-            
-def singleplayer_client_thread(socket_client):
-    import voxelengine.multiplayer.client as client
-    client.main(socket_client)
-    thread.interrupt_main()
-
 if __name__ == "__main__":
-    if select(["open server","play alone"])[0]:
-        #Singleplayer
-        import voxelengine.multiplayer.local_connection as local_connection
-        connector = local_connection.Connector()
-        try:
-            thread.start_new_thread(singleplayer_client_thread,(connector.client,))
-            main(connector.server)
-        except KeyboardInterrupt:
-            print "window closed"
-    else:
-        #Multiplayer
-        main()
+    multiplayer = not select(["open server","play alone"])[0]
+    spawnpoint = (0,int(terrainfunction(0,0)+2),0)
+
+    w = World([terrain_generator])
+
+    settings = {"spawnpoint" : (w,spawnpoint),
+                "multiplayer": multiplayer,
+                }
+
+    with Game(**settings) as g:
+        while not g.get_players():
+            g.update()
+            time.sleep(0.5) #wait for players to connect
+        while g.get_players():
+            g.update()
+            for player in g.get_new_players():
+                init_player(player)
+            for player in g.get_players():
+                update_player(player)
