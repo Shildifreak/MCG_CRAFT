@@ -25,6 +25,7 @@ from shared import *
 # make it possible to pass texturepng and texturelist to client
 
 TICKS_PER_SEC = 60
+focus_distance = DEFAULT_FOCUS_DISTANCE
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -310,6 +311,7 @@ class Window(pyglet.window.Window):
         return Vector((dx, dy, dz))
 
     def update(self, dt):
+        global focus_distance
         if self.updating:
             return
         self.updating = True
@@ -345,6 +347,8 @@ class Window(pyglet.window.Window):
             elif test("goto",4):
                 position = Vector(map(float,c[1:4]))
                 self.position = position
+            elif test("focusdist",2):
+                focus_distance = float(c[1])
         self.client.send("tick")
         self.model.process_queue()
         self.updating = False
@@ -510,7 +514,7 @@ class Window(pyglet.window.Window):
 
         """
         vector = self.get_sight_vector()
-        block = hit_test(self.model.get_block, self.position, vector)[0]
+        block = hit_test(self.model.get_block, self.position, vector, focus_distance)[0]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)

@@ -51,6 +51,8 @@ import sys,os,inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"modules"))
 
+import zipfile
+
 from shared import *
 
 DOASYNCLOAD = True
@@ -86,7 +88,7 @@ class _Chunkdict(dict):
         return chunk
 
 class World(object):
-    def __init__(self, worldgenerators = []):
+    def __init__(self, worldgenerators = [], filename = None):
         """create new World instance"""
         self.worldgenerators = worldgenerators
         self.loading_queue = []
@@ -94,6 +96,8 @@ class World(object):
         self.chunks = _Chunkdict(self)
         self.entities = set()
         self.players = set()
+        if filename != None:
+            self._load(filename)
 
     def __getitem__(self, position):
         return self.get_block(position)
@@ -101,8 +105,18 @@ class World(object):
     def __setitem__(self, position, block_id):
         self.set_block(position, block_id)
 
+    def get_block_name(self,position):
+        """get name of block at position
+
+        in special cases you might consider using
+        BLOCK_ID_BY_NAME[name] or BLOCK_NAME_BY_ID[id] for conversion"""
+        block_id = self.get_block(position)
+        if not (0 <= block_id < len(BLOCK_NAME_BY_ID)):
+            raise Exception("Can't find name for block id %i" %block_id)
+        return BLOCK_NAME_BY_ID[self.get_block(position)]
+
     def get_block(self, position, minlevel = None, load_on_miss = True):
-        """ get ID of block at position
+        """get ID of block at position
 
         args (Argumente):
             position    : (x,y,z)
@@ -117,15 +131,17 @@ class World(object):
             return None
         return chunk.get_block(position)
 
-    def set_block(self, position, block_id, minlevel = None, load_on_miss = True):
-        """set ID of block at position"""
+    def set_block(self, position, block, minlevel = None, load_on_miss = True):
+        """set ID of block at position (name is accepted)"""
         position = Vector(position)
+        if isinstance(block,basestring):
+            block = BLOCK_ID_BY_NAME[block]
         chunk = self._get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
             return False
-        chunk.set_block(position,block_id)
+        chunk.set_block(position,block)
         for observer in chunk.observers:
-            observer._notice(position,block_id)
+            observer._notice(position,block)
         return True
 
     def _get_chunk(self, position, minlevel = None, load_on_miss = True):
@@ -149,14 +165,12 @@ class World(object):
         if not chunk.lock.acquire(wait_if_locked):
             return False
         if chunk.initlevel == -1:
-            if False: #M# try to load from file
-                pass
-            else: #fill with airblocks
-                chunk.init_data()
+            chunk.init_data()
             chunk.initlevel = 0
         while chunk.initlevel < minlevel:
             self.worldgenerators[chunk.initlevel](chunk)
             chunk.initlevel+=1
+        chunk.altered = False #M# make this True if generated chunks should be saved (because generation uses random...)
         chunk.lock.release()
         return True
         
@@ -189,13 +203,33 @@ class World(object):
         """return set of entities in world"""
         return self.entities
 
-    def save(self):
+    def _load(self,filename):
+        if os.path.exists(filename):
+            with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
+                for name in zf.namelist():
+                    if name.startswith("c"):
+                        _,x,y,z = name.split("_")
+                        position = Vector(map(int,(x,y,z)))
+                        initlevel,compressed_data = zf.read(name).split(" ",1)
+                        initlevel = int(initlevel)
+
+                        c = ServerChunk(self,position)
+                        c.initlevel = initlevel
+                        c.compressed_data = compressed_data
+                        self.chunks[position] = c
+        else:
+            print "File %s not found." %filename
+
+    def save(self,filename):
         """not implemented yet"""
-        raise NotImplementedError()
-        #M# doesn't work either
-        for position,chunk in self.chunks.items():
-            if chunk.altered:
-                pass #do something savy and unload if without observers
+        with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
+            for position,chunk in self.chunks.items():
+                if chunk.altered:
+                    x,y,z = map(str,chunk.position)
+                    name = "_".join(("c",x,y,z))
+                    initlevel = str(chunk.initlevel)
+                    data = " ".join((initlevel,chunk.compressed_data))
+                    zf.writestr(name,data)
 
 class ServerChunk(Chunk):
     """The (Server)Chunk class is only relevant when writing a world generator
@@ -209,7 +243,6 @@ class ServerChunk(Chunk):
         self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
         self.entities = set() #M# not up to date yet
-        self.altered = False #M# not tracked yet
         self.initlevel = -1
         self.lock = thread.allocate_lock()
 
@@ -260,15 +293,6 @@ class Entity(object):
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
 
-    def get_focused_pos(self,max_distance=8):
-        """ Line of sight search from current position. If a block is
-        intersected it is returned, along with the block previously in the line
-        of sight. If no block is found, return (None, None).
-
-        max_distance : How many blocks away to search for a hit.
-        """ 
-        return hit_test(lambda v:self.world.get_block(v)!=0,self.position,
-                        self.get_sight_vector())
 
 class Player(Entity):
     """a player is an Entity with some additional methods"""
@@ -277,6 +301,7 @@ class Player(Entity):
         Entity.__init__(self)
         self.outbox = []
         self.rotation = (0,0)
+        self.focus_distance = 8
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = {}
         self.was_pressed_set = set()
@@ -311,6 +336,23 @@ class Player(Entity):
     def is_active(self):
         """indicates whether client responds (fast enough)"""
         return self.sentcount <= MSGS_PER_TICK
+
+    def get_focused_pos(self,max_distance=None):
+        """Line of sight search from current position. If a block is
+        intersected it is returned, along with the block previously in the line
+        of sight. If no block is found, return (None, None).
+
+        max_distance : How many blocks away to search for a hit.
+        """ 
+        if max_distance == None:
+            max_distance = self.focus_distance
+        return hit_test(lambda v:self.world.get_block(v)!=0,self.position,
+                        self.get_sight_vector(),max_distance)
+
+    def set_focus_distance(self,distance):
+        """Set maximum distance for focusing block"""
+        self.outbox.append("focusdist %g" %distance)
+        self.focus_distance = distance
 
     # it follows a long list of private methods that make sure a player acts like one
     def _update_chunks_loop(self):
@@ -462,9 +504,9 @@ class Game(object):
 
     def __exit__(self,*args):
         """for use with "with" statement"""
-        while self.wait and self.get_players():
-            self.update()
-            time.sleep(0.01) #wichtig damit das threading Zeug klappt
+        if args == (None,None,None): #kein Fehler aufgetreten
+            while self.wait and self.get_players():
+                self.update()
         self.quit()
     
     def quit(self):
@@ -484,8 +526,9 @@ class Game(object):
     def _on_connect(self,addr):
         """place at worldspawn"""
         print(addr, "connected")
-        self.players[addr] = Player(*self.spawnpoint)
-        self.new_players.add(Player)
+        p = Player(*self.spawnpoint)
+        self.players[addr] = p
+        self.new_players.add(p)
 
     def _on_disconnect(self,addr):
         print(addr, "disconnected")

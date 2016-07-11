@@ -2,6 +2,7 @@ entities -> in Chunks eintragen
          -> anzeigen
 compress benutzen wenn ein Chunk nicht mehr aktiv gebraucht wird
 laden/entladen mit unterschiedlicher Entfernung
+rausfinden warum ab einer gewissen Entfernung das automatische Laden versagt
 id vs name mess aufräumen
 transparency
 test if multi init level chunkgeneration works

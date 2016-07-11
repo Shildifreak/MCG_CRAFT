@@ -9,13 +9,16 @@ import zlib
 CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
 DIMENSION = 3
 TEXTURE_SIDE_LENGTH = 16
+DEFAULT_FOCUS_DISTANCE = 8
 
 import textures
 BLOCK_ID_BY_NAME = {"AIR":0}
+BLOCK_NAME_BY_ID = ["AIR"]
 TRANSPARENCY = [True] #this first value is for air
 SOLIDITY = [False] #this as well #M# maybe make air a normal block in the textures.py
 for i, (name, transparency, solidity, top, bottom, side) in enumerate(textures.textures):
     BLOCK_ID_BY_NAME[name] = i+1
+    BLOCK_NAME_BY_ID.append(name)
     TRANSPARENCY.append(transparency)
     SOLIDITY.append(solidity)
 
@@ -77,7 +80,7 @@ def hit_test(block_at_func, position, direction, max_distance=8):
         The (x, y, z) position to check visibility from.
     direction : tuple of len 3
         The line of sight vector.
-    max_distance : int
+    max_distance : float
         How many blocks away to search for a hit.
 
     """
@@ -85,7 +88,7 @@ def hit_test(block_at_func, position, direction, max_distance=8):
     position = Vector(position)
     direction = Vector(direction)
     previous = position.normalize()
-    for _ in xrange(max_distance * m):
+    for _ in xrange(int(max_distance * m)):
         key = position.normalize()
         if key != previous and block_at_func(key):
             return key, previous
@@ -120,7 +123,8 @@ class Chunk(object):
     """
     blockformat = "H"
     byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime
-    
+    altered = False #M# not tracked yet
+
     def init_data(self):
         """fill chunk with zeros"""
         c = (1<<CHUNKSIZE)**3*self.byte_per_block
@@ -137,6 +141,7 @@ class Chunk(object):
     def compressed_data(self,data):
         self._compressed_data = data
         self._decompressed_data = None    
+        self.altered = True
 
     @property
     def decompressed_data(self):
@@ -146,6 +151,7 @@ class Chunk(object):
     def decompressed_data(self,data):
         self._decompressed_data = bytearray(data)
         self._compressed_data = None
+        self.altered = True
 
     def _load_decompressed(self):
         if not self._decompressed_data:
@@ -171,6 +177,7 @@ class Chunk(object):
         else:
             struct.pack_into(self.blockformat,self._decompressed_data,key*self.byte_per_block,value)
         self._compressed_data = None
+        self.altered = True
 
     def __getitem__(self,index):
         self._load_decompressed()

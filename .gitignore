@@ -4,3 +4,4 @@ saves/
 voxelengine_old/
 *.pyc
 .fuse_hidden*
+*.zip

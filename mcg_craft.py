@@ -11,7 +11,7 @@ SLIDING = 0.001
 
 def init_player(player):
     player.velocity = Vector([0,0,0])
-    player.flying = True
+    player.flying = False
     player.last_update = time.time()
 
     player.SPEED = 5
