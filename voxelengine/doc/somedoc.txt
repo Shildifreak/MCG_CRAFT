@@ -1,0 +1,218 @@
+Help on package voxelengine:
+
+NAME
+    voxelengine - a pyglet based voxel engine module for Python
+
+DESCRIPTION
+    Dieses Modul soll eine einfache Möglichkeit bieten um 3D/Würfel basierte
+    Programme zu schreiben.
+    
+    This module is designed to provide a simple interface for 3D voxel based
+    applications.
+    
+    Beispiel/Example:
+    >>> import voxelengine
+    >>> w = voxelengine.World()
+    >>> with voxelengine.Game( spawnpoint=(w,(0,0,0)) ) as g:
+    >>>     w.set_block((1,2,3),"GRASS")
+
+PACKAGE CONTENTS
+    client
+
+CLASSES
+    Entity
+        Player
+    Game
+    World
+    Chunk
+        ServerChunk
+    
+    class Entity
+     |  Methods defined here:
+     |  
+     |  get_position(self)
+     |      return position of entity
+     |  
+     |  get_sight_vector(self)
+     |      Returns the current line of sight vector indicating the direction
+     |      the entity is looking.
+     |  
+     |  set_position(self, position, world=None)
+     |      set position of entity
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  SPEED = 5
+    
+    class Game(__builtin__.object)
+     |  Ein Game Objekt sorgt für die Kommunikation mit dem/den Klienten.
+     |  Bei Mehrbenutzerprogrammen muss jeder Benutzer sich mittels des
+     |  Programms voxelengine/client.py verbinden.
+     |  
+     |  Es ist empfehlenswert Game mit einem with Statement zu benutzen:
+     |  >>> with Game(*args,*kwargs) as g:
+     |  >>>     ...
+     |  
+     |  args (Argumente):
+     |      spawnpoint : (world, (x,y,z)) where to place new players
+     |  
+     |  kwargs (optionale Argumente):
+     |      wait       : wait for players to disconnect before leaving with
+     |      multiplayer: True  - open world to lan
+     |                   False - open client with direct connection
+     |      texturepath: specify path to custom texture.png
+     |      textureinfo: see voxelengine/multiplayer/texture.py
+     |      name       : name of the server
+     |      (socket_server : only use this if you know what you're doing)
+     |  
+     |  (bei Benutzung ohne "with", am Ende unbedingt Game.quit() aufrufen)
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, spawnpoint, wait=True, multiplayer=False, texturepath=None, textureinfo=None, name='MCG-CRAFT', socket_server=None)
+     |  
+     |  get_new_players(self)
+     |      get set of players connected since last call to this function
+     |  
+     |  get_players(self)
+     |      get a list of connected players
+     |  
+     |  quit(self)
+     |      quit the game
+     |  
+     |  update(self)
+     |      communicate with clients
+     |      call regularly to make sure internal updates are performed
+    
+    class Player(Entity)
+     |  a player is an Entity with some additional methods
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, world, spawnpoint)
+     |  
+     |  get_focused_pos(self, max_distance=None)
+     |      Line of sight search from current position. If a block is
+     |      intersected it is returned, along with the block previously in the line
+     |      of sight. If no block is found, return (None, None).
+     |      
+     |      max_distance : How many blocks away to search for a hit.
+     |  
+     |  is_active(self)
+     |      indicates whether client responds (fast enough)
+     |  
+     |  is_pressed(self, key)
+     |      return whether key is pressed
+     |  
+     |  set_focus_distance(self, distance)
+     |      Set maximum distance for focusing block
+     |  
+     |  set_position(self, position, world=None)
+     |      set position of camera/player
+     |  
+     |  was_pressed(self, key)
+     |      return whether key was pressed since last update
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  RENDERDISTANCE = 16
+    
+    class ServerChunk
+     |  The (Server)Chunk class is only relevant when writing a world generator
+     |  
+     |  you can iterate over the positions in a chunk by:
+     |  >>> for position in chunk:
+     |  >>>     ...
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, world, position)
+     |  
+     |  __iter__(self)
+     |      iterate over positions in chunk
+     |  
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from shared.Chunk:
+     |  
+     |  __getitem__(self, index)
+     |  
+     |  __setitem__(self, key, value)
+     |      allow for setting slices so e.g. filling chunk by hightmap becomes easier
+     |  
+     |  compress(self)
+     |      make sure data is saved ONLY in compressed form, thereby saving memory
+     |  
+     |  get_block(self, position)
+     |  
+     |  init_data(self)
+     |      fill chunk with zeros
+     |  
+     |  pos_to_i(self, position)
+     |  
+     |  set_block(self, position, value)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors inherited from shared.Chunk:
+     |  
+     |  compressed_data
+     |      Compressed version of the blocks in the chunk. Use this for load/store and sending to client.
+     |  
+     |  decompressed_data
+    
+    class World(__builtin__.object)
+     |  Methods defined here:
+     |  
+     |  __init__(self, worldgenerators=[], filename=None)
+     |      create new World instance
+     |  
+     |  __getitem__(self, position)
+     |  
+     |  __setitem__(self, position, block_id)
+     |  
+     |  get_block(self, position, minlevel=None, load_on_miss=True)
+     |      get ID of block at position
+     |      
+     |      args (Argumente):
+     |          position    : (x,y,z)
+     |      kwargs (optionale Argumente):
+     |          minlevel    : required initlevel of chunk (defaults to max)
+     |          load_on_miss: whether to load chunk if necessary
+     |                        if False requests for unloaded chunks return None
+     |  
+     |  get_block_name(self, position)
+     |      get name of block at position
+     |      
+     |      in special cases you might consider using
+     |      BLOCK_ID_BY_NAME[name] or BLOCK_NAME_BY_ID[id] for conversion
+     |  
+     |  get_entities(self)
+     |      return set of entities in world
+     |  
+     |  save(self, filename)
+     |      not implemented yet
+     |  
+     |  set_block(self, position, block, minlevel=None, load_on_miss=True)
+     |      set ID of block at position (name is accepted)
+     |  
+
+FUNCTIONS
+    terrain_generator_from_heightfunc(heightfunc)
+        does what it is called - can be used as decorator
+
+DATA
+    ACTIONS = ['inv1', 'inv2', 'inv3', 'inv4', 'inv5', 'inv6', 'inv7', 'in...
+    BLOCK_ID_BY_NAME = {'AIR': 0, 'BRAUN': 33, 'BRICK': 3, 'BRUCHSTEIN': 1...
+    BLOCK_NAME_BY_ID = ['AIR', 'GRASS', 'SAND', 'BRICK', 'STONE', 'DIRT', ...
+    CHUNKSIZE = 3
+    DEFAULT_FOCUS_DISTANCE = 8
+    DIMENSION = 3
+    DOASYNCLOAD = True
+    MAX_LOAD_THREADS = 1
+    MSGS_PER_TICK = 10
+    PATH = '/media/joram/data/joram/Programmierung/ProgrammierAG/MCG_CRAFT...
+    SOLIDITY = [False, True, True, True, True, True, True, True, True, Tru...
+    TEXTURE_SIDE_LENGTH = 16
+    TRANSPARENCY = [True, False, False, False, False, False, False, False,...
+    __version__ = '0.1.0'

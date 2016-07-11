@@ -6,6 +6,8 @@ import inspect
 import warnings
 from collections import deque
 import itertools
+import ast
+from __init__ import Vector, Chunk
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -63,11 +65,14 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
-TEXTURES = [None]
-for _, _, _, top, bottom, side in textures.textures:
-    TEXTURES.append(tex_coords(top, bottom, side))
+class ClientTextureInfo(object):
+    def load(self,string)
+        TEXTURES = [None] #this first value is for air
+        TRANSPARENCY = [True]
+        for _, _, _, top, bottom, side in textures.textures:
+            TEXTURES.append(tex_coords(top, bottom, side))
+            TRANSPARENCY.append(transparency)
 
-TEXTURE_PATH = os.path.join(PATH,"modules","texture.png")
 
 # TODO: only display blocks which need to be displayed -> fast algorithm needed
 
@@ -126,7 +131,7 @@ class Model(object):
         self.batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture())
+        self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture()) #possible to use image.load(file=filedescriptor) if necessary
 
         self.blocks = {}
         self.chunks = Chunkdict()
@@ -571,6 +576,8 @@ def setup():
 def show_on_window(client):
     window = None
     try:
+        #M# receive texturedata from game
+        raise NotImplementedError()
         window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.

@@ -6,3 +6,21 @@ rausfinden warum ab einer gewissen Entfernung das automatische Laden versagt
 id vs name mess aufräumen
 transparency
 test if multi init level chunkgeneration works
+
+
+# TODO:
+# players attribut für welt -> für ladepriorität benutzen
+# change order of xyz to yxz in Chunkformat
+# deloading with bigger radius than loading
+# (maybe add optional visibility filter to server)
+
+# ABOUT:
+# initlevels: (managing multi-chunk-structures)
+# inf (finished): finished, Entities may be here, can be send to client, ...
+#   4 (structs) : postmulti-single-chunk-structures
+#   3 (structs) : multi-chunk-structures
+#   2 (structs) : premulti-single-chunk-structures
+#   1 (terrain) : terrain build
+#   0 (plain)   : nothing generated yet
+#  -1 (vacuum)  : not even air
+# idea: every chunk may require chunks around him to be at a level of at least (his level - 1)

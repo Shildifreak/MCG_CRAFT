@@ -1,3 +1,10 @@
+# A voxelengine setup file contains all information that is game specific but important to the client
+
+CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
+TEXTURE_SIDE_LENGTH = 16
+DEFAULT_FOCUS_DISTANCE = 8
+TEXURE_PATH = "mc_texture.png"
+
 #["Name",              transparenz, solid, ( oben), (unten), (seiten)]
 textures = [
 ["GRASS",                    False,  True, ( 0, 2), ( 0, 0), ( 0, 1)], #block ==  1

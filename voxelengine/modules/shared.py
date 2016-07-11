@@ -1,71 +1,19 @@
+# The shared.py file contains information that is relevant to client and server but does not depend on the game
+# Some Funktions have been moved to __init__ but i try to get them back
+
 import sys
 if sys.version >= "3":
     raw_input = input
 
-import struct
 import zlib
-
-# maybe in own config.py?
-CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
-DIMENSION = 3
-TEXTURE_SIDE_LENGTH = 16
-DEFAULT_FOCUS_DISTANCE = 8
-
-import textures
-BLOCK_ID_BY_NAME = {"AIR":0}
-BLOCK_NAME_BY_ID = ["AIR"]
-TRANSPARENCY = [True] #this first value is for air
-SOLIDITY = [False] #this as well #M# maybe make air a normal block in the textures.py
-for i, (name, transparency, solidity, top, bottom, side) in enumerate(textures.textures):
-    BLOCK_ID_BY_NAME[name] = i+1
-    BLOCK_NAME_BY_ID.append(name)
-    TRANSPARENCY.append(transparency)
-    SOLIDITY.append(solidity)
+import struct
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
            "inv9","inv0",
            "for" ,"back","left","right","jump","fly","inv","shift",]
+DIMENSION = 3 # don't change this, it won't work
 
-class Vector(tuple):
-    def _assert_same_length(self,other):
-        if len(self) != len(other):
-            raise ValueError("incompatible length adding vectors")
-        
-    def __add__(self,other):
-        self._assert_same_length(other)
-        return Vector(map(lambda (s,o):s+o,zip(self,other)))
-
-    def __sub__(self,other):
-        self._assert_same_length(other)
-        return Vector(map(lambda (s,o):s-o,zip(self,other)))
-
-    def __mul__(self,other):
-        if isinstance(other,(float,int)):
-            return Vector(map(lambda x: x*other,self))
-        else:
-            return Vector(map(lambda (s,o):s*o,zip(self,other)))
-
-    def __rshift__(self,other):
-        return Vector([i>>other for i in self])
-
-    def __lshift__(self,other):
-        return Vector([i<<other for i in self])
-
-    def __mod__(self,other):
-        return Vector([i%other for i in self])
-
-    def __radd__(self,other):
-        return self+other
-
-    def __rsub__(self,other):
-        return Vector(other)-self
-
-    def __rmul__(self,other):
-        return self*other
-
-    def normalize(self):
-        return Vector(map(int,map(round,self)))
 
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position. If a block is
@@ -112,6 +60,46 @@ def select(options):
             print "Please enter one of the above NUMBERS to select:",
         except IndexError:
             print "Please enter ONE OF THE ABOVE numbers to select:",
+
+class Vector(tuple):
+    def _assert_same_length(self,other):
+        if len(self) != len(other):
+            raise ValueError("incompatible length adding vectors")
+        
+    def __add__(self,other):
+        self._assert_same_length(other)
+        return Vector(map(lambda (s,o):s+o,zip(self,other)))
+
+    def __sub__(self,other):
+        self._assert_same_length(other)
+        return Vector(map(lambda (s,o):s-o,zip(self,other)))
+
+    def __mul__(self,other):
+        if isinstance(other,(float,int)):
+            return Vector(map(lambda x: x*other,self))
+        else:
+            return Vector(map(lambda (s,o):s*o,zip(self,other)))
+
+    def __rshift__(self,other):
+        return Vector([i>>other for i in self])
+
+    def __lshift__(self,other):
+        return Vector([i<<other for i in self])
+
+    def __mod__(self,other):
+        return Vector([i%other for i in self])
+
+    def __radd__(self,other):
+        return self+other
+
+    def __rsub__(self,other):
+        return Vector(other)-self
+
+    def __rmul__(self,other):
+        return self*other
+
+    def normalize(self):
+        return Vector(map(int,map(round,self)))
 
 class Chunk(object):
     """
@@ -199,3 +187,27 @@ class Chunk(object):
         """make sure data is saved ONLY in compressed form, thereby saving memory"""
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
+
+
+class TextureInfo(object):
+    def id(self,name_or_id):
+        if isinstance(name_or_id,int):
+            return name_or_id
+        return self.block_id_by_name[name_or_id]
+
+    def name(self,name_or_id):
+        if isinstance(name_or_id,basestring):
+            return name_or_id
+        return self.block_name_by_id[name_or_id]
+
+    def solid(self,name_or_id):
+        return self.solidity[self.id(name_or_id)]
+
+    def load(self,filename,texture_info):
+        self.block_id_by_name = {"AIR":0}
+        self.block_name_by_id = ["AIR"]
+        self.solidity = [False]
+        for i, (name, transparency, solidity, top, bottom, side) in enumerate(texture_info):
+            self.block_id_by_name[name] = i+1
+            self.block_name_by_id.append(name)
+            self.solidity.append(solidity)

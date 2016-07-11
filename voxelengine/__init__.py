@@ -22,7 +22,7 @@
 # 3. This notice may not be removed or altered from any source distribution.
 
 
-"""
+u"""
 a pyglet based voxel engine module for Python
 
 Dieses Modul soll eine einfache Möglichkeit bieten um 3D/Würfel basierte
@@ -40,42 +40,33 @@ Beispiel/Example:
 """
 
 __version__ = '0.1.0'
-
+__all__ = []
 
 import math
 import time
 import thread
+
+import zipfile
 
 import sys,os,inspect
 # Adding directory modules to path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"modules"))
 
-import zipfile
-
 from shared import *
+import textures
 
 DOASYNCLOAD = True
 MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
 
-# TODO:
-# players attribut für welt -> für ladepriorität benutzen
-# change order of xyz to yxz in Chunkformat
-# deloading with bigger radius than loading
-# (maybe add optional visibility filter to server)
+def load_setup(path):
+    path = os.abspath(path)
+    TEXTURE_INFO = shared.TextureInfo()
+    TEXTURE_INFO.load(os.path.join(PATH,"modules","texture.png"),textures.textures)
+    pass
 
-# ABOUT:
-# initlevels: (managing multi-chunk-structures)
-# inf (finished): finished, Entities may be here, can be send to client, ...
-#   4 (structs) : postmulti-single-chunk-structures
-#   3 (structs) : multi-chunk-structures
-#   2 (structs) : premulti-single-chunk-structures
-#   1 (terrain) : terrain build
-#   0 (plain)   : nothing generated yet
-#  -1 (vacuum)  : not even air
-# idea: every chunk may require chunks around him to be at a level of at least (his level - 1)
-
+#load_setup(os.path.join(PATH,"setups","mc_setup.py"))
 
 class _Chunkdict(dict):
     def __init__(self,world,*args,**kwargs):
@@ -231,6 +222,7 @@ class World(object):
                     data = " ".join((initlevel,chunk.compressed_data))
                     zf.writestr(name,data)
 
+
 class ServerChunk(Chunk):
     """The (Server)Chunk class is only relevant when writing a world generator
     
@@ -253,6 +245,7 @@ class ServerChunk(Chunk):
             for dy in range(1<<CHUNKSIZE):
                 for dz in range(1<<CHUNKSIZE):
                     yield p+(dx,dy,dz)
+
 
 class Entity(object):
     SPEED = 5
@@ -297,9 +290,10 @@ class Entity(object):
 class Player(Entity):
     """a player is an Entity with some additional methods"""
     RENDERDISTANCE = 16
-    def __init__(self,world,spawnpoint):
+    def __init__(self,world,spawnpoint,initmessages=()):
         Entity.__init__(self)
         self.outbox = []
+        self.outbox.extend(initmessages)
         self.rotation = (0,0)
         self.focus_distance = 8
         self.sentcount = 0 # number of msgs sent to player since he last sent something
@@ -526,7 +520,8 @@ class Game(object):
     def _on_connect(self,addr):
         """place at worldspawn"""
         print(addr, "connected")
-        p = Player(*self.spawnpoint)
+        initmessages = ["texture "+TEXTURE_INFO.client_string,"chunksize "+CHUNKSIZE]
+        p = Player(*self.spawnpoint,initmessages = initmessages)
         self.players[addr] = p
         self.new_players.add(p)
 
@@ -554,16 +549,9 @@ class Game(object):
                 print "Fehler"
         time.sleep(0.01) #wichtig damit das threading Zeug klappt
 
-def _simple_terrain_generator(chunk):
-    """a very simple terrain generator -> flat map"""
-    if chunk.position[1] >= 0:
-        return # nothing to do in the sky by now
-    for position in chunk:
-        if position[1] < -2:
-            chunk.set_block(position,BLOCK_ID_BY_NAME["GRASS"])
-
 def terrain_generator_from_heightfunc(heightfunc):
-    """does what it is called - can be used as decorator"""
+    """heightfunc(int,int)->int is used to create generator function
+    (can be used as decorator)"""
     def terrain_generator(chunk):
         x,y,z = chunk.position<<CHUNKSIZE
         for dx in xrange(1<<CHUNKSIZE):
@@ -579,11 +567,20 @@ def terrain_generator_from_heightfunc(heightfunc):
                     chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
     return terrain_generator
 
+__all__.extend(filter(lambda s:not s.startswith("_"),globals().keys()))
+
 if __name__ == "__main__":
+    def _simple_terrain_generator(chunk):
+        """a very simple terrain generator -> flat map"""
+        if chunk.position[1] >= 0:
+            return # nothing to do in the sky by now
+        for position in chunk:
+            if position[1] < -2:
+                chunk.set_block(position,"GRASS")
 
     w = World([_simple_terrain_generator])
     settings = {"spawnpoint" : (w,(0,0,0)),
                 "multiplayer": False,
                 }
     with Game(**settings) as g:
-        w.set_block((1,2,3),BLOCK_ID_BY_NAME["GRASS"])
+        w.set_block((1,2,3),"GRASS")
