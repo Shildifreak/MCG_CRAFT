@@ -1,12 +1,13 @@
 # A voxelengine setup file contains all information that is game specific but important to the client
 
-CHUNKSIZE = 3 # (in bit -> length is 2**CHUNKSIZE)
-TEXTURE_SIDE_LENGTH = 16
-DEFAULT_FOCUS_DISTANCE = 8
-TEXURE_PATH = "mc_texture.png"
+{
+"CHUNKSIZE" : 3, # (in bit -> length is 2**CHUNKSIZE)
+"TEXTURE_SIDE_LENGTH" : 16,
+"DEFAULT_FOCUS_DISTANCE" : 8,
+"TEXTURE_PATH" : "mc_texture.png",
 
 #["Name",              transparenz, solid, ( oben), (unten), (seiten)]
-textures = [
+"TEXTURE_INFO" : [
 ["GRASS",                    False,  True, ( 0, 2), ( 0, 0), ( 0, 1)], #block ==  1
 ["SAND",                     False,  True, ( 1, 0), ( 1, 0), ( 1, 0)], #block ==  2
 ["BRICK",                    False,  True, ( 3, 0), ( 3, 0), ( 3, 0)], #block ==  3
@@ -77,3 +78,4 @@ textures = [
 ["Steinziegel",              False,  True, (11, 8), (11, 8), (11, 8)], #block == 61
 ["Gemeisselter_Steinziegel", False,  True, (11, 7), (11, 7), (11, 7)], #block == 62
 ]
+}

@@ -26,7 +26,47 @@ CLASSES
     World
     Chunk
         ServerChunk
+
+OVERVIEW
+    class Entity
+     |  get_position(self)
+     |  get_sight_vector(self)
+     |  set_position(self, position, world=None)
+     |  SPEED = 5
     
+    class Game(__builtin__.object)
+     |  __init__(self, spawnpoint, wait=True, multiplayer=False, texturepath=None, textureinfo=None, name='MCG-CRAFT', socket_server=None)
+     |  get_new_players(self)
+     |  get_players(self)
+     |  quit(self)
+     |  update(self)
+    
+    class Player(Entity)
+     |  get_focused_pos(self, max_distance=None)
+     |  is_active(self)
+     |  is_pressed(self, key)
+     |  set_focus_distance(self, distance)
+     |  set_position(self, position, world=None)
+     |  was_pressed(self, key)
+     |  RENDERDISTANCE = 16
+    
+    class ServerChunk
+     |  __iter__(self)
+
+    class World(__builtin__.object)
+     |  __init__(self, worldgenerators=[], filename=None)
+     |  __getitem__(self, position)
+     |  __setitem__(self, position, block_id)
+     |  get_block(self, position, minlevel=None, load_on_miss=True)
+     |  get_block_name(self, position)
+     |  get_entities(self)
+     |  save(self, filename)
+     |  set_block(self, position, block, minlevel=None, load_on_miss=True)
+    
+    terrain_generator_from_heightfunc(heightfunc)
+
+
+LONG DESCRIPTION    
     class Entity
      |  Methods defined here:
      |  

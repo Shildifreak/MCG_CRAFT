@@ -38,7 +38,7 @@ import voxelengine
 with open("voxelengine.html","w") as f:
     print >> f, filtertext(h.docmodule(voxelengine))
 
-sys.path.append("../../modules")
-import shared
-with open("shared.html","w") as f:
-    print >> f, filtertext(h.docmodule(shared))
+#sys.path.append("../../modules")
+#import shared
+#with open("shared.html","w") as f:
+#    print >> f, filtertext(h.docmodule(shared))

@@ -113,9 +113,12 @@ class Chunk(object):
     byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime
     altered = False #M# not tracked yet
 
+    def __init__(self,chunksize):
+        self.chunksize = chunksize
+
     def init_data(self):
         """fill chunk with zeros"""
-        c = (1<<CHUNKSIZE)**3*self.byte_per_block
+        c = (1<<self.chunksize)**3*self.byte_per_block
         self.decompressed_data = bytearray(c)
         self._compressed_data = None
     
@@ -179,35 +182,11 @@ class Chunk(object):
 
     def pos_to_i(self, position):
         # reorder to y-first for better compression
-        position = position%(1<<CHUNKSIZE)
-        i = reduce(lambda x,y:(x<<CHUNKSIZE)+y,position)
+        position = position%(1<<self.chunksize)
+        i = reduce(lambda x,y:(x<<self.chunksize)+y,position)
         return i
 
     def compress(self):
         """make sure data is saved ONLY in compressed form, thereby saving memory"""
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
-
-
-class TextureInfo(object):
-    def id(self,name_or_id):
-        if isinstance(name_or_id,int):
-            return name_or_id
-        return self.block_id_by_name[name_or_id]
-
-    def name(self,name_or_id):
-        if isinstance(name_or_id,basestring):
-            return name_or_id
-        return self.block_name_by_id[name_or_id]
-
-    def solid(self,name_or_id):
-        return self.solidity[self.id(name_or_id)]
-
-    def load(self,filename,texture_info):
-        self.block_id_by_name = {"AIR":0}
-        self.block_name_by_id = ["AIR"]
-        self.solidity = [False]
-        for i, (name, transparency, solidity, top, bottom, side) in enumerate(texture_info):
-            self.block_id_by_name[name] = i+1
-            self.block_name_by_id.append(name)
-            self.solidity.append(solidity)

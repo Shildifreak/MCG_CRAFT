@@ -1,3 +1,4 @@
+setup richtig benutzen -> weniger globale Variablen
 entities -> in Chunks eintragen
          -> anzeigen
 compress benutzen wenn ein Chunk nicht mehr aktiv gebraucht wird

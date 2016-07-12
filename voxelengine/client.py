@@ -27,7 +27,6 @@ from shared import *
 # make it possible to pass texturepng and texturelist to client
 
 TICKS_PER_SEC = 60
-focus_distance = DEFAULT_FOCUS_DISTANCE
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -42,11 +41,11 @@ def cube_vertices(x, y, z, n):
         x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
     ]
 
-def tex_coord(x, y, n=TEXTURE_SIDE_LENGTH):
+def tex_coord(x, y):
     """ Return the bounding vertices of the texture square.
 
     """
-    m = 1.0 / n
+    m = 1.0 / TEXTURE_SIDE_LENGTH
     dx = x * m
     dy = y * m
     return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
@@ -65,14 +64,19 @@ def tex_coords(top, bottom, side):
     result.extend(side * 4)
     return result
 
-class ClientTextureInfo(object):
-    def load(self,string)
-        TEXTURES = [None] #this first value is for air
-        TRANSPARENCY = [True]
-        for _, _, _, top, bottom, side in textures.textures:
-            TEXTURES.append(tex_coords(top, bottom, side))
-            TRANSPARENCY.append(transparency)
-
+def load_setup(path):
+    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH
+    setupfile = open(path,"r")
+    setup = ast.literal_eval(setupfile.read())
+    CHUNKSIZE = setup["CHUNKSIZE"]
+    focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
+    TEXTURE_SIDE_LENGTH = setup["TEXTURE_SIDE_LENGTH"]
+    TEXTURE_PATH = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
+    TEXTURES = [None] #this first value is for air
+    TRANSPARENCY = [True]
+    for i, (name, transparency, solidity, top, bottom, side) in enumerate(setup["TEXTURE_INFO"]):
+        TEXTURES.append(tex_coords(top, bottom, side))
+        TRANSPARENCY.append(transparency)
 
 # TODO: only display blocks which need to be displayed -> fast algorithm needed
 
@@ -223,7 +227,7 @@ class Model(object):
         del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
     def _set_area(self, position, compressed_blocks):
-        c = Chunk()
+        c = Chunk(CHUNKSIZE)
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
 
@@ -283,7 +287,7 @@ class Window(pyglet.window.Window):
         self.client = client
 
         # some blocks to see if client works as intended
-        self.model.add_block(Vector([1,2,3]),BLOCK_ID_BY_NAME["GRASS"])
+        self.model.add_block(Vector([1,2,3]),1)
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)
@@ -577,7 +581,13 @@ def show_on_window(client):
     window = None
     try:
         #M# receive texturedata from game
-        raise NotImplementedError()
+        while True:
+            c = client.receive()
+            if c:
+                break
+        if c.startswith("setup"):
+            path = c.split(" ",1)[-1]
+            load_setup(path)
         window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.
