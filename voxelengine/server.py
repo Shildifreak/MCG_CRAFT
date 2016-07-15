@@ -4,7 +4,7 @@ import math
 import time
 import thread
 import ast
-
+import itertools
 import zipfile
 
 import sys,os,inspect
@@ -12,19 +12,31 @@ import sys,os,inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"modules"))
 
-DOASYNCLOAD = True
-MAX_LOAD_THREADS = 1
-MSGS_PER_TICK = 10
-DEFAULT_SETUP_PATH = os.path.join(PATH,"setups","mc_setup.py")
-setup = {}
-
 from shared import *
 import textures
 
+DOASYNCLOAD = True
+MAX_LOAD_THREADS = 1
+MSGS_PER_TICK = 10
+DEFAULT_SETUP_PATH = os.path.join(PATH,"setups","colors_setup.py")
+setup = {"users":set()}
+
+# merke: wenn man from voxelengine import * macht werden neue globale Variablen nach dem import nicht übernommen :(
+# ergo: globale Variablen nicht mehr ändern zur Laufzeit (verändern der Objekte ist ok)
+
 def load_setup(path):
-    global setup
+    """
+    Load a path to a setup file like the ones in voxelengine/setups directory.
+    Make sure that the path is suitable for the client too,
+    so be careful when using relative paths.
+    """
+    warn = False
+    if setup["users"]:
+        warn = True
     setupfile = open(path,"r")
-    setup = ast.literal_eval(setupfile.read())
+    setup.clear()
+    setup.update(ast.literal_eval(setupfile.read()))
+    setup["users"] = set()
     setup["SETUP_PATH"] = path
     setup["BLOCK_ID_BY_NAME"] = {"AIR":0}
     setup["BLOCK_NAME_BY_ID"] = ["AIR"]
@@ -33,10 +45,8 @@ def load_setup(path):
         setup["BLOCK_ID_BY_NAME"][name] = i+1
         setup["BLOCK_NAME_BY_ID"].append(name)
         setup["SOLIDITY"].append(solidity)
-    global CHUNKSIZE, BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID
-    CHUNKSIZE = setup["CHUNKSIZE"]
-    BLOCK_ID_BY_NAME = setup["BLOCK_ID_BY_NAME"]
-    BLOCK_NAME_BY_ID = setup["BLOCK_NAME_BY_ID"]
+    if warn:
+        raise RuntimeWarning("You changed a setup that was currently used. (You can catch this warning but it will most likely crash your game.)")
 
 load_setup(DEFAULT_SETUP_PATH)
 
@@ -46,13 +56,15 @@ class _Chunkdict(dict):
         self.world = world
 
     def __missing__(self, chunkposition):
-        chunk = ServerChunk(CHUNKSIZE,self.world,chunkposition)
+        chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
         self[chunkposition] = chunk
         return chunk
 
 class World(object):
     def __init__(self, worldgenerators = [], filename = None):
         """create new World instance"""
+        setup["users"].add(self)
+        self.chunksize = setup["CHUNKSIZE"]
         self.worldgenerators = worldgenerators
         self.loading_queue = []
         self.load_thread_count = 0
@@ -61,6 +73,9 @@ class World(object):
         self.players = set()
         if filename != None:
             self._load(filename)
+
+    def __del__(self):
+        setup["users"].remove(self)
 
     def __getitem__(self, position):
         return self.get_block(position)
@@ -74,9 +89,9 @@ class World(object):
         in special cases you might consider using
         BLOCK_ID_BY_NAME[name] or BLOCK_NAME_BY_ID[id] for conversion"""
         block_id = self.get_block(position)
-        if not (0 <= block_id < len(BLOCK_NAME_BY_ID)):
-            raise Exception("Can't find name for block id %i" %block_id)
-        return BLOCK_NAME_BY_ID[self.get_block(position)]
+        #if not (0 <= block_id < len(setup["BLOCK_NAME_BY_ID"])):
+        #    raise Exception("Can't find name for block id %i" %block_id)
+        return setup["BLOCK_NAME_BY_ID"][block_id]
 
     def get_block(self, position, minlevel = None, load_on_miss = True):
         """get ID of block at position
@@ -98,7 +113,7 @@ class World(object):
         """set ID of block at position (name is accepted)"""
         position = Vector(position)
         if isinstance(block,basestring):
-            block = BLOCK_ID_BY_NAME[block]
+            block = setup["BLOCK_ID_BY_NAME"][block]
         chunk = self._get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
             return False
@@ -115,7 +130,7 @@ class World(object):
         if minlevel == None:
             minlevel = len(self.worldgenerators)
         position = position.normalize()
-        chunk = self.chunks[position>>CHUNKSIZE]
+        chunk = self.chunks[position>>self.chunksize]
         if chunk.initlevel < minlevel:
             if not load_on_miss:
                 return
@@ -167,8 +182,11 @@ class World(object):
         return self.entities
 
     def _load(self,filename):
+        #M# save chunksize, test for inkompatibility?
         if os.path.exists(filename):
             with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
+                if zf.read("info_chunksize") != str(self.chunksize):
+                    raise RuntimeError("It is currently not possible to load Worlds that were saved with another chunksize.")
                 for name in zf.namelist():
                     if name.startswith("c"):
                         _,x,y,z = name.split("_")
@@ -176,7 +194,7 @@ class World(object):
                         initlevel,compressed_data = zf.read(name).split(" ",1)
                         initlevel = int(initlevel)
 
-                        c = ServerChunk(CHUNKSIZE,self,position)
+                        c = ServerChunk(self.chunksize,self,position)
                         c.initlevel = initlevel
                         c.compressed_data = compressed_data
                         self.chunks[position] = c
@@ -186,6 +204,7 @@ class World(object):
     def save(self,filename):
         """not implemented yet"""
         with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
+            zf.writestr("info_chunksize",str(self.chunksize))
             for position,chunk in self.chunks.items():
                 if chunk.altered:
                     x,y,z = map(str,chunk.position)
@@ -213,10 +232,11 @@ class ServerChunk(Chunk):
 
     def __iter__(self):
         """iterate over positions in chunk"""
-        p = self.position<<CHUNKSIZE
-        for dx in range(1<<CHUNKSIZE):
-            for dy in range(1<<CHUNKSIZE):
-                for dz in range(1<<CHUNKSIZE):
+        p = self.position<<self.chunksize
+        c = 1<<self.chunksize
+        for dx in xrange(c):
+            for dy in xrange(c):
+                for dz in xrange(c):
                     yield p+(dx,dy,dz)
 
 
@@ -327,16 +347,17 @@ class Player(Entity):
             while True:
                 # copy some attributes because function is used asynchron
                 world = self.world
-                position = self.position.normalize()
-                radius=self.RENDERDISTANCE
                 if not world:
                     time.sleep(0.1)
                     continue
+                position = self.position.normalize()
+                radius=self.RENDERDISTANCE
+                r = range(-radius,radius,1<<world.chunksize)+[radius]
                 chunks = set()
-                for dx in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
-                    for dy in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
+                for dx in r:
+                    for dy in r:
                         time.sleep(0.01)
-                        for dz in range(-radius,radius,1<<CHUNKSIZE)+[radius]:
+                        for dz in r:
                             chunkpos = position+(dx,dy,dz)
                             chunk = world._get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
                             if chunk == None:
@@ -349,7 +370,7 @@ class Player(Entity):
                 lc = chunks.difference(self.observed_chunks)
                 self._lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
         except Exception as e:
-            raise
+            print(e.args)
             print("some error in _update_chunks_loop, most likely because the player disconnected, I should find a way to handle this nicely")
 
     def _update_chunks(self):
@@ -370,10 +391,10 @@ class Player(Entity):
                 chunk.observers.add(self)
 
     def _chunk_priority_func(self,chunk):
-        return self._priority_func(chunk.position<<CHUNKSIZE)
+        return self._priority_func(chunk.position<<self.world.chunksize)
 
     def _priority_func(self,position):
-        dist = position+(Vector([1,1,1])<<(CHUNKSIZE-1))+(self.position*-1)
+        dist = position+(Vector([1,1,1])<<(self.world.chunksize-1))-self.position
         return sum(map(abs,dist))
 
     def _update(self):
@@ -437,6 +458,7 @@ class Game(object):
                  name="MCG-CRAFT",
                  socket_server=None, #only use this if you know what you're doing
                  ):
+        setup["users"].add(self)
         self.spawnpoint = spawnpoint
         self.wait = wait
         self.texturepath = texturepath
@@ -464,6 +486,12 @@ class Game(object):
         else:
             self.socket_server = socket_server
         print "ready"
+
+    def __del__(self):
+        try:
+            setup["users"].remove(self)
+        except:
+            print setup
 
     def __enter__(self):
         """for use with "with" statement"""
@@ -522,22 +550,24 @@ class Game(object):
                 print "Fehler"
         time.sleep(0.01) #wichtig damit das threading Zeug klappt
 
-def terrain_generator_from_heightfunc(heightfunc):
+def terrain_generator_from_heightfunc(heightfunc,block_id):
     """heightfunc(int,int)->int is used to create generator function
     (can be used as decorator)"""
     def terrain_generator(chunk):
-        x,y,z = chunk.position<<CHUNKSIZE
-        for dx in xrange(1<<CHUNKSIZE):
-            for dz in xrange(1<<CHUNKSIZE):            
+        x,y,z = chunk.position<<chunk.chunksize
+        c = 1 << chunk.chunksize
+        r = xrange(c)
+        for dx in r:
+            for dz in r:            
                 h = int(heightfunc(x+dx,z+dz))
                 if y <= h:
-                    if h < y+(1<<CHUNKSIZE):
+                    if h < y+c:
                         i = chunk.pos_to_i(Vector([dx,h,dz]))
                         n = (h-y)
                     else:
-                        i = chunk.pos_to_i(Vector([dx,(1<<CHUNKSIZE)-1,dz]))
-                        n = (1<<CHUNKSIZE)-1
-                    chunk[i-n*(1<<CHUNKSIZE):i+1:1<<CHUNKSIZE] = BLOCK_ID_BY_NAME["GRASS"]
+                        i = chunk.pos_to_i(Vector([dx,c-1,dz]))
+                        n = c-1
+                    chunk[i-n*c:i+1:c] = block_id
     return terrain_generator
 
 if __name__ == "__main__":
@@ -547,11 +577,14 @@ if __name__ == "__main__":
             return # nothing to do in the sky by now
         for position in chunk:
             if position[1] < -2:
-                chunk.set_block(position,setup["BLOCK_ID_BY_NAME"]["GRASS"])
+                if (position[0]+position[2]) % 2:
+                    chunk.set_block(position,setup["BLOCK_ID_BY_NAME"]["GREEN"])
+                else:
+                    chunk.set_block(position,setup["BLOCK_ID_BY_NAME"]["CYAN"])
 
     w = World([_simple_terrain_generator])
     settings = {"spawnpoint" : (w,(0,0,0)),
                 "multiplayer": False,
                 }
     with Game(**settings) as g:
-        w.set_block((1,2,3),"GRASS")
+        w.set_block((-1,2,-3),"YELLOW")

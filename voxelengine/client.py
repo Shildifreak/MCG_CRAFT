@@ -48,6 +48,12 @@ def tex_coord(x, y):
     m = 1.0 / TEXTURE_SIDE_LENGTH
     dx = x * m
     dy = y * m
+    
+    p = TEXTURE_EDGE_CUTTING*m
+    dx += p
+    dy += p
+    m  -= p * 2
+    
     return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
 
 
@@ -65,13 +71,16 @@ def tex_coords(top, bottom, side):
     return result
 
 def load_setup(path):
-    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH
+    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING
     setupfile = open(path,"r")
     setup = ast.literal_eval(setupfile.read())
     CHUNKSIZE = setup["CHUNKSIZE"]
     focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
     TEXTURE_SIDE_LENGTH = setup["TEXTURE_SIDE_LENGTH"]
-    TEXTURE_PATH = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
+    TEXTURE_EDGE_CUTTING = setup.get("TEXTURE_EDGE_CUTTING",0)
+    if not os.path.isabs(setup["TEXTURE_PATH"]): #M# do something to support urls
+        setup["TEXTURE_PATH"] = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
+    TEXTURE_PATH = setup["TEXTURE_PATH"]
     TEXTURES = [None] #this first value is for air
     TRANSPARENCY = [True]
     for i, (name, transparency, solidity, top, bottom, side) in enumerate(setup["TEXTURE_INFO"]):
@@ -513,9 +522,16 @@ class Window(pyglet.window.Window):
         self.set_3d()
         glColor3d(1, 1, 1)
         self.model.batch.draw()
+        
+        glColor3d(1, 1, 1)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO)
+
         self.draw_focused_block()
         self.set_2d()
         self.draw_reticle()
+
+        glDisable(GL_BLEND)
 
     def draw_focused_block(self):
         """ Draw black edges around the block that is currently under the
@@ -527,7 +543,6 @@ class Window(pyglet.window.Window):
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
-            glColor3d(0, 0, 0)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -536,9 +551,7 @@ class Window(pyglet.window.Window):
         """ Draw the crosshairs in the center of the screen.
 
         """
-        glColor3d(0, 0, 0)
         self.reticle.draw(GL_LINES)
-
 
 def setup_fog():
     """ Configure the OpenGL fog properties.
@@ -575,6 +588,7 @@ def setup():
     # as smooth."
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+
     setup_fog()
 
 def show_on_window(client):

@@ -28,7 +28,7 @@ def init_player(player):
 def onground(player):
     for relpos in player.HITBOX:
         block_pos = (player.position+relpos+(0,-0.2,0)).normalize()
-        if player.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
+        if player.world.get_block_name(block_pos) != "AIR": #M# test for solidity instead
             return True
     return False
 
@@ -36,7 +36,7 @@ def collide(player,position):
     blocks = set()
     for relpos in player.HITBOX:
         block_pos = (position+relpos).normalize()
-        if player.world[block_pos] != BLOCK_ID_BY_NAME["AIR"]:
+        if player.world.get_block_name(block_pos) != "AIR": #s.onground
             blocks.add(block_pos)
     return blocks
 
@@ -50,13 +50,13 @@ def update_player(player):
     if player.was_pressed("right click"):
         v = player.get_focused_pos()[1]
         if v:
-            player.world[v] = BLOCK_ID_BY_NAME["GRASS"]
+            player.world[v] = "GRASS"
             if v in collide(player,player.position):
-                player.world[v] = BLOCK_ID_BY_NAME["AIR"]
+                player.world[v] = "AIR"
     if player.was_pressed("left click"):
         v = player.get_focused_pos()[0]
         if v:
-            player.world[v] = BLOCK_ID_BY_NAME["AIR"]
+            player.world[v] = "AIR"
 
     if player.flying:
         if player.is_pressed("for"):
@@ -100,9 +100,12 @@ def update_player(player):
                 pos = new
     player.set_position(pos)
 
-terrain_generator = terrain_generator_from_heightfunc(heightfunction)
+terrain_generator = terrain_generator_from_heightfunc(heightfunction,1)
 
 if __name__ == "__main__":
+    import os
+    load_setup(os.path.join(PATH,"setups","mc_setup.py"))
+
     multiplayer = not select(["open server","play alone"])[0]
     spawnpoint = (0,int(heightfunction(0,0)+2),0)
 

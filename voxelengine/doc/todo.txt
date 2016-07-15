@@ -1,3 +1,4 @@
+Seiten einzeln sichtbar
 setup richtig benutzen -> weniger globale Variablen
 entities -> in Chunks eintragen
          -> anzeigen
