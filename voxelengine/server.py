@@ -2,6 +2,7 @@
 
 import math
 import time
+import threading #used by client and has to be imported before thread, cause otherwise some internal monkey patching causes error on termination
 import thread
 import ast
 import itertools
@@ -75,7 +76,10 @@ class World(object):
             self._load(filename)
 
     def __del__(self):
-        setup["users"].remove(self)
+        try:
+            setup["users"].remove(self)
+        except:
+            pass
 
     def __getitem__(self, position):
         return self.get_block(position)
@@ -110,10 +114,8 @@ class World(object):
         return chunk.get_block(position)
 
     def set_block(self, position, block, minlevel = None, load_on_miss = True):
-        """set ID of block at position (name is accepted)"""
+        """set block at position"""
         position = Vector(position)
-        if isinstance(block,basestring):
-            block = setup["BLOCK_ID_BY_NAME"][block]
         chunk = self._get_chunk(position, minlevel, load_on_miss)
         if chunk == None:
             return False
@@ -239,6 +241,31 @@ class ServerChunk(Chunk):
                 for dz in xrange(c):
                     yield p+(dx,dy,dz)
 
+    def get_block(self, position):
+        """
+        like normal Chunks get_block but
+        - searches world if position is not within chunk (with own initlevel-1)
+        - recommended for getting blocks of other chunks in terrain generators
+        """
+        if (position>>self.chunksize) == self.position:
+            return Chunk.get_block(self,position)
+        return self.world.get_block(position,self.initlevel-1)
+    
+    def set_block(self, position, block):
+        """
+        like normal Chunks set_block but
+        - searches world if position is not within chunk (with own initlevel-1)
+        - recommended for setting blocks of other chunks in terrain generators
+        """
+        if (position>>self.chunksize) == self.position:
+            if isinstance(block,basestring):
+                block = setup["BLOCK_ID_BY_NAME"][block]
+            return Chunk.set_block(self,position,block)
+        return self.world.set_block(position,block,self.initlevel-1)
+
+    def get_block_name(self,position):
+        """get name of block at position"""
+        return setup["BLOCK_NAME_BY_ID"][self.get_block(position)]
 
 class Entity(object):
     SPEED = 5
@@ -370,8 +397,10 @@ class Player(Entity):
                 lc = chunks.difference(self.observed_chunks)
                 self._lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
         except Exception as e:
-            print(e.args)
-            print("some error in _update_chunks_loop, most likely because the player disconnected, I should find a way to handle this nicely")
+            try:
+                raise
+            except:
+                pass
 
     def _update_chunks(self):
         # unload chunks
@@ -420,9 +449,11 @@ class Player(Entity):
                 self.action_states[a] = new_state
 
 
-    def _notice(self,position,block_id):
+    def _notice(self,position,block):
         """send blockinformation to client"""
-        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block_id))
+        if isinstance(block,basestring):
+                block = setup["BLOCK_ID_BY_NAME"][block]
+        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
 
 class Game(object):
     """
@@ -491,7 +522,7 @@ class Game(object):
         try:
             setup["users"].remove(self)
         except:
-            print setup
+            pass
 
     def __enter__(self):
         """for use with "with" statement"""
@@ -578,9 +609,9 @@ if __name__ == "__main__":
         for position in chunk:
             if position[1] < -2:
                 if (position[0]+position[2]) % 2:
-                    chunk.set_block(position,setup["BLOCK_ID_BY_NAME"]["GREEN"])
+                    chunk.set_block(position,"GREEN")
                 else:
-                    chunk.set_block(position,setup["BLOCK_ID_BY_NAME"]["CYAN"])
+                    chunk.set_block(position,"CYAN")
 
     w = World([_simple_terrain_generator])
     settings = {"spawnpoint" : (w,(0,0,0)),
