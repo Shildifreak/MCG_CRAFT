@@ -164,7 +164,6 @@ class World(object):
         players = filter(lambda entity:isinstance(entity,Player),self.entities)
         if players:
             return min([player._priority_func(position) for player in players])
-        print "oh no!"
         return 0
 
     def _async_load_loop(self):
@@ -201,7 +200,8 @@ class World(object):
                         c.compressed_data = compressed_data
                         self.chunks[position] = c
         else:
-            print "File %s not found." %filename
+            if "-debug" in sys.argv:
+                print "File %s not found." %filename
 
     def save(self,filename):
         """not implemented yet"""
@@ -516,7 +516,8 @@ class Game(object):
                 self._on_connect(None)
         else:
             self.socket_server = socket_server
-        print "ready"
+        if "-debug" in sys.argv:
+            print "game ready"
 
     def __del__(self):
         try:
@@ -551,14 +552,16 @@ class Game(object):
 
     def _on_connect(self,addr):
         """place at worldspawn"""
-        print(addr, "connected")
+        if "-debug" in sys.argv:
+            print(addr, "connected")
         initmessages = ["setup "+setup["SETUP_PATH"]]
         p = Player(*self.spawnpoint,initmessages = initmessages)
         self.players[addr] = p
         self.new_players.add(p)
 
     def _on_disconnect(self,addr):
-        print(addr, "disconnected")
+        if "-debug" in sys.argv:
+            print(addr, "disconnected")
         # do something with player
         del self.players[addr]
 
@@ -577,8 +580,8 @@ class Game(object):
         for msg, addr in self.socket_server.receive():
             if addr in self.players:
                 self.players[addr]._handle_input(msg)
-            else:
-                print "Fehler"
+            elif "-debug" in sys.argv:
+                print "Message from unregistered Player"
         time.sleep(0.01) #wichtig damit das threading Zeug klappt
 
 def terrain_generator_from_heightfunc(heightfunc,block_id):

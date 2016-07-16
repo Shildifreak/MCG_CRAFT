@@ -611,7 +611,7 @@ def show_on_window(client):
     except Exception as e:
         raise
         if e.message != "Disconnect" and e.message != "Server went down.":
-            print e.message#raise
+            raise
         else:
             print e.message
     finally:
@@ -631,7 +631,8 @@ def main(socket_client = None):
             time.sleep(1)
 
     else:
-        print "doing something clienty"
+        if "-debug" in sys.argv:
+            print "doing something clienty"
         show_on_window(socket_client)
 
 def autoclient():
