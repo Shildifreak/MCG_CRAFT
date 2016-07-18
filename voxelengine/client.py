@@ -23,8 +23,6 @@ from pyglet.window import key, mouse
 import socket_connection
 from shared import *
 
-# TODO:
-# make it possible to pass texturepng and texturelist to client
 
 TICKS_PER_SEC = 60
 
@@ -523,15 +521,19 @@ class Window(pyglet.window.Window):
         glColor3d(1, 1, 1)
         self.model.batch.draw()
         
-        glColor3d(1, 1, 1)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO)
+        x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
+        glColor3d(x, x, x)
+        #glEnable(GL_BLEND)
+        #glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO)
+        glEnable(GL_COLOR_LOGIC_OP)
+        glLogicOp(GL_XOR)
 
         self.draw_focused_block()
         self.set_2d()
         self.draw_reticle()
 
-        glDisable(GL_BLEND)
+        glDisable(GL_COLOR_LOGIC_OP)
+        #glDisable(GL_BLEND)
 
     def draw_focused_block(self):
         """ Draw black edges around the block that is currently under the

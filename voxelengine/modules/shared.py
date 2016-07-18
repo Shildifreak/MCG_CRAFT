@@ -190,3 +190,29 @@ class Chunk(object):
         """make sure data is saved ONLY in compressed form, thereby saving memory"""
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
+
+#M# wozu:?
+class TrappedSet(object):
+    def __init__(self, add_func, remove_func, *args, **kwargs):
+        self.set = set(*args, **kwargs)
+        self.add_func = add_func
+        self.remove_func = remove_func
+
+    def add(self, value):
+        self.set.add(value)
+        self.add_func(value)
+
+    def remove(self, value):
+        self.set.remove(value)
+        self.remove_func(value)
+
+    def discard(self, value):
+        self.set.discard(value)
+        self.remove_func(value)
+
+if __name__ == "__main__":
+    def p(v):
+        print v
+    t = TrappedSet(p,p,[1,2,3,4,5])
+    t.add(6)
+    t.remove(1)
