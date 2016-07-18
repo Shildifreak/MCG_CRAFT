@@ -39,6 +39,16 @@ def cube_vertices(x, y, z, n):
         x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
     ]
 
+def face_vertices(x, y, z, f, n):
+    return [
+        [x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n],  # top
+        [x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n],  # bottom
+        [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # left
+        [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # right
+        [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # front
+        [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # back
+    ][f]
+
 def tex_coord(x, y):
     """ Return the bounding vertices of the texture square.
 
@@ -62,10 +72,7 @@ def tex_coords(top, bottom, side):
     top = tex_coord(*top)
     bottom = tex_coord(*bottom)
     side = tex_coord(*side)
-    result = []
-    result.extend(top)
-    result.extend(bottom)
-    result.extend(side * 4)
+    result = [top, bottom, side, side, side, side]
     return result
 
 def load_setup(path):
@@ -85,24 +92,13 @@ def load_setup(path):
         TEXTURES.append(tex_coords(top, bottom, side))
         TRANSPARENCY.append(transparency)
 
-# TODO: only display blocks which need to be displayed -> fast algorithm needed
 
-FACES = [
-    ( 0, 1, 0),
-    ( 0,-1, 0),
-    (-1, 0, 0),
-    ( 1, 0, 0),
-    ( 0, 0, 1),
-    ( 0, 0,-1),
-]
-
-#M# zwei Dinge mit dem selben Namen :(
-NEIGHBOURS = [Vector([ 1, 0, 0]),
-              Vector([ 0, 1, 0]),
-              Vector([ 0, 0, 1]),
-              Vector([-1, 0, 0]),
-              Vector([ 0,-1, 0]),
-              Vector([ 0, 0,-1])]
+FACES = [Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0]), #right
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1])] #back
 
 class SimpleChunk(object):
     def __init__(self):
@@ -144,7 +140,7 @@ class Model(object):
         # A TextureGroup manages an OpenGL texture.
         self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture()) #possible to use image.load(file=filedescriptor) if necessary
 
-        self.blocks = {}
+        self.shown = {} #{(position,face):vertex_list}
         self.chunks = Chunkdict()
 
         self.queue = deque()
@@ -177,37 +173,50 @@ class Model(object):
 
     def update_visibility(self, position):
         if self.get_block(position):
-            for dn in NEIGHBOURS:
-                b = self.get_block(position+dn)
-                if b != None:
-                    if b == 0: #M# test for transparency here!
-                        self.show(position)
-                        return
-        self.hide(position)
+            for f in xrange(len(FACES)):
+                self.update_face(position,f)
+        else:
+            self.hide(position)
+
+    def update_face(self,position,face):
+        fv = FACES[face]
+        b = self.get_block(position+fv)
+        if b != None:
+            if b == 0: #M# test for transparency here!
+                self.show_face(position,face)
+                return
+        self.hide_face(position,face)
     
     def update_visibility_around(self,position):
-        for dn in NEIGHBOURS:
-            self.update_visibility(position+dn)
+        for f,fv in enumerate(FACES):
+            self.update_face(position+fv,(f+1-(2*(f%2))))
     
-    def show(self,position):
-        if position in self.blocks:
-            self.hide(position)
+    def show_face(self,position,face):
+        if (position,face) in self.shown:
+            #M# entscheiden ob entweder sicher:
+            #self.hide_face(position,face)
+            #M# oder schnell:
+            return
         x, y, z = position
         block_id = self.get_block(position)
         if not block_id:
             return
-        texture_data = list(TEXTURES[block_id])
-        vertex_data = cube_vertices(x, y, z, 0.5)
+        texture_data = list(TEXTURES[block_id][face]) #maybe add list() around
+        vertex_data = face_vertices(x, y, z, face, 0.5)
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
-        self.blocks[position] = self.batch.add(24, GL_QUADS, self.group,
+        self.shown[(position,face)] = self.batch.add(4, GL_QUADS, self.group,
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
 
     def hide(self,position):
-        if not position in self.blocks:
+        for face in xrange(len(FACES)):
+            self.hide_face(position,face)
+
+    def hide_face(self,position,face):
+        if not (position,face) in self.shown:
             return False
-        self.blocks.pop(position).delete()
+        self.shown.pop((position,face)).delete()
 
     def _add_block(self, position, block_id):
         self._set_block(position,block_id)
@@ -220,9 +229,9 @@ class Model(object):
         self.update_visibility_around(position)
 
     def _clear(self):
-        for position in self.blocks.keys():
-            self.hide(position)
-        self.blocks = {}
+        for position,face in self.shown.keys():
+            self.hide_face(position,face)
+        self.shown = {}
         self.chunks = Chunkdict()
 
     def _del_area(self, position):
@@ -230,6 +239,7 @@ class Model(object):
         for relpos in iterchunk():
             self.hide((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
+            #M# hier müsste eigentlich immer nur die entsprechende Seite upgedated werden
             self.update_visibility((position<<CHUNKSIZE)+relpos)
         del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
@@ -242,6 +252,7 @@ class Model(object):
             if c[i] != 0: #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
                 self.update_visibility((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
+            #M# hier gilt das selbe wie in _del_chunk
             self.update_visibility((position<<CHUNKSIZE)+relpos)
 
     def get_block(self,position):
@@ -292,9 +303,6 @@ class Window(pyglet.window.Window):
         if not client:
             raise ValueError("There must be some client")
         self.client = client
-
-        # some blocks to see if client works as intended
-        self.model.add_block(Vector([1,2,3]),1)
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)

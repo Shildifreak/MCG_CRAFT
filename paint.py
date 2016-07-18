@@ -12,7 +12,6 @@ with voxelengine.Game( spawnpoint=(w,(0,0,0)) ) as g:
     while g.get_players():
         g.update()
         for player in g.get_new_players():
-            print player
             player.set_focus_distance(100)
         for player in g.get_players():
             if player.was_pressed("left click"):
