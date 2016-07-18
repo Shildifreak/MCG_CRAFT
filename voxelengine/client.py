@@ -175,8 +175,6 @@ class Model(object):
         if self.get_block(position):
             for f in xrange(len(FACES)):
                 self.update_face(position,f)
-        else:
-            self.hide(position)
 
     def update_face(self,position,face):
         fv = FACES[face]
@@ -219,6 +217,8 @@ class Model(object):
         self.shown.pop((position,face)).delete()
 
     def _add_block(self, position, block_id):
+        if self.get_block(position):
+            self.hide(position)
         self._set_block(position,block_id)
         self.update_visibility(position)
         self.update_visibility_around(position)
@@ -244,6 +244,8 @@ class Model(object):
         del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
     def _set_area(self, position, compressed_blocks):
+        if isinstance(self.chunks[position],Chunk):
+            raise Exception("Can't load chunk if there is already one.")
         c = Chunk(CHUNKSIZE)
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
