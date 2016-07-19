@@ -62,11 +62,12 @@ class _Chunkdict(dict):
         return chunk
 
 class World(object):
-    def __init__(self, worldgenerators = [], filename = None):
+    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0)):
         """create new World instance"""
         setup["users"].add(self)
         self.chunksize = setup["CHUNKSIZE"]
         self.worldgenerators = worldgenerators
+        self.spawnpoint = Vector(spawnpoint)
         self.loading_queue = []
         self.load_thread_count = 0
         self.chunks = _Chunkdict(self)
@@ -121,7 +122,7 @@ class World(object):
             return False
         chunk.set_block(position,block)
         for observer in chunk.observers:
-            observer._notice(position,block)
+            observer._notice_block(position,block)
         return True
 
     def _get_chunk(self, position, minlevel = None, load_on_miss = True):
@@ -181,6 +182,11 @@ class World(object):
     def get_entities(self):
         """return set of entities in world"""
         return self.entities
+    
+    def spawn_player(self,player):
+        spielfigur = Entity()
+        spielfigur.set_position(self.spawnpoint,self)
+        player.observe(spielfigur)
 
     def _load(self,filename):
         #M# save chunksize, test for inkompatibility?
@@ -272,7 +278,8 @@ class Entity(object):
     def __init__(self):
         self.world = None
         self.position = None
-        self.rotation = None
+        self.rotation = (0,0)
+        self.observers = set()
 
     def get_position(self):
         """return position of entity"""
@@ -281,13 +288,19 @@ class Entity(object):
     def set_position(self, position, world=None):
         """set position of entity"""
         #M# remove from chunk of old position & tell everyone
-        if world and world != self.world:
+        changed_world = world and world != self.world
+        if changed_world:
             if self.world:
                 self.world.entities.discard(self)
             self.world = world
             self.world.entities.add(self)
         self.position = position
         #M# add to chunk of new position & tell everyone
+        for observer in self.observers:
+            observer._notice_position(changed_world)
+
+    def set_rotation(self, x, y):
+        self.rotation = x,y
 
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -307,37 +320,32 @@ class Entity(object):
         return Vector((dx, dy, dz))
 
 
-class Player(Entity):
-    """a player is an Entity with some additional methods"""
+class Player(object):
+    """a player/observer is someone how looks through the eyes of an entity"""
     RENDERDISTANCE = 16
-    def __init__(self,world,spawnpoint,initmessages=()):
-        Entity.__init__(self)
+    def __init__(self,initmessages=()):
+        self.entity = None
         self.outbox = []
         self.outbox.extend(initmessages)
-        self.rotation = (0,0)
         self.focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = {}
         self.was_pressed_set = set()
         self.observed_chunks = set()
-        self._lc = set()
-        self._uc = set()
-        self.set_position(Vector(spawnpoint),world)
+        self._lc = set() #load chunks
+        self._uc = set() #unload chunks
         thread.start_new_thread(self._update_chunks_loop,())
+        self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
+        self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
-    def set_position(self,position,world=None):
-        """set position of camera/player"""
-        if world and world != self.world:
-            #clear observed chunks if entering new world
-            for chunk in self.observed_chunks:
-                chunk.observers.remove(self)
-            self.observed_chunks.clear()
-            self.outbox.append("clear")
-        Entity.set_position(self,position,world)
-        for msg in self.outbox:
-            if msg.startswith("goto"):
-                self.outbox.remove(msg)
-        self.outbox.append("goto %s %s %s" %self.position)
+    def observe(self,entity):
+        self.lock.acquire()
+        if self.entity:
+            self.entity.observers.remove(self)
+        self.entity = entity
+        entity.observers.add(self)
+        self.lock_used = True
+        self.lock.release()
 
     def is_pressed(self,key):
         """return whether key is pressed """
@@ -360,47 +368,60 @@ class Player(Entity):
         """ 
         if max_distance == None:
             max_distance = self.focus_distance
-        return hit_test(lambda v:self.world.get_block(v)!=0,self.position,
-                        self.get_sight_vector(),max_distance)
+        return hit_test(lambda v:self.entity.world.get_block(v)!=0,self.entity.position,
+                        self.entity.get_sight_vector(),max_distance)
 
     def set_focus_distance(self,distance):
         """Set maximum distance for focusing block"""
         self.outbox.append("focusdist %g" %distance)
         self.focus_distance = distance
 
-    # it follows a long list of private methods that make sure a player acts like one
+    ### it follows a long list of private methods that make sure a player acts like one ###
     def _update_chunks_loop(self):
         try:
             while True:
+                self.lock_used = False
                 # copy some attributes because function is used asynchron
-                world = self.world
-                if not world:
-                    time.sleep(0.1)
-                    continue
-                position = self.position.normalize()
-                radius=self.RENDERDISTANCE
-                r = range(-radius,radius,1<<world.chunksize)+[radius]
-                chunks = set()
-                for dx in r:
-                    for dy in r:
-                        time.sleep(0.01)
-                        for dz in r:
-                            chunkpos = position+(dx,dy,dz)
-                            chunk = world._get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
-                            if chunk == None:
-                                world._async_load_chunk(chunkpos)
-                            elif chunk == "loading":
-                                pass
-                            else:
-                                chunks.add(chunk)
-                self._uc = self.observed_chunks.difference(chunks)
+                try:
+                    while not self.entity or not self.entity.world:
+                        time.sleep(0.1)
+                    world = self.entity.world
+                    position = self.entity.position.normalize()
+                    radius=self.RENDERDISTANCE
+                    r = range(-radius,radius,1<<world.chunksize)+[radius]
+                    chunks = set()
+                    for dx in r:
+                        for dy in r:
+                            time.sleep(0.01)
+                            for dz in r:
+                                chunkpos = position+(dx,dy,dz)
+                                chunk = world._get_chunk(chunkpos,load_on_miss = not DOASYNCLOAD)
+                                if chunk == None:
+                                    world._async_load_chunk(chunkpos)
+                                elif chunk == "loading":
+                                    pass
+                                else:
+                                    chunks.add(chunk)
+                except:
+                    if self.lock_used:
+                        continue
+                    else:
+                        raise
+                uc = self.observed_chunks.difference(chunks)
                 lc = chunks.difference(self.observed_chunks)
-                self._lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
+                lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
+                if self.lock.acquire(False):
+                    if not self.lock_used:
+                        self._uc = uc
+                        self._lc = lc
+                    self.lock.release()
         except Exception as e:
-            try:
-                raise
-            except:
-                pass
+            raise
+            #M#
+            #try:
+            #    raise
+            #except:
+            #    pass
 
     def _update_chunks(self):
         # unload chunks
@@ -420,10 +441,10 @@ class Player(Entity):
                 chunk.observers.add(self)
 
     def _chunk_priority_func(self,chunk):
-        return self._priority_func(chunk.position<<self.world.chunksize)
+        return self._priority_func(chunk.position<<chunk.chunksize)
 
     def _priority_func(self,position):
-        dist = position+(Vector([1,1,1])<<(self.world.chunksize-1))-self.position
+        dist = position+(Vector([1,1,1])<<(self.entity.world.chunksize-1))-self.entity.position
         return sum(map(abs,dist))
 
     def _update(self):
@@ -437,7 +458,7 @@ class Player(Entity):
             self.sentcount = 0
         if msg.startswith("rot"):
             x,y = map(float,msg.split(" ")[1:])
-            self.rotation = x,y
+            self.entity.set_rotation(x,y)
         if msg in ("right click","left click"):
             self.was_pressed_set.add(msg)
         if msg.startswith("keys"):
@@ -448,8 +469,22 @@ class Player(Entity):
                     self.was_pressed_set.add(a)
                 self.action_states[a] = new_state
 
+    def _notice_position(self,changed_worlds=False):
+        """set position of camera/player"""
+        if changed_worlds:
+            self.lock.acquire()
+            for chunk in self.observed_chunks:
+                chunk.observers.remove(self)
+            self.observed_chunks.clear()
+            self.outbox.append("clear")
+            self.lock_used = True
+            self.lock.release()
+        for msg in self.outbox:
+            if msg.startswith("goto"):
+                self.outbox.remove(msg)
+        self.outbox.append("goto %s %s %s" %self.entity.position)
 
-    def _notice(self,position,block):
+    def _notice_block(self,position,block):
         """send blockinformation to client"""
         if isinstance(block,basestring):
                 block = setup["BLOCK_ID_BY_NAME"][block]
@@ -481,7 +516,7 @@ class Game(object):
     """
 
     def __init__(self,
-                 spawnpoint,
+                 init_function=None,
                  wait=True,
                  multiplayer=False,
                  texturepath=None,
@@ -490,7 +525,7 @@ class Game(object):
                  socket_server=None, #only use this if you know what you're doing
                  ):
         setup["users"].add(self)
-        self.spawnpoint = spawnpoint
+        self.init_function = init_function
         self.wait = wait
         self.texturepath = texturepath
         self.textureinfo = textureinfo
@@ -555,9 +590,10 @@ class Game(object):
         if "-debug" in sys.argv:
             print(addr, "connected")
         initmessages = ["setup "+setup["SETUP_PATH"]]
-        p = Player(*self.spawnpoint,initmessages = initmessages)
+        p = Player(initmessages)
         self.players[addr] = p
         self.new_players.add(p)
+        self.init_function(p)
 
     def _on_disconnect(self,addr):
         if "-debug" in sys.argv:
@@ -617,7 +653,7 @@ if __name__ == "__main__":
                     chunk.set_block(position,"CYAN")
 
     w = World([_simple_terrain_generator])
-    settings = {"spawnpoint" : (w,(0,0,0)),
+    settings = {"init_function" : w.spawn_player,
                 "multiplayer": False,
                 }
     with Game(**settings) as g:
