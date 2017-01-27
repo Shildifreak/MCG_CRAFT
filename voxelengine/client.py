@@ -76,14 +76,15 @@ def tex_coord(x, y):
     return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
 
 
-def tex_coords(top, bottom, side):
+def tex_coords(textures):
     """ Return a list of the texture squares for the top, bottom and side.
 
     """
-    top = tex_coord(*top)
-    bottom = tex_coord(*bottom)
-    side = tex_coord(*side)
-    result = [top, bottom, side, side, side, side]
+    result = []
+    for i in range(6):
+        if i >= len(textures):
+            i = -1
+        result.append(tex_coord(*textures[i]))
     return result
 
 def load_setup(path):
@@ -101,9 +102,9 @@ def load_setup(path):
     TEXTURES = [None] #this first value is for air
     TRANSPARENCY = [True]
     BLOCK_ID_BY_NAME = {"AIR":0}
-    for i, (name, transparency, solidity, top, bottom, side) in enumerate(setup["TEXTURE_INFO"]):
+    for i, (name, transparency, solidity, textures) in enumerate(setup["TEXTURE_INFO"]):
         BLOCK_ID_BY_NAME[name] = i+1
-        TEXTURES.append(tex_coords(top, bottom, side))
+        TEXTURES.append(tex_coords(textures))
         TRANSPARENCY.append(transparency)
 
 

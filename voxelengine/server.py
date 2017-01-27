@@ -42,7 +42,7 @@ def load_setup(path):
     setup["BLOCK_ID_BY_NAME"] = {"AIR":0}
     setup["BLOCK_NAME_BY_ID"] = ["AIR"]
     setup["SOLIDITY"] = [False]
-    for i, (name, transparency, solidity, top, bottom, side) in enumerate(setup["TEXTURE_INFO"]):
+    for i, (name, transparency, solidity, sides) in enumerate(setup["TEXTURE_INFO"]):
         setup["BLOCK_ID_BY_NAME"][name] = i+1
         setup["BLOCK_NAME_BY_ID"].append(name)
         setup["SOLIDITY"].append(solidity)
