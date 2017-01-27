@@ -189,7 +189,6 @@ class World(object):
         player.observe(spielfigur)
 
     def _load(self,filename):
-        #M# save chunksize, test for inkompatibility?
         if os.path.exists(filename):
             with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
                 if zf.read("info_chunksize") != str(self.chunksize):
@@ -234,7 +233,6 @@ class ServerChunk(Chunk):
         self.world = world
         self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
-        self.entities = set() #M# not up to date yet
         self.initlevel = -1
         self.lock = thread.allocate_lock()
 
@@ -273,6 +271,18 @@ class ServerChunk(Chunk):
         """get name of block at position"""
         return setup["BLOCK_NAME_BY_ID"][self.get_block(position)]
 
+    def get_entities(self):
+        return (entity for entity in self.world.entities if (entity.position.normalize()>>self.chunksize) == self.position)
+
+class TextureElement(object):
+    def __init__(self,texture_id,x,y,z,dx,dy,dz):
+        raise NotImplementedError()
+
+class EntityModel(object):
+    def __init__(self,*elements):
+        """elements may be TextureElements (and hopefully someday EntityModels)"""
+        self.elements = elements
+
 class Entity(object):
     SPEED = 5
     def __init__(self):
@@ -280,6 +290,7 @@ class Entity(object):
         self.position = None
         self.rotation = (0,0)
         self.observers = set()
+        self.texture = 0
 
     def get_position(self):
         """return position of entity"""
@@ -288,19 +299,31 @@ class Entity(object):
     def set_position(self, position, world=None):
         """set position of entity"""
         #M# remove from chunk of old position & tell everyone
+        old_observers = self.world._get_chunk(self.position).observers if self.world else set()
         changed_world = world and world != self.world
         if changed_world:
             if self.world:
                 self.world.entities.discard(self)
             self.world = world
             self.world.entities.add(self)
-        self.position = position
+        self.position = Vector(position)
         #M# add to chunk of new position & tell everyone
+        new_observers = self.world._get_chunk(self.position).observers if self.world else set()
+        for o in old_observers.difference(new_observers):
+            o._del_entity(self)
+        for o in new_observers:
+            o._set_entity(self)
+        # observer of this entity (the player)
         for observer in self.observers:
             observer._notice_position(changed_world)
 
-    def set_rotation(self, x, y):
-        self.rotation = x,y
+    def set_texture(self,texture):
+        self.texture = texture
+        self._inform_observers()
+
+    def set_rotation(self, yaw, pitch):
+        self.rotation = yaw,pitch
+        self._inform_observers()
 
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -319,6 +342,10 @@ class Entity(object):
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
 
+    def _inform_observers(self):
+        if self.world:
+            for observer in self.world._get_chunk(self.position).observers:
+                observer._set_entity(self)
 
 class Player(object):
     """a player/observer is someone how looks through the eyes of an entity"""
@@ -432,6 +459,8 @@ class Player(object):
                 chunk.observers.remove(self)
                 self.outbox.append("delarea %s %s %s"
                                %(tuple(chunk.position)))
+                for entity in chunk.get_entities():
+                    self._del_entity(entity)
         # load chunks
         if self._lc:
             chunk = self._lc.pop()
@@ -439,6 +468,8 @@ class Player(object):
                 self.observed_chunks.add(chunk)
                 self.outbox.append("setarea %s %s %s "%(chunk.position[0],chunk.position[1],chunk.position[2])+chunk.compressed_data) #Send chunksize only once
                 chunk.observers.add(self)
+                for entity in chunk.get_entities():
+                    self._set_entity(entity)
 
     def _chunk_priority_func(self,chunk):
         return self._priority_func(chunk.position<<chunk.chunksize)
@@ -489,6 +520,12 @@ class Player(object):
         if isinstance(block,basestring):
                 block = setup["BLOCK_ID_BY_NAME"][block]
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
+    
+    def _set_entity(self,entity):
+        self.outbox.append("setentity %s %s %s %s %s %s %s" %(hash(entity),entity.texture,entity.position[0],entity.position[1],entity.position[2],entity.rotation[0],entity.rotation[1]))
+
+    def _del_entity(self,entity):
+        self.outbox.append("delentity %s" %hash(entity))
 
 class Game(object):
     """
@@ -504,13 +541,12 @@ class Game(object):
         spawnpoint : (world, (x,y,z)) where to place new players
 
     kwargs (optionale Argumente):
-        wait       : wait for players to disconnect before leaving with
-        multiplayer: True  - open world to lan
-                     False - open client with direct connection
-        texturepath: specify path to custom texture.png
-        textureinfo: see voxelengine/multiplayer/texture.py
-        name       : name of the server
-        (socket_server : only use this if you know what you're doing)
+        init_function : function to call with new players (callback)
+        wait          : wait for players to disconnect before leaving with statement
+        multiplayer   : True  - open world to lan
+                        False - open client with direct connection
+        name          : name of the server
+        (socket_server: only use this if you know what you're doing)
 
     (bei Benutzung ohne "with", am Ende unbedingt Game.quit() aufrufen)
     """
@@ -519,16 +555,12 @@ class Game(object):
                  init_function=None,
                  wait=True,
                  multiplayer=False,
-                 texturepath=None,
-                 textureinfo=None,
                  name="MCG-CRAFT",
                  socket_server=None, #only use this if you know what you're doing
                  ):
         setup["users"].add(self)
         self.init_function = init_function
         self.wait = wait
-        self.texturepath = texturepath
-        self.textureinfo = textureinfo
 
         self.players = {}
         self.new_players = set()

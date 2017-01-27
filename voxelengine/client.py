@@ -76,19 +76,22 @@ def tex_coords(top, bottom, side):
     return result
 
 def load_setup(path):
-    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING
+    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME
     setupfile = open(path,"r")
     setup = ast.literal_eval(setupfile.read())
     CHUNKSIZE = setup["CHUNKSIZE"]
     focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
     TEXTURE_SIDE_LENGTH = setup["TEXTURE_SIDE_LENGTH"]
     TEXTURE_EDGE_CUTTING = setup.get("TEXTURE_EDGE_CUTTING",0)
+    ENTITY_MODELS = setup["ENTITY_MODELS"]
     if not os.path.isabs(setup["TEXTURE_PATH"]): #M# do something to support urls
         setup["TEXTURE_PATH"] = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
     TEXTURE_PATH = setup["TEXTURE_PATH"]
     TEXTURES = [None] #this first value is for air
     TRANSPARENCY = [True]
+    BLOCK_ID_BY_NAME = {"AIR":0}
     for i, (name, transparency, solidity, top, bottom, side) in enumerate(setup["TEXTURE_INFO"]):
+        BLOCK_ID_BY_NAME[name] = i+1
         TEXTURES.append(tex_coords(top, bottom, side))
         TRANSPARENCY.append(transparency)
 
@@ -140,8 +143,9 @@ class Model(object):
         # A TextureGroup manages an OpenGL texture.
         self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture()) #possible to use image.load(file=filedescriptor) if necessary
 
-        self.shown = {} #{(position,face):vertex_list}
+        self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = Chunkdict()
+        self.entities = {} #{entity_id: (vertex_list,...,...)}
 
         self.queue = deque()
 
@@ -199,7 +203,7 @@ class Model(object):
         block_id = self.get_block(position)
         if not block_id:
             return
-        texture_data = list(TEXTURES[block_id][face]) #maybe add list() around
+        texture_data = list(TEXTURES[block_id][face])
         vertex_data = face_vertices(x, y, z, face, 0.5)
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
@@ -215,6 +219,52 @@ class Model(object):
         if not (position,face) in self.shown:
             return False
         self.shown.pop((position,face)).delete()
+
+    @staticmethod
+    def _transform(mat,offset,vecs):
+        # used in set_entity
+        # ignores translation (4th column) of matrix and uses offset instead
+        return [sum([vecs[c-(c%3)+r]*mat[r+4*(c%3)] for r in range(3)])+offset[c%3] for c,x in enumerate(vecs)]
+
+    def set_entity(self,entity_id,model_id,position,rotation):
+        self.del_entity(entity_id)
+        if model_id == "0":
+            return
+        vertex_lists=[]
+        model = ENTITY_MODELS[model_id]
+        # transformationsmatrix bekommen
+        glPushMatrix()
+        glLoadIdentity()
+        x, y = rotation
+        glRotatef(x, 0, 1, 0)
+        body_matrix = (GLfloat * 16)()
+        glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
+        glRotatef(-y, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
+        head_matrix = (GLfloat * 16)()
+        glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
+        glPopMatrix()
+        for modelpart,transmatrix in (("body",body_matrix),("head",head_matrix)):
+            for relpos,offset,size,texture in model[modelpart]:
+                x, y, z = offset
+                if texture == "<<random>>":
+                    texture = entity_id%len(TEXTURES)
+                if isinstance(texture,basestring):
+                    texture = BLOCK_ID_BY_NAME[texture]
+                for face in range(len(FACES)):
+                    texture_data = list(TEXTURES[texture][face])
+                    vertex_data = face_vertices(x, y, z, face, 0.5) #M# iwas mit size
+                    vertex_data = self._transform(transmatrix,position+relpos,vertex_data)
+                    # create vertex list
+                    # FIXME Maybe `add_indexed()` should be used instead
+                    vertex_lists.append(self.batch.add(4, GL_QUADS, self.group,
+                        ('v3f/static', vertex_data),
+                        ('t2f/static', texture_data)))
+        self.entities[entity_id] = vertex_lists
+
+    def del_entity(self,entity_id):
+        vertex_lists = self.entities.pop(entity_id,[])
+        for vertex_list in vertex_lists:
+            vertex_list.delete()
 
     def _add_block(self, position, block_id):
         if self.get_block(position):
@@ -375,6 +425,14 @@ class Window(pyglet.window.Window):
                 self.position = position
             elif test("focusdist",2):
                 focus_distance = float(c[1])
+            elif test("setentity",8):
+                position = Vector(map(float,c[3:6]))
+                rotation = map(float,c[6:8])
+                self.model.set_entity(int(c[1]),c[2],position,rotation)
+            elif test("delentity",2):
+                self.model.del_entity(int(c[1]))
+            else:
+                print "unknown command", c
         self.client.send("tick")
         self.model.process_queue()
         self.updating = False
@@ -516,11 +574,17 @@ class Window(pyglet.window.Window):
         gluPerspective(65.0, width / float(height), 0.1, 60.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        x, y = self.rotation
-        glRotatef(x, 0, 1, 0)
-        glRotatef(-y, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
+        yaw, pitch = self.rotation
+        c = math.cos(math.radians(yaw))
+        s = math.sin(math.radians(yaw))
+        glRotatef(yaw, 0, 1, 0)
+        glRotatef(-pitch, c, 0, s)
+        AH = 0.5
+        dx = AH* math.sin(math.radians(pitch))*-s
+        dz = AH* math.sin(math.radians(pitch))*c
+        dy = AH*(math.cos(math.radians(pitch))-1)
         x, y, z = self.position
-        glTranslatef(-x, -y, -z)
+        glTranslatef(-x-dx, -y-dy, -z-dz)
 
     def on_draw(self):
         """ Called by pyglet to draw the canvas.

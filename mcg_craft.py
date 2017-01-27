@@ -19,11 +19,12 @@ PLAYER_HITBOX = [(dx,dy,dz) for dx in (width,-width)
                             for dz in (width,-width)]
 
 def init_player(player):
+    player.entity.set_texture("PLAYER")
     player.flying = False
 
     player.SPEED = 5
     player.JUMPSPEED = 10
-    player.RENDERDISTANCE = 8
+    player.RENDERDISTANCE = 40
 
     player.entity.hitbox = PLAYER_HITBOX
     player.entity.velocity = Vector([0,0,0])
@@ -111,7 +112,7 @@ terrain_generator = terrain_generator_from_heightfunc(heightfunction,1)
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
 
-    multiplayer = not select(["open server","play alone"])[0]
+    multiplayer = select(["open server","play alone"])[0] == 0
     spawnpoint = (0,int(heightfunction(0,0)+2),0)
 
     w = World([terrain_generator],spawnpoint=spawnpoint)
