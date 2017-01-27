@@ -40,14 +40,25 @@ def cube_vertices(x, y, z, n):
     ]
 
 def face_vertices(x, y, z, f, n):
-    return [
+    return (
         [x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n],  # top
         [x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n],  # bottom
         [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # left
         [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # right
         [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # front
         [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # back
-    ][f]
+    )[f]
+
+def face_vertices_noncube(x, y, z, f, size):
+    dx,dy,dz = size
+    return (
+        [x-dx,y+dy,z-dz, x-dx,y+dy,z+dz, x+dx,y+dy,z+dz, x+dx,y+dy,z-dz],  # top
+        [x-dx,y-dy,z-dz, x+dx,y-dy,z-dz, x+dx,y-dy,z+dz, x-dx,y-dy,z+dz],  # bottom
+        [x-dx,y-dy,z-dz, x-dx,y-dy,z+dz, x-dx,y+dy,z+dz, x-dx,y+dy,z-dz],  # left
+        [x+dx,y-dy,z+dz, x+dx,y-dy,z-dz, x+dx,y+dy,z-dz, x+dx,y+dy,z+dz],  # right
+        [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # front
+        [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # back
+    )[f]
 
 def tex_coord(x, y):
     """ Return the bounding vertices of the texture square.
@@ -252,7 +263,7 @@ class Model(object):
                     texture = BLOCK_ID_BY_NAME[texture]
                 for face in range(len(FACES)):
                     texture_data = list(TEXTURES[texture][face])
-                    vertex_data = face_vertices(x, y, z, face, 0.5) #M# iwas mit size
+                    vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size)) #M# iwas mit size
                     vertex_data = self._transform(transmatrix,position+relpos,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead

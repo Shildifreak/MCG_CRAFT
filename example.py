@@ -18,5 +18,5 @@ with voxelengine.Game(w.spawn_player) as g:
         i+=0.1
         g.update()
         e.set_rotation(2*i,5*i)
-        #e.set_position((-1,math.sin(i)+1,-3),w)
+        e.set_position((-1,math.sin(i)+1,-3),w)
     print w.entities
