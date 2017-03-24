@@ -264,7 +264,7 @@ class Model(object):
                     texture = BLOCK_ID_BY_NAME[texture]
                 for face in range(len(FACES)):
                     texture_data = list(TEXTURES[texture][face])
-                    vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size)) #M# iwas mit size
+                    vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     vertex_data = self._transform(transmatrix,position+relpos,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
@@ -555,7 +555,7 @@ class Window(pyglet.window.Window):
         # reticle
         if self.reticle:
             self.reticle.delete()
-        x, y = self.width / 2, self.height / 2
+        x, y = self.width // 2, self.height // 2
         n = 10
         self.reticle = pyglet.graphics.vertex_list(4,
             ('v2i', (x - n, y, x + n, y, x, y - n, x, y + n))
@@ -620,6 +620,7 @@ class Window(pyglet.window.Window):
 
         glDisable(GL_COLOR_LOGIC_OP)
         #glDisable(GL_BLEND)
+        #M# self.model.hud_batch.draw()
 
     def draw_focused_block(self):
         """ Draw black edges around the block that is currently under the
@@ -682,7 +683,7 @@ def setup():
 def show_on_window(client):
     window = None
     try:
-        #M# receive texturedata from game
+        # receive texturedata from game
         while True:
             c = client.receive()
             if c:
