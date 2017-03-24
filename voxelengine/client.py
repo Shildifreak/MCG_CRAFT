@@ -95,7 +95,7 @@ def load_setup(path):
     focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
     TEXTURE_SIDE_LENGTH = setup["TEXTURE_SIDE_LENGTH"]
     TEXTURE_EDGE_CUTTING = setup.get("TEXTURE_EDGE_CUTTING",0)
-    ENTITY_MODELS = setup["ENTITY_MODELS"]
+    ENTITY_MODELS = setup.get("ENTITY_MODELS",{})
     if not os.path.isabs(setup["TEXTURE_PATH"]): #M# do something to support urls
         setup["TEXTURE_PATH"] = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
     TEXTURE_PATH = setup["TEXTURE_PATH"]
@@ -251,13 +251,16 @@ class Model(object):
         glRotatef(x, 0, 1, 0)
         body_matrix = (GLfloat * 16)()
         glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
-        glRotatef(-y, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
+        glPopMatrix()
+        glPushMatrix()
+        glLoadIdentity()
+        glRotatef(-y, 1, 0, 0)#, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
         head_matrix = (GLfloat * 16)()
         glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
         glPopMatrix()
-        for modelpart,transmatrix in (("body",body_matrix),("head",head_matrix)):
+        for modelpart in ("body","head"):
             for relpos,offset,size,texture in model[modelpart]:
-                x, y, z = offset
+                x, y, z = offset if modelpart == "head" else relpos
                 if texture == "<<random>>":
                     texture = entity_id%len(TEXTURES)
                 if isinstance(texture,basestring):
@@ -265,7 +268,9 @@ class Model(object):
                 for face in range(len(FACES)):
                     texture_data = list(TEXTURES[texture][face])
                     vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
-                    vertex_data = self._transform(transmatrix,position+relpos,vertex_data)
+                    if modelpart == "head":
+                        vertex_data = self._transform(head_matrix,relpos,vertex_data)
+                    vertex_data = self._transform(body_matrix,position,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     vertex_lists.append(self.batch.add(4, GL_QUADS, self.group,
