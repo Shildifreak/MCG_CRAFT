@@ -361,7 +361,10 @@ class Player(object):
         self.observed_chunks = set()
         self._lc = set() #load chunks
         self._uc = set() #unload chunks
-        thread.start_new_thread(self._update_chunks_loop,())
+        if setup["WORLDSIZE"] == None:
+            thread.start_new_thread(self._update_chunks_loop,())
+        else:
+            self._init_chunks(setup["WORLDSIZE"])
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
@@ -373,6 +376,8 @@ class Player(object):
         entity.observers.add(self)
         self.lock_used = True
         self.lock.release()
+        if setup["WORLDSIZE"] != None:
+            self._init_chunks(setup["WORLDSIZE"])
 
     def is_pressed(self,key):
         """return whether key is pressed """
@@ -402,6 +407,21 @@ class Player(object):
         """Set maximum distance for focusing block"""
         self.outbox.append("focusdist %g" %distance)
         self.focus_distance = distance
+
+    def _init_chunks(self,worldsize):
+        if not self.entity or not self.entity.world:
+            return
+        world = self.entity.world
+        dx,dy,dz = worldsize
+        for x in range(dx):
+            x -= dx//2
+            for y in range(dy):
+                y -= dy//2
+                for z in range(dz):
+                    z -= dz//2
+                    chunkpos = Vector((x,y,z))<<world.chunksize
+                    chunk = world._get_chunk(chunkpos,load_on_miss = True)
+                    self._lc.add(chunk)
 
     ### it follows a long list of private methods that make sure a player acts like one ###
     def _update_chunks_loop(self):
@@ -522,6 +542,9 @@ class Player(object):
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
     
     def _set_entity(self,entity):
+        for msg in self.outbox:
+            if msg.startswith("setentity %s" %hash(entity)):
+                self.outbox.remove(msg)
         self.outbox.append("setentity %s %s %s %s %s %s %s" %(hash(entity),entity.texture,entity.position[0],entity.position[1],entity.position[2],entity.rotation[0],entity.rotation[1]))
 
     def _del_entity(self,entity):

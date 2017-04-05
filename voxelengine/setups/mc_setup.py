@@ -5,6 +5,7 @@
 "TEXTURE_SIDE_LENGTH" : 16,
 "DEFAULT_FOCUS_DISTANCE" : 8,
 "TEXTURE_PATH" : "mc_texture.png",
+"WORLDSIZE": (10,10,10), # size of world in chunks - None for infinite world
 
    #["Name",               transparenz, solid, [( oben), (unten), ( rest)]],
    #  oder
@@ -46,6 +47,7 @@
     ["DUNKELGRAU" ,              False,  True, [( 6,11), ( 6,11), ( 6,11)]],
     ["HELLORANGE" ,              False,  True, [( 6,12), ( 6,12), ( 6,12)]],
     ["BRAUN" ,                   False,  True, [( 3,12), ( 3,12), ( 3,12)]],
+    ["WEISS" ,                   False,  True, [(13,12), (13,12), (13,12)]],
     #bis hier INVENTAR FARBEN
 
     ["DIAMANT" ,                 False,  True, [( 6, 2), ( 6, 2), ( 6, 2)]],
@@ -64,7 +66,10 @@
     ["CREEPER" ,                 False,  True, [( 3,13), (3 ,13), ( 2,13)]],
     ["Zombie" ,                  False,  True, [( 1,15), (1 ,15), ( 0,13)]],
     ["Skelett",                  False,  True, [(15, 0), (15, 0), ( 0,15)]],
+    ["Schaf",                    False,  True, [(13,12), (13,12), (13,12), (13,12), (13,12), ( 4,13)]],
     # Gesichter
+    ["Schafbeine",               False,  True, [(13,12), ( 0,12), ( 5,13)]],
+    # Beine
     ["Commandblock",             False,  True, [(10, 1), (10, 1), (10, 1)]],
     ["Fruhlingsgrass",           False,  True, [( 7, 3), ( 0, 0), ( 0, 1)]],
     ["Fruhlingslaub",            False,  True, [(11, 1), (11, 1), (11, 1)]],
@@ -85,7 +90,19 @@
     "PLAYER":{
         "head":[((0,-0.6,0),(0,0.6,0),(1,1,1),"GESICHT")],
         "body":[((0,-1,0),(0,0,0),(0.8,1,0.4),"<<random>>")],
+        "legl":[],
+        "legr":[],
+        },
+    "SCHAF":{
+        "head":[((0,0,0),(0,0.8,-0.75),(0.7,0.7,0.6),"Schaf")],
+        "body":[((0,0,0),(0,0,0),(1.1,1.1,1.7),"WEISS"),
+                ((0,0,0),(0,0.1,0.9),(0.3,0.4,0.2),"WEISS")],
+        "legl":[((0.35,-0.3,0.55),(0,-0.5,0),(0.35,1,0.35),"Schafbeine"),
+                ((0.35,-0.3,-0.55),(0,-0.5,0),(0.35,1,0.35),"Schafbeine")],
+        "legr":[((-0.35,-0.3,-0.55),(0,-0.5,0),(0.35,1,0.35),"Schafbeine"),
+                ((-0.35,-0.3,0.55),(0,-0.5,0),(0.35,1,0.35),"Schafbeine")],
         }
+
     },
 
 }

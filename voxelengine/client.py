@@ -258,9 +258,21 @@ class Model(object):
         head_matrix = (GLfloat * 16)()
         glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
         glPopMatrix()
-        for modelpart in ("body","head"):
+        glPushMatrix()
+        glLoadIdentity()
+        glRotatef(math.sin(time.time()*6.2)*20, 1, 0, 0)
+        legl_matrix = (GLfloat * 16)()
+        glGetFloatv(GL_MODELVIEW_MATRIX,legl_matrix)
+        glPopMatrix()
+        glPushMatrix()
+        glLoadIdentity()
+        glRotatef(math.sin(time.time()*6.2)*-20, 1, 0, 0)
+        legr_matrix = (GLfloat * 16)()
+        glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
+        glPopMatrix()
+        for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,texture in model[modelpart]:
-                x, y, z = offset if modelpart == "head" else relpos
+                x, y, z = offset if modelpart in ("head","legl","legr") else relpos
                 if texture == "<<random>>":
                     texture = entity_id%len(TEXTURES)
                 if isinstance(texture,basestring):
@@ -270,6 +282,10 @@ class Model(object):
                     vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     if modelpart == "head":
                         vertex_data = self._transform(head_matrix,relpos,vertex_data)
+                    if modelpart == "legl":
+                        vertex_data = self._transform(legl_matrix,relpos,vertex_data)
+                    if modelpart == "legr":
+                        vertex_data = self._transform(legr_matrix,relpos,vertex_data)
                     vertex_data = self._transform(body_matrix,position,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead

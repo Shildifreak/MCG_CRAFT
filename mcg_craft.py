@@ -20,7 +20,7 @@ PLAYER_HITBOX = [(dx,dy,dz) for dx in (width,-width)
 
 def init_player(player):
     player.entity.set_texture("PLAYER")
-    player.flying = False
+    player.flying = True
 
     player.SPEED = 5
     player.JUMPSPEED = 10
@@ -107,7 +107,12 @@ def update_player(player):
                 pos = new
     pe.set_position(pos)
 
+
+def heightfunction(x,z):
+    return 5*math.sin(x/5.0)+5*math.sin(z/5.0)+5*math.sin(x/5.0+z/5.0)
+
 terrain_generator = terrain_generator_from_heightfunc(heightfunction,1)
+
 
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
