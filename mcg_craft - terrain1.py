@@ -35,7 +35,7 @@ def init_schaf(world):
     schaf.set_texture("SCHAF")
     schaf.SPEED = 5
     schaf.JUMPSPEED = 10
-    schaf.hitbox = get_hitbox(1.7,1.5,0.8)
+    schaf.hitbox = get_hitbox(0.6,1.5,0.8)
     hat_position = False
     while not hat_position:
         x = random.randint(-40,40)
