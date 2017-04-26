@@ -1,7 +1,8 @@
-import os
+import os,sys
+
+sys.path.append("Welten")
 
 from voxelengine import *
-from noise import f4 as heightfunction
 import random
 
 #TODO:
@@ -24,7 +25,7 @@ def init_player(player):
 
     player.RENDERDISTANCE = 20
 
-    player.entity.SPEED = 20
+    player.entity.SPEED = 10
     player.entity.JUMPSPEED = 10
     player.entity.hitbox = get_hitbox(0.4, 1.8, 1.6)
     player.entity.velocity = Vector([0,0,0])
@@ -176,21 +177,14 @@ def baum_function(chunk):
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
 
-    GRASS = setup["BLOCK_ID_BY_NAME"]["GRASS"]
-    DIRT  = setup["BLOCK_ID_BY_NAME"]["DIRT" ]
-    STONE = setup["BLOCK_ID_BY_NAME"]["STEIN"]
-
-    relief_gras = terrain_generator_from_heightfunc(grashoehe,GRASS)
-    relief_dirt = terrain_generator_from_heightfunc(erdhoehe,DIRT)
-    relief_stein = terrain_generator_from_heightfunc(steinhoehe,STONE)
-
-    terrain_generator = [relief_gras,relief_dirt,relief_stein,baum_function]
-
-
     multiplayer = select(["open server","play alone"])[0] == 0
-    spawnpoint = (0,int(heightfunction(0,0)+2),0)
+    worldtypes = os.listdir("Welten")
+    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
+    worldtype = select(worldtypes)[1]
+    worldmod = __import__(worldtype)
 
-    w = World(terrain_generator,spawnpoint=spawnpoint)
+    w = World(spawnpoint=(0,20,0))
+    worldmod.init(w)
 
     def i_f(player):
         w.spawn_player(player)

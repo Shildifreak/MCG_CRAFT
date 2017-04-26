@@ -5,7 +5,7 @@
 "TEXTURE_SIDE_LENGTH" : 16,
 "DEFAULT_FOCUS_DISTANCE" : 8,
 "TEXTURE_PATH" : "mc_texture.png",
-"WORLDSIZE": (10,10,10), # size of world in chunks - None for infinite world
+"RENDERLIMIT": False, # whether to show all chunks (False) or just some (True)
 
    #["Name",               transparenz, solid, [( oben), (unten), ( rest)]],
    #  oder

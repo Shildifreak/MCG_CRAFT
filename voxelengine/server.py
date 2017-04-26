@@ -59,6 +59,8 @@ class _Chunkdict(dict):
     def __missing__(self, chunkposition):
         chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
         self[chunkposition] = chunk
+        for player in self.world.players:
+            player._notice_new_chunk(chunk)
         return chunk
 
 class World(object):
@@ -113,6 +115,10 @@ class World(object):
         if chunk == None:
             return None
         return chunk.get_block(position)
+
+    def set_block_name(self, position, blockname):
+        block_id = setup["BLOCK_ID_BY_NAME"][blockname]
+        self.set_block(position, block_id)
 
     def set_block(self, position, block, minlevel = None, load_on_miss = True):
         """set block at position"""
@@ -298,6 +304,9 @@ class Entity(object):
 
     def set_position(self, position, world=None):
         """set position of entity"""
+        # observer of this entity (the player)
+        for observer in self.observers:
+            observer._notice_position(position, world)
         #M# remove from chunk of old position & tell everyone
         old_observers = self.world._get_chunk(self.position).observers if self.world else set()
         changed_world = world and world != self.world
@@ -313,9 +322,6 @@ class Entity(object):
             o._del_entity(self)
         for o in new_observers:
             o._set_entity(self)
-        # observer of this entity (the player)
-        for observer in self.observers:
-            observer._notice_position(changed_world)
 
     def set_texture(self,texture):
         self.texture = texture
@@ -361,14 +367,15 @@ class Player(object):
         self.observed_chunks = set()
         self._lc = set() #load chunks
         self._uc = set() #unload chunks
-        if setup["WORLDSIZE"] == None:
+        if setup["RENDERLIMIT"]:
             thread.start_new_thread(self._update_chunks_loop,())
         else:
-            self._init_chunks(setup["WORLDSIZE"])
+            self._init_chunks()
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
     def observe(self,entity):
+        self._notice_position(entity.position,entity.world)
         self.lock.acquire()
         if self.entity:
             self.entity.observers.remove(self)
@@ -376,8 +383,8 @@ class Player(object):
         entity.observers.add(self)
         self.lock_used = True
         self.lock.release()
-        if setup["WORLDSIZE"] != None:
-            self._init_chunks(setup["WORLDSIZE"])
+        if not setup["RENDERLIMIT"]:
+            self._init_chunks()
 
     def is_pressed(self,key):
         """return whether key is pressed """
@@ -408,20 +415,11 @@ class Player(object):
         self.outbox.append("focusdist %g" %distance)
         self.focus_distance = distance
 
-    def _init_chunks(self,worldsize):
+    def _init_chunks(self):
         if not self.entity or not self.entity.world:
             return
-        world = self.entity.world
-        dx,dy,dz = worldsize
-        for x in range(dx):
-            x -= dx//2
-            for y in range(dy):
-                y -= dy//2
-                for z in range(dz):
-                    z -= dz//2
-                    chunkpos = Vector((x,y,z))<<world.chunksize
-                    chunk = world._get_chunk(chunkpos,load_on_miss = True)
-                    self._lc.add(chunk)
+        for chunk in self.entity.world.chunks.values():
+            self._lc.add(chunk)
 
     ### it follows a long list of private methods that make sure a player acts like one ###
     def _update_chunks_loop(self):
@@ -520,9 +518,13 @@ class Player(object):
                     self.was_pressed_set.add(a)
                 self.action_states[a] = new_state
 
-    def _notice_position(self,changed_worlds=False):
+    def _notice_position(self,position,world):
         """set position of camera/player"""
-        if changed_worlds:
+        if world != None and (not self.entity or world != self.entity.world):
+            if self.entity and self.entity.world:
+                self.entity.world.players.discard(self)
+            if world:
+                world.players.add(self)
             self.lock.acquire()
             for chunk in self.observed_chunks:
                 chunk.observers.remove(self)
@@ -533,14 +535,18 @@ class Player(object):
         for msg in self.outbox:
             if msg.startswith("goto"):
                 self.outbox.remove(msg)
-        self.outbox.append("goto %s %s %s" %self.entity.position)
+        self.outbox.append("goto %s %s %s" %position)
 
     def _notice_block(self,position,block):
         """send blockinformation to client"""
         if isinstance(block,basestring):
                 block = setup["BLOCK_ID_BY_NAME"][block]
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
-    
+
+    def _notice_new_chunk(self,chunk):
+        if not setup["RENDERLIMIT"]:
+            self._lc.add(chunk)
+
     def _set_entity(self,entity):
         for msg in self.outbox:
             if msg.startswith("setentity %s" %hash(entity)):
