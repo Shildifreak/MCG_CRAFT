@@ -1,8 +1,7 @@
-import os,sys,math
-
-sys.path.append("Welten")
+import os
 
 from voxelengine import *
+from noise import f4 as heightfunction
 import random
 
 #TODO:
@@ -14,14 +13,11 @@ AIRRESISTANCE = 5
 SLIDING = 0.001
 schafe = []
 
-def floatrange(a,b):
-    return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
-
 def get_hitbox(width,height,eye_level):
-    return [(dx,dy,dz) for dx in floatrange(-width,width)
-                       for dy in floatrange(-eye_level,height-eye_level)
-                       for dz in floatrange(-width,width)]
-    
+    return [(dx,dy,dz) for dx in (width,-width)
+                       for dy in (height-eye_level,-eye_level)
+                       for dz in (width,-width)]
+
 def init_player(player):
     player.entity.set_texture("PLAYER")
     player.flying = False
@@ -30,27 +26,10 @@ def init_player(player):
 
     player.entity.SPEED = 10
     player.entity.JUMPSPEED = 10
-    player.entity.hitbox = get_hitbox(0.4, 1.8, 1.6)
+    player.entity.hitbox = get_hitbox(0.6, 1.8, 1.6)
     player.entity.velocity = Vector([0,0,0])
     player.entity.last_update = time.time()
 
-"""def init_schaf(world):
-    schaf = Entity()
-    schaf.set_texture("SCHAF")
-    schaf.SPEED = 5
-    schaf.JUMPSPEED = 10
-    schaf.hitbox = get_hitbox(0.6,1.5,0.8)
-    hat_position = False
-    while not hat_position:
-        x = random.randint(-40,40)
-        y = random.randint(-40,40)
-        z = random.randint(-40,40)
-        schaf.set_position((x,y,z),world)
-        if world.get_block_name((x,y-2,z)) != "AIR" and not collide(schaf,Vector((x,y,z))):
-            hat_position = True
-    schaf.velocity = Vector([0,0,0])
-    schaf.last_update = time.time()
-    schafe.append(schaf)"""
 def init_schaf(world):
     schaf = Entity()
     schaf.set_texture("SCHAF")
@@ -61,11 +40,10 @@ def init_schaf(world):
     while not has_position:
         x = random.randint(-40,40)
         z = random.randint(-40,40)
-        y = random.randint(-40,40)
-        #y = grashoehe(x,z) + 2
+        y = grashoehe(x,z) + 2
 #        print x," ",y," ",z
         schaf.set_position((x,y,z),world)
-        if world.get_block_name((x,y-2,z)) != "AIR" and len(collide_and_is_in(schaf,Vector((x,y,z)))) == 0:
+        if len(collide_and_is_in(schaf,Vector((x,y,z)))) == 0:
 #        if onground(schaf):
             has_position = True
     schaf.velocity = Vector([0,0,0])
@@ -75,14 +53,12 @@ def init_schaf(world):
     schaf.nod = False
     schafe.append(schaf)
 
-
 def onground(entity):
     for relpos in entity.hitbox:
         block_pos = (entity.position+relpos+(0,-0.2,0)).normalize()
         if entity.world.get_block_name(block_pos) != "AIR": #M# test for solidity instead
             return True
     return False
-
 
 def collide(entity,position):
     """blocks entity would collide with if it was at position"""
@@ -98,7 +74,6 @@ def collide_difference(entity,new_position,previous_position):
     return collide(entity,new_position).difference(collide(entity,previous_position))
 
 def collide_and_is_in(entity,position):
-    #M# merge with normal collide
     """blocks entity would collide with and would be in if it was at position"""
     if entity.world.get_block_name(position.normalize()) != "AIR":
         blocks = collide(entity,position)
@@ -172,7 +147,6 @@ def update_player(player):
         nv += ( sz,0,-sx)
 
     sv = horizontal_move(pe,player.is_pressed("jump"))
-
     
     pe.velocity += ((1,1,1)-sv)*nv
     update_position(pe)
@@ -204,7 +178,7 @@ def update_schaf(schaf):
     if schaf.forward:
         nv += (sx,0,sz)
 #    if len(collide_and_is_in(schaf,schaf.position)) != 0:
-    jump = False
+    jump = True
 #    else:
 #        jump = False
     sv = horizontal_move(schaf,jump)
@@ -242,14 +216,23 @@ def baum_function(chunk):
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
 
-    multiplayer = select(["open server","play alone"])[0] == 0
-    worldtypes = os.listdir("Welten")
-    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
-    worldtype = select(worldtypes)[1]
-    worldmod = __import__(worldtype)
+    GRASS = setup["BLOCK_ID_BY_NAME"]["GRASS"]
+    DIRT  = setup["BLOCK_ID_BY_NAME"]["DIRT" ]
+    STONE = setup["BLOCK_ID_BY_NAME"]["STEIN"]
 
-    w = World(spawnpoint=(0,20,0))
-    worldmod.init(w)
+    relief_gras = terrain_generator_from_heightfunc(grashoehe,GRASS)
+    relief_dirt = terrain_generator_from_heightfunc(erdhoehe,DIRT)
+    relief_stein = terrain_generator_from_heightfunc(steinhoehe,STONE)
+
+    terrain_generator = [relief_gras,relief_dirt,relief_stein,baum_function]
+
+
+    multiplayer = select(["open server","play alone"])[0] == 0
+    x = random.randint(-5,5)
+    z = random.randint(-5,5)
+    spawnpoint = (x,int(heightfunction(x,z)+2),z)
+
+    w = World(terrain_generator,spawnpoint=spawnpoint)
 
     def i_f(player):
         w.spawn_player(player)
@@ -269,5 +252,5 @@ if __name__ == "__main__":
                 update_player(player)
             for schaf in schafe:
                 update_schaf(schaf)
-            if len(schafe) < 30:
+            if len(schafe) < 5:
                 init_schaf(w)
