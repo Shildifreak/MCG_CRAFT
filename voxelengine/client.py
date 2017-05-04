@@ -613,9 +613,9 @@ class Window(pyglet.window.Window):
         glRotatef(yaw, 0, 1, 0)
         glRotatef(-pitch, c, 0, s)
         AH = 0.5
-        dx = AH* math.sin(math.radians(pitch))*-s
-        dz = AH* math.sin(math.radians(pitch))*c
-        dy = AH*(math.cos(math.radians(pitch))-1)
+        dx = 0#AH* math.sin(math.radians(pitch))*-s
+        dz = 0#AH* math.sin(math.radians(pitch))*c
+        dy = 0#AH*(math.cos(math.radians(pitch))-1)
         x, y, z = self.position
         glTranslatef(-x-dx, -y-dy, -z-dz)
 
@@ -707,11 +707,10 @@ def show_on_window(client):
         # receive texturedata from game
         while True:
             c = client.receive()
-            if c:
+            if c and c.startswith("setup"):
+                path = c.split(" ",1)[-1]
+                load_setup(path)
                 break
-        if c.startswith("setup"):
-            path = c.split(" ",1)[-1]
-            load_setup(path)
         window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.

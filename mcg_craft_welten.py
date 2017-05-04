@@ -71,7 +71,7 @@ def init_schaf(world):
     schaf.velocity = Vector([0,0,0])
     schaf.last_update = time.time()
     schaf.forward = False
-    schaf.turn = "no"
+    schaf.turn = 0
     schaf.nod = False
     schafe.append(schaf)
 
@@ -179,22 +179,22 @@ def update_player(player):
 
 def update_schaf(schaf):
     r = random.randint(0,99)
-    if r < 10:
-        schaf.turn = "left"
+    if r < 1:
+        schaf.turn = -5
         schaf.nod = False
-    elif r < 20:
-        schaf.turn = "right"
+    elif r < 2:
+        schaf.turn = 5
         schaf.nod = False
-    elif r < 60:
+    elif r < 3:
         schaf.forward = True
-        schaf.turn = "no"
+        schaf.turn = 0
         schaf.nod = False
-    elif r < 90:
+    elif r < 5:
         schaf.forward = False
         schaf.nod = False
-    else:
+    elif r < 7:
         schaf.forward = False
-        schaf.turn = "no"
+        schaf.turn = 0
         schaf.nod = True
     
     
@@ -210,6 +210,9 @@ def update_schaf(schaf):
     sv = horizontal_move(schaf,jump)
     schaf.velocity += ((1,1,1)-sv)*nv
     update_position(schaf)
+    if schaf.turn:
+        y,p = schaf.rotation
+        schaf.set_rotation(y+schaf.turn,p)
 
 def grashoehe(x,z):
     return int(heightfunction(x,z))#int(5*math.sin(x/5.0)+5*math.sin(z/5.0)+5*math.sin(x/5.0+z/5.0))
@@ -263,11 +266,15 @@ if __name__ == "__main__":
         while not g.get_players():
             g.update()
             time.sleep(0.5) #wait for players to connect
+        i = 0
         while g.get_players():
+            print "loop", i; i += 1
             g.update()
             for player in g.get_players():
                 update_player(player)
             for schaf in schafe:
+                #schaf.set_position(schaf.position + (0,0.01,0))
                 update_schaf(schaf)
-            if len(schafe) < 30:
+                pass
+            if len(schafe) < 3:
                 init_schaf(w)

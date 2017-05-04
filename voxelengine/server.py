@@ -420,7 +420,11 @@ class Player(object):
             return
         for chunk in self.entity.world.chunks.values():
             self._lc.add(chunk)
-
+        if self.lock.acquire():
+            self._lc = sorted(self._lc,key=self._chunk_priority_func,reverse=True)
+            self.lock.release()
+        else:
+            print "locking error"
     ### it follows a long list of private methods that make sure a player acts like one ###
     def _update_chunks_loop(self):
         try:
@@ -532,10 +536,8 @@ class Player(object):
             self.outbox.append("clear")
             self.lock_used = True
             self.lock.release()
-        for msg in self.outbox:
-            if msg.startswith("goto"):
-                self.outbox.remove(msg)
-        self.outbox.append("goto %s %s %s" %position)
+        self.outbox[:] = (msg for msg in self.outbox if not msg.startswith("goto"))
+        self.outbox.insert(0,"goto %s %s %s" %position)
 
     def _notice_block(self,position,block):
         """send blockinformation to client"""
@@ -545,13 +547,17 @@ class Player(object):
 
     def _notice_new_chunk(self,chunk):
         if not setup["RENDERLIMIT"]:
-            self._lc.add(chunk)
+            if chunk not in self._lc:
+                self._lc.append(chunk)
 
     def _set_entity(self,entity):
-        for msg in self.outbox:
+        new_msg = "setentity %s %s %s %s %s %s %s" %(hash(entity),entity.texture,entity.position[0],entity.position[1],entity.position[2],entity.rotation[0],entity.rotation[1])
+        for i,msg in enumerate(self.outbox):
             if msg.startswith("setentity %s" %hash(entity)):
-                self.outbox.remove(msg)
-        self.outbox.append("setentity %s %s %s %s %s %s %s" %(hash(entity),entity.texture,entity.position[0],entity.position[1],entity.position[2],entity.rotation[0],entity.rotation[1]))
+                self.outbox[i] = new_msg
+                break
+        else:
+            self.outbox.append(new_msg)
 
     def _del_entity(self,entity):
         self.outbox.append("delentity %s" %hash(entity))
