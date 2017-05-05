@@ -55,7 +55,7 @@ def init_schaf(world):
     schaf = Entity()
     schaf.set_texture("SCHAF")
     schaf.SPEED = 5
-    schaf.JUMPSPEED = 20
+    schaf.JUMPSPEED = 10
     schaf.hitbox = get_hitbox(0.6,1.5,1)
     has_position = False
     while not has_position:
@@ -65,7 +65,7 @@ def init_schaf(world):
         #y = grashoehe(x,z) + 2
 #        print x," ",y," ",z
         schaf.set_position((x,y,z),world)
-        if world.get_block_name((x,y-2,z)) != "AIR" and len(collide_and_is_in(schaf,Vector((x,y,z)))) == 0:
+        if world.get_block_name((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
 #        if onground(schaf):
             has_position = True
     schaf.velocity = Vector([0,0,0])
@@ -77,34 +77,40 @@ def init_schaf(world):
 
 
 def onground(entity):
-    for relpos in entity.hitbox:
-        block_pos = (entity.position+relpos+(0,-0.2,0)).normalize()
-        if entity.world.get_block_name(block_pos) != "AIR": #M# test for solidity instead
-            return True
-    return False
-
+    return bool_collide_difference(entity,entity.position+(0,-0.2,0),entity.position)
 
 def collide(entity,position):
+    global debug_counter_2
     """blocks entity would collide with if it was at position"""
     blocks = set()
     for relpos in entity.hitbox:
+        debug_counter_2 += 1
         block_pos = (position+relpos).normalize()
         if entity.world.get_block_name(block_pos) != "AIR": #s.onground
             blocks.add(block_pos)
     return blocks
 
+def potential_collide_blocks(entity,position):
+    blocks = set()
+    for relpos in entity.hitbox:
+        block_pos = (position+relpos).normalize()
+        blocks.add(block_pos)
+    return blocks
+
+
 def collide_difference(entity,new_position,previous_position):
     """return blocks entity would newly collide with if it moved from previous_position to new_position"""
     return collide(entity,new_position).difference(collide(entity,previous_position))
 
-def collide_and_is_in(entity,position):
-    #M# merge with normal collide
-    """blocks entity would collide with and would be in if it was at position"""
-    if entity.world.get_block_name(position.normalize()) != "AIR":
-        blocks = collide(entity,position)
-        blocks.add(position.normalize())
-        return blocks
-    return collide(entity,position)
+def bool_collide_difference(entity,new_position,previous_position):
+    global debug_counter_2
+    for block in potential_collide_blocks(entity,new_position).difference(potential_collide_blocks(entity,previous_position)):
+        debug_counter_2 += 1
+        if entity.world.get_block(block) != 0:
+            return True
+    return False
+    
+
 
 def horizontal_move(entity,jump):
     if onground(entity):
@@ -132,7 +138,7 @@ def update_position(entity):
             mask          = Vector([int(i==j) for j in range(DIMENSION)])
             inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
             new = pos + entity.velocity*entity.dt*mask*(1.0/steps)
-            if collide_difference(entity,new,pos):
+            if bool_collide_difference(entity,new,pos):
                 entity.velocity *= inverted_mask
             else:
                 pos = new
@@ -178,7 +184,7 @@ def update_player(player):
     update_position(pe)
 
 def update_schaf(schaf):
-    r = random.randint(0,99)
+    r = random.randint(0,200)
     if r < 1:
         schaf.turn = -5
         schaf.nod = False
@@ -200,13 +206,12 @@ def update_schaf(schaf):
     
     update_dt(schaf)
     nv = Vector([0,0,0])
-    sx,sy,sz = schaf.get_sight_vector()*schaf.SPEED
+    sx,sy,sz = schaf.get_sight_vector()
     if schaf.forward:
-        nv += (sx,0,sz)
-#    if len(collide_and_is_in(schaf,schaf.position)) != 0:
-    jump = False
-#    else:
-#        jump = False
+        nv += Vector((sx,0,sz))*schaf.SPEED
+        jump = schaf.world.get_block((schaf.position+Vector((sx,-0.5,sz))).normalize()) != 0
+    else:
+        jump = not random.randint(0,2000)
     sv = horizontal_move(schaf,jump)
     schaf.velocity += ((1,1,1)-sv)*nv
     update_position(schaf)
@@ -214,33 +219,8 @@ def update_schaf(schaf):
         y,p = schaf.rotation
         schaf.set_rotation(y+schaf.turn,p)
 
-def grashoehe(x,z):
-    return int(heightfunction(x,z))#int(5*math.sin(x/5.0)+5*math.sin(z/5.0)+5*math.sin(x/5.0+z/5.0))
-
-def erdhoehe(x,z):
-    return grashoehe(x,z)-1
-
-def steinhoehe(x,z):
-    return grashoehe(x,z)-3
-
-chunksize = 2**setup["CHUNKSIZE"]
-def baum_function(chunk):
-    chunkpos = chunk.position*chunksize
-    baumzahl = random.randint(0,1)
-    for i in range(3):
-        dx = random.choice(range(chunksize))
-        dz = random.choice(range(chunksize))
-        baumhoehe = random.randint(3,5)
-        x = chunkpos[0] + dx
-        z = chunkpos[2] + dz
-        y = grashoehe(x,z)
-        if 0 <= y-chunkpos[1] < chunksize:
-            for dy in range(1,baumhoehe):
-                chunk.set_block(Vector((x,y+dy,z)),"HOLZ")
-            for dx in range(-1,2):
-                for dz in range(-1,2):
-                    for dy in range(3):
-                        chunk.set_block(Vector((x+dx,y+dy+baumhoehe,z+dz)),"LAUB")
+debug_counter_1 = 1
+debug_counter_2 = 1
 
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
@@ -266,15 +246,13 @@ if __name__ == "__main__":
         while not g.get_players():
             g.update()
             time.sleep(0.5) #wait for players to connect
-        i = 0
         while g.get_players():
-            print "loop", i; i += 1
+            #print "counter", debug_counter_1, debug_counter_2, debug_counter_2//debug_counter_1; debug_counter_1 += 1
             g.update()
             for player in g.get_players():
                 update_player(player)
             for schaf in schafe:
-                #schaf.set_position(schaf.position + (0,0.01,0))
                 update_schaf(schaf)
                 pass
-            if len(schafe) < 3:
+            if len(schafe) < 10:
                 init_schaf(w)
