@@ -34,23 +34,7 @@ def init_player(player):
     player.entity.velocity = Vector([0,0,0])
     player.entity.last_update = time.time()
 
-"""def init_schaf(world):
-    schaf = Entity()
-    schaf.set_texture("SCHAF")
-    schaf.SPEED = 5
-    schaf.JUMPSPEED = 10
-    schaf.hitbox = get_hitbox(0.6,1.5,0.8)
-    hat_position = False
-    while not hat_position:
-        x = random.randint(-40,40)
-        y = random.randint(-40,40)
-        z = random.randint(-40,40)
-        schaf.set_position((x,y,z),world)
-        if world.get_block_name((x,y-2,z)) != "AIR" and not collide(schaf,Vector((x,y,z))):
-            hat_position = True
-    schaf.velocity = Vector([0,0,0])
-    schaf.last_update = time.time()
-    schafe.append(schaf)"""
+
 def init_schaf(world):
     schaf = Entity()
     schaf.set_texture("SCHAF")
@@ -63,10 +47,8 @@ def init_schaf(world):
         z = random.randint(-40,40)
         y = random.randint(-40,40)
         #y = grashoehe(x,z) + 2
-#        print x," ",y," ",z
         schaf.set_position((x,y,z),world)
-        if world.get_block_name((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
-#        if onground(schaf):
+        if world.get_block((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
             has_position = True
     schaf.velocity = Vector([0,0,0])
     schaf.last_update = time.time()
@@ -86,7 +68,7 @@ def collide(entity,position):
     for relpos in entity.hitbox:
         debug_counter_2 += 1
         block_pos = (position+relpos).normalize()
-        if entity.world.get_block_name(block_pos) != "AIR": #s.onground
+        if entity.world.get_block(block_pos) != "AIR": #s.onground
             blocks.add(block_pos)
     return blocks
 
@@ -106,7 +88,7 @@ def bool_collide_difference(entity,new_position,previous_position):
     global debug_counter_2
     for block in potential_collide_blocks(entity,new_position).difference(potential_collide_blocks(entity,previous_position)):
         debug_counter_2 += 1
-        if entity.world.get_block(block) != 0:
+        if entity.world.get_block(block) != "AIR":
             return True
     return False
     
@@ -158,6 +140,7 @@ def update_player(player):
     if player.was_pressed("left click"):
         v = player.get_focused_pos()[0]
         if v:
+            print "tried to set air"
             pe.world[v] = "AIR"
 
     if player.flying:
@@ -209,7 +192,7 @@ def update_schaf(schaf):
     sx,sy,sz = schaf.get_sight_vector()
     if schaf.forward:
         nv += Vector((sx,0,sz))*schaf.SPEED
-        jump = schaf.world.get_block((schaf.position+Vector((sx,-0.5,sz))).normalize()) != 0
+        jump = schaf.world.get_block((schaf.position+Vector((sx,-0.5,sz))).normalize()) != "AIR"
     else:
         jump = not random.randint(0,2000)
     sv = horizontal_move(schaf,jump)
@@ -222,6 +205,24 @@ def update_schaf(schaf):
 debug_counter_1 = 1
 debug_counter_2 = 1
 
+class MCGCraftWorld(World):
+    def __init__(self,*args,**kwargs):
+        World.__init__(self,*args,**kwargs)
+        self.set_block_buffer = {}
+        self.block_updates = []
+
+    #def set_block(self,position,block):
+    #    l = self.set_block_buffer.setdefault(position,[])
+    #    l.append(block)
+
+    def tick(self):
+        for position, blocklist in self.set_block_buffer.items():
+            if len(blocklist) == 1:
+                World.set_block(self,position,blocklist[0])
+            elif len(blocklist) > 1:
+                print("can't set multiple block at one tick to the same position")
+                #M# drop 'em!
+
 if __name__ == "__main__":
     load_setup(os.path.join(PATH,"setups","mc_setup.py"))
 
@@ -231,7 +232,7 @@ if __name__ == "__main__":
     worldtype = select(worldtypes)[1]
     worldmod = __import__(worldtype)
 
-    w = World(spawnpoint=(0,20,0))
+    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=(0,20,0))
     worldmod.init(w)
 
     def i_f(player):
@@ -254,5 +255,5 @@ if __name__ == "__main__":
             for schaf in schafe:
                 update_schaf(schaf)
                 pass
-            if len(schafe) < 10:
-                init_schaf(w)
+            #if len(schafe) < 10:
+            #    init_schaf(w)

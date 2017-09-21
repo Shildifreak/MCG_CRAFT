@@ -88,7 +88,7 @@ def tex_coords(textures):
     return result
 
 def load_setup(path):
-    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME
+    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID
     setupfile = open(path,"r")
     setup = ast.literal_eval(setupfile.read())
     CHUNKSIZE = setup["CHUNKSIZE"]
@@ -99,12 +99,14 @@ def load_setup(path):
     if not os.path.isabs(setup["TEXTURE_PATH"]): #M# do something to support urls
         setup["TEXTURE_PATH"] = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
     TEXTURE_PATH = setup["TEXTURE_PATH"]
-    TEXTURES = [None] #this first value is for air
+    TEXTURES = {} #this first value is for air
     TRANSPARENCY = [True]
     BLOCK_ID_BY_NAME = {"AIR":0}
+    BLOCK_NAME_BY_ID = ["AIR"]
     for i, (name, transparency, solidity, textures) in enumerate(setup["TEXTURE_INFO"]):
+        BLOCK_NAME_BY_ID.append(name)
         BLOCK_ID_BY_NAME[name] = i+1
-        TEXTURES.append(tex_coords(textures))
+        TEXTURES[name] = tex_coords(textures)
         TRANSPARENCY.append(transparency)
 
 
@@ -120,10 +122,10 @@ class SimpleChunk(object):
         self.blocks = {}
 
     def get_block(self,position):
-        return self.blocks.get(position,0 if self.blocks else None)
+        return self.blocks.get(position,"AIR" if self.blocks else None)
 
     def set_block(self,position,value):
-        if value == 0:
+        if value == "AIR":
             del self.blocks[position]
         else:
             self.blocks[position] = value
@@ -161,9 +163,9 @@ class Model(object):
 
         self.queue = deque()
 
-    def add_block(self,position, id_or_name):
+    def add_block(self, position, block_name):
         """for immediate execution use private method"""
-        self.queue.append((self._add_block,(position,id_or_name)))
+        self.queue.append((self._add_block,(position,block_name)))
 
     def remove_block(self, position):
         """for immediate execution use private method"""
@@ -196,7 +198,7 @@ class Model(object):
         fv = FACES[face]
         b = self.get_block(position+fv)
         if b != None:
-            if b == 0: #M# test for transparency here!
+            if b == "AIR": #M# test for transparency here!
                 self.show_face(position,face)
                 return
         self.hide_face(position,face)
@@ -212,10 +214,10 @@ class Model(object):
             #M# oder schnell:
             return
         x, y, z = position
-        block_id = self.get_block(position)
-        if not block_id:
+        block_name = self.get_block(position)
+        if not block_name or block_name == "AIR":
             return
-        texture_data = list(TEXTURES[block_id][face])
+        texture_data = list(TEXTURES[block_name][face])
         vertex_data = face_vertices(x, y, z, face, 0.5)
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
@@ -274,11 +276,11 @@ class Model(object):
             for relpos,offset,size,texture in model[modelpart]:
                 x, y, z = offset if modelpart in ("head","legl","legr") else relpos
                 if texture == "<<random>>":
-                    texture = entity_id%len(TEXTURES)
+                    texture = TEXTURES.values()[entity_id%len(TEXTURES)]
                 if isinstance(texture,basestring):
-                    texture = BLOCK_ID_BY_NAME[texture]
+                    texture = TEXTURES[texture]
                 for face in range(len(FACES)):
-                    texture_data = list(TEXTURES[texture][face])
+                    texture_data = list(texture[face])
                     vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     if modelpart == "head":
                         vertex_data = self._transform(head_matrix,relpos,vertex_data)
@@ -299,15 +301,15 @@ class Model(object):
         for vertex_list in vertex_lists:
             vertex_list.delete()
 
-    def _add_block(self, position, block_id):
+    def _add_block(self, position, block_name):
         if self.get_block(position):
             self.hide(position)
-        self._set_block(position,block_id)
+        self._set_block(position,block_name)
         self.update_visibility(position)
         self.update_visibility_around(position)
 
     def _remove_block(self, position):
-        self._set_block(position,0)
+        self._set_block(position,"AIR")
         self.hide(position)
         self.update_visibility_around(position)
 
@@ -329,12 +331,13 @@ class Model(object):
     def _set_area(self, position, compressed_blocks):
         if isinstance(self.chunks[position],Chunk):
             raise Exception("Can't load chunk if there is already one.")
-        c = Chunk(CHUNKSIZE)
+        codec = (BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID)#M#
+        c = Chunk(CHUNKSIZE,codec)
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
 
         for i,relpos in enumerate(iterchunk()):
-            if c[i] != 0: #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
+            if c[i] != "AIR": #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
                 self.update_visibility((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
             #M# hier gilt das selbe wie in _del_chunk
@@ -343,9 +346,9 @@ class Model(object):
     def get_block(self,position):
         return self.chunks[position>>CHUNKSIZE].get_block(position)
 
-    def _set_block(self,position,block_id):
-        """this does not update the screen!"""
-        return self.chunks[position>>CHUNKSIZE].set_block(position,block_id)
+    def _set_block(self,position,block_name):
+        """this does not update the screen! consider using set_block (without underscore)"""
+        return self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
 
 class Window(pyglet.window.Window):
 
@@ -452,7 +455,7 @@ class Window(pyglet.window.Window):
                 self.model.del_area(position)
             elif test("set",5):
                 position = Vector(map(int,c[1:4]))
-                self.model.add_block(position,int(c[4]))
+                self.model.add_block(position,c[4])
             elif test("goto",4):
                 position = Vector(map(float,c[1:4]))
                 self.position = position
@@ -506,7 +509,7 @@ class Window(pyglet.window.Window):
         Parameters
         ----------
         x, y : int
-            The coordinates of the mouse click. Always center of the screen if
+            The coordinates of the mouse. Always center of the screen if
             the mouse is captured.
         dx, dy : float
             The movement of the mouse.
@@ -519,6 +522,8 @@ class Window(pyglet.window.Window):
             y = max(-90, min(90, y))
             self.rotation = (x, y)
             self.client.send("rot %s %s" %self.rotation)
+        else:
+            print "non exclusive mouse"
 
     def send_key_change(self, symbol, modifiers, state):
         """ Called when the player presses a key. See pyglet docs for key
@@ -612,10 +617,10 @@ class Window(pyglet.window.Window):
         s = math.sin(math.radians(yaw))
         glRotatef(yaw, 0, 1, 0)
         glRotatef(-pitch, c, 0, s)
-        AH = 0.5
-        dx = 0#AH* math.sin(math.radians(pitch))*-s
-        dz = 0#AH* math.sin(math.radians(pitch))*c
-        dy = 0#AH*(math.cos(math.radians(pitch))-1)
+        AH = 0.25
+        dx = AH* math.sin(math.radians(pitch))*-s
+        dz = AH* math.sin(math.radians(pitch))*c
+        dy = AH*(math.cos(math.radians(pitch))-1)
         x, y, z = self.position
         glTranslatef(-x-dx, -y-dy, -z-dz)
 
@@ -649,7 +654,7 @@ class Window(pyglet.window.Window):
 
         """
         vector = self.get_sight_vector()
-        block = hit_test(self.model.get_block, self.position, vector, focus_distance)[0]
+        block = hit_test(lambda pos:self.model.get_block(pos)!="AIR", self.position, vector, focus_distance)[0]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)

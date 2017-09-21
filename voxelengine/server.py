@@ -77,6 +77,8 @@ class World(object):
         self.players = set()
         if filename != None:
             self._load(filename)
+        
+        self.setup = setup
 
     def __del__(self):
         try:
@@ -89,16 +91,6 @@ class World(object):
 
     def __setitem__(self, position, block_id):
         self.set_block(position, block_id)
-
-    def get_block_name(self,position):
-        """get name of block at position
-
-        in special cases you might consider using
-        BLOCK_ID_BY_NAME[name] or BLOCK_NAME_BY_ID[id] for conversion"""
-        block_id = self.get_block(position)
-        #if not (0 <= block_id < len(setup["BLOCK_NAME_BY_ID"])):
-        #    raise Exception("Can't find name for block id %i" %block_id)
-        return setup["BLOCK_NAME_BY_ID"][block_id]
 
     def get_block(self, position, minlevel = None, load_on_miss = True):
         """get ID of block at position
@@ -115,10 +107,6 @@ class World(object):
         if chunk == None:
             return None
         return chunk.get_block(position)
-
-    def set_block_name(self, position, blockname):
-        block_id = setup["BLOCK_ID_BY_NAME"][blockname]
-        self.set_block(position, block_id)
 
     def set_block(self, position, block, minlevel = None, load_on_miss = True):
         """set block at position"""
@@ -235,7 +223,8 @@ class ServerChunk(Chunk):
     >>>     ...
     """
     def __init__(self, chunksize, world, position):
-        Chunk.__init__(self,chunksize)
+        codec = setup["BLOCK_ID_BY_NAME"], setup["BLOCK_NAME_BY_ID"]
+        Chunk.__init__(self,chunksize,codec)
         self.world = world
         self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
@@ -257,6 +246,8 @@ class ServerChunk(Chunk):
         - searches world if position is not within chunk (with own initlevel-1)
         - recommended for getting blocks of other chunks in terrain generators
         """
+        if not isinstance(position,Vector):
+            position = Vector(position)
         if (position>>self.chunksize) == self.position:
             return Chunk.get_block(self,position)
         return self.world.get_block(position,self.initlevel-1)
@@ -267,27 +258,19 @@ class ServerChunk(Chunk):
         - searches world if position is not within chunk (with own initlevel-1)
         - recommended for setting blocks of other chunks in terrain generators
         """
+        if not isinstance(position,Vector):
+            position = Vector(position)
         if (position>>self.chunksize) == self.position:
-            if isinstance(block,basestring):
-                block = setup["BLOCK_ID_BY_NAME"][block]
             return Chunk.set_block(self,position,block)
         return self.world.set_block(position,block,self.initlevel-1)
 
     def get_block_name(self,position):
         """get name of block at position"""
-        return setup["BLOCK_NAME_BY_ID"][self.get_block(position)]
+        return self.get_block(position)
 
     def get_entities(self):
         return (entity for entity in self.world.entities if (entity.position.normalize()>>self.chunksize) == self.position)
-
-class TextureElement(object):
-    def __init__(self,texture_id,x,y,z,dx,dy,dz):
-        raise NotImplementedError()
-
-class EntityModel(object):
-    def __init__(self,*elements):
-        """elements may be TextureElements (and hopefully someday EntityModels)"""
-        self.elements = elements
+    
 
 class Entity(object):
     SPEED = 5
@@ -407,7 +390,7 @@ class Player(object):
         """ 
         if max_distance == None:
             max_distance = self.focus_distance
-        return hit_test(lambda v:self.entity.world.get_block(v)!=0,self.entity.position,
+        return hit_test(lambda v:self.entity.world.get_block(v)!="AIR",self.entity.position,
                         self.entity.get_sight_vector(),max_distance)
 
     def set_focus_distance(self,distance):
@@ -541,8 +524,6 @@ class Player(object):
 
     def _notice_block(self,position,block):
         """send blockinformation to client"""
-        if isinstance(block,basestring):
-                block = setup["BLOCK_ID_BY_NAME"][block]
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
 
     def _notice_new_chunk(self,chunk):
@@ -686,26 +667,6 @@ class Game(object):
             elif "-debug" in sys.argv:
                 print "Message from unregistered Player"
         time.sleep(0.01) #wichtig damit das threading Zeug klappt
-
-def terrain_generator_from_heightfunc(heightfunc,block_id):
-    """heightfunc(int,int)->int is used to create generator function
-    (can be used as decorator)"""
-    def terrain_generator(chunk):
-        x,y,z = chunk.position<<chunk.chunksize
-        c = 1 << chunk.chunksize
-        r = xrange(c)
-        for dx in r:
-            for dz in r:            
-                h = int(heightfunc(x+dx,z+dz))
-                if y <= h:
-                    if h < y+c:
-                        i = chunk.pos_to_i(Vector([dx,h,dz]))
-                        n = (h-y)
-                    else:
-                        i = chunk.pos_to_i(Vector([dx,c-1,dz]))
-                        n = c-1
-                    chunk[i-n*c:i+1:c] = block_id
-    return terrain_generator
 
 if __name__ == "__main__":
     def _simple_terrain_generator(chunk):

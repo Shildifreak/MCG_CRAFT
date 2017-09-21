@@ -113,8 +113,9 @@ class Chunk(object):
     byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime
     altered = False #M# not tracked yet
 
-    def __init__(self,chunksize):
+    def __init__(self,chunksize,block_codec):
         self.chunksize = chunksize
+        self.block_id_by_name, self.block_name_by_id = block_codec
 
     def init_data(self):
         """fill chunk with zeros"""
@@ -154,6 +155,7 @@ class Chunk(object):
 
     def __setitem__(self,key,value):
         """allow for setting slices so e.g. filling chunk by hightmap becomes easier"""
+        value = self.block_id_by_name[value]
         self._load_decompressed()
         if isinstance(key,slice):
             s = self.byte_per_block
@@ -172,7 +174,8 @@ class Chunk(object):
 
     def __getitem__(self,index):
         self._load_decompressed()
-        return struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0]
+        block_id = struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0]
+        return self.block_name_by_id[block_id]
 
     def get_block(self,position):
         return self[self.pos_to_i(position)]
@@ -182,6 +185,8 @@ class Chunk(object):
 
     def pos_to_i(self, position):
         # reorder to y-first for better compression
+        if not isinstance(position,Vector):
+            position = Vector(position)
         position = position%(1<<self.chunksize)
         i = reduce(lambda x,y:(x<<self.chunksize)+y,position)
         return i

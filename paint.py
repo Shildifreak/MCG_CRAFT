@@ -25,7 +25,7 @@ with voxelengine.Game(init_func, multiplayer=False,name="Paint") as g:
             if player.was_pressed("left click"):
                 focused_block = player.get_focused_pos()[0]
                 if focused_block:
-                    if w.get_block_name(focused_block) == "GREEN":
+                    if w[focused_block] == "GREEN":
                         w[focused_block] = "BLACK"
                     else:
                         w[focused_block] = "GREEN"

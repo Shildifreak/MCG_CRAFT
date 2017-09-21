@@ -6,6 +6,7 @@
 "DEFAULT_FOCUS_DISTANCE" : 8,
 "TEXTURE_PATH" : "colors_texture.png",
 "TEXTURE_EDGE_CUTTING" : 0.1, #value between 0 and 0.5 -> how much to cut away from the sides of each texture
+"RENDERLIMIT": False, # whether to show all chunks (False) or just some (True)
 
 #["Name",              transparenz, solid, [( oben), (unten), (seiten)]]
 "TEXTURE_INFO" : [
