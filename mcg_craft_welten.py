@@ -9,6 +9,7 @@ import random
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
 # make sliding depend on block?
 
+CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)
 GRAVITY = 35
 AIRRESISTANCE = 5
 SLIDING = 0.001
@@ -21,12 +22,17 @@ def get_hitbox(width,height,eye_level):
     return [(dx,dy,dz) for dx in floatrange(-width,width)
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
-    
+
+class Character(Entity):
+    """The entity that is controlled by a player"""
+    pass
+
 def init_player(player):
     player.entity.set_texture("PLAYER")
+    player.set_focus_distance(8)
     player.flying = False
 
-    player.RENDERDISTANCE = 20
+    player.RENDERDISTANCE = 8
 
     player.entity.SPEED = 10
     player.entity.JUMPSPEED = 10
@@ -56,7 +62,6 @@ def init_schaf(world):
     schaf.turn = 0
     schaf.nod = False
     schafe.append(schaf)
-
 
 def onground(entity):
     return bool_collide_difference(entity,entity.position+(0,-0.2,0),entity.position)
@@ -140,7 +145,6 @@ def update_player(player):
     if player.was_pressed("left click"):
         v = player.get_focused_pos()[0]
         if v:
-            print "tried to set air"
             pe.world[v] = "AIR"
 
     if player.flying:
@@ -211,6 +215,9 @@ class MCGCraftWorld(World):
         self.set_block_buffer = {}
         self.block_updates = []
 
+    def schedule_blocks(self,positions,blocks,callback):
+        pass
+
     #def set_block(self,position,block):
     #    l = self.set_block_buffer.setdefault(position,[])
     #    l.append(block)
@@ -224,15 +231,13 @@ class MCGCraftWorld(World):
                 #M# drop 'em!
 
 if __name__ == "__main__":
-    load_setup(os.path.join(PATH,"setups","mc_setup.py"))
-
     multiplayer = select(["open server","play alone"])[0] == 0
     worldtypes = os.listdir("Welten")
     worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
     worldtype = select(worldtypes)[1]
     worldmod = __import__(worldtype)
 
-    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=(0,20,0))
+    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE)
     worldmod.init(w)
 
     def i_f(player):
@@ -241,6 +246,8 @@ if __name__ == "__main__":
 
     settings = {"init_function" : i_f,
                 "multiplayer": multiplayer,
+                "renderlimit": True, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
+                "suggested_texturepack" : "mcgcraft-standart",
                 }
 
     with Game(**settings) as g:
@@ -255,5 +262,5 @@ if __name__ == "__main__":
             for schaf in schafe:
                 update_schaf(schaf)
                 pass
-            #if len(schafe) < 10:
-            #    init_schaf(w)
+            if len(schafe) < 10:
+                init_schaf(w)

@@ -19,37 +19,9 @@ import textures
 DOASYNCLOAD = True
 MAX_LOAD_THREADS = 1
 MSGS_PER_TICK = 10
-DEFAULT_SETUP_PATH = os.path.join(PATH,"setups","colors_setup.py")
-setup = {"users":set()}
 
 # merke: wenn man from voxelengine import * macht werden neue globale Variablen nach dem import nicht übernommen :(
 # ergo: globale Variablen nicht mehr ändern zur Laufzeit (verändern der Objekte ist ok)
-
-def load_setup(path):
-    """
-    Load a path to a setup file like the ones in voxelengine/setups directory.
-    Make sure that the path is suitable for the client too,
-    so be careful when using relative paths.
-    """
-    warn = False
-    if setup["users"]:
-        warn = True
-    setupfile = open(path,"r")
-    setup.clear()
-    setup.update(ast.literal_eval(setupfile.read()))
-    setup["users"] = set()
-    setup["SETUP_PATH"] = path
-    setup["BLOCK_ID_BY_NAME"] = {"AIR":0}
-    setup["BLOCK_NAME_BY_ID"] = ["AIR"]
-    setup["SOLIDITY"] = [False]
-    for i, (name, transparency, solidity, sides) in enumerate(setup["TEXTURE_INFO"]):
-        setup["BLOCK_ID_BY_NAME"][name] = i+1
-        setup["BLOCK_NAME_BY_ID"].append(name)
-        setup["SOLIDITY"].append(solidity)
-    if warn:
-        raise RuntimeWarning("You changed a setup that was currently used. (You can catch this warning but it will most likely crash your game.)")
-
-load_setup(DEFAULT_SETUP_PATH)
 
 class _Chunkdict(dict):
     def __init__(self,world,*args,**kwargs):
@@ -59,15 +31,12 @@ class _Chunkdict(dict):
     def __missing__(self, chunkposition):
         chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
         self[chunkposition] = chunk
-        for player in self.world.players:
-            player._notice_new_chunk(chunk)
         return chunk
 
 class World(object):
-    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0)):
+    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4):
         """create new World instance"""
-        setup["users"].add(self)
-        self.chunksize = setup["CHUNKSIZE"]
+        self.chunksize = chunksize
         self.worldgenerators = worldgenerators
         self.spawnpoint = Vector(spawnpoint)
         self.loading_queue = []
@@ -77,14 +46,6 @@ class World(object):
         self.players = set()
         if filename != None:
             self._load(filename)
-        
-        self.setup = setup
-
-    def __del__(self):
-        try:
-            setup["users"].remove(self)
-        except:
-            pass
 
     def __getitem__(self, position):
         return self.get_block(position)
@@ -223,13 +184,24 @@ class ServerChunk(Chunk):
     >>>     ...
     """
     def __init__(self, chunksize, world, position):
-        codec = setup["BLOCK_ID_BY_NAME"], setup["BLOCK_NAME_BY_ID"]
-        Chunk.__init__(self,chunksize,codec)
+        Chunk.__init__(self,chunksize)
         self.world = world
         self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
-        self.initlevel = -1
         self.lock = thread.allocate_lock()
+        self._initlevel = -1
+
+    @property
+    def initlevel(self):
+        return self._initlevel
+    
+    @initlevel.setter
+    def initlevel(self,value):
+        self._initlevel = value
+        if self.is_fully_generated():
+            for player in self.world.players:
+                player._notice_new_chunk(self)
+
 
     def __iter__(self):
         """iterate over positions in chunk"""
@@ -271,6 +243,8 @@ class ServerChunk(Chunk):
     def get_entities(self):
         return (entity for entity in self.world.entities if (entity.position.normalize()>>self.chunksize) == self.position)
     
+    def is_fully_generated(self):
+        return self.initlevel == len(self.world.worldgenerators)
 
 class Entity(object):
     SPEED = 5
@@ -339,18 +313,19 @@ class Entity(object):
 class Player(object):
     """a player/observer is someone how looks through the eyes of an entity"""
     RENDERDISTANCE = 16
-    def __init__(self,initmessages=()):
+    def __init__(self,renderlimit,initmessages=()):
+        self.renderlimit = renderlimit
         self.entity = None
         self.outbox = []
         self.outbox.extend(initmessages)
-        self.focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
+        self.focus_distance = 0
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = {}
         self.was_pressed_set = set()
         self.observed_chunks = set()
         self._lc = set() #load chunks
         self._uc = set() #unload chunks
-        if setup["RENDERLIMIT"]:
+        if self.renderlimit:
             thread.start_new_thread(self._update_chunks_loop,())
         else:
             self._init_chunks()
@@ -366,7 +341,7 @@ class Player(object):
         entity.observers.add(self)
         self.lock_used = True
         self.lock.release()
-        if not setup["RENDERLIMIT"]:
+        if not self.renderlimit:
             self._init_chunks()
 
     def is_pressed(self,key):
@@ -439,7 +414,8 @@ class Player(object):
                         continue
                     else:
                         raise
-                uc = self.observed_chunks.difference(chunks)
+                #M# don't do any unloads, because who needs them anyway I mean... do them if they are too far away
+                uc = {} #self.observed_chunks.difference(chunks)
                 lc = chunks.difference(self.observed_chunks)
                 lc = sorted(lc,key=self._chunk_priority_func,reverse=True)
                 if self.lock.acquire(False):
@@ -449,11 +425,6 @@ class Player(object):
                     self.lock.release()
         except Exception as e:
             raise
-            #M#
-            #try:
-            #    raise
-            #except:
-            #    pass
 
     def _update_chunks(self):
         # unload chunks
@@ -469,9 +440,10 @@ class Player(object):
         # load chunks
         if self._lc:
             chunk = self._lc.pop()
-            if not chunk in self.observed_chunks:
+            if not chunk in self.observed_chunks and chunk.is_fully_generated():
                 self.observed_chunks.add(chunk)
-                self.outbox.append("setarea %s %s %s "%(chunk.position[0],chunk.position[1],chunk.position[2])+chunk.compressed_data) #Send chunksize only once
+                data = repr((chunk.position,chunk.block_codec,chunk.compressed_data))
+                self.outbox.append("setarea "+ data) #Send chunksize only once
                 chunk.observers.add(self)
                 for entity in chunk.get_entities():
                     self._set_entity(entity)
@@ -510,13 +482,14 @@ class Player(object):
         if world != None and (not self.entity or world != self.entity.world):
             if self.entity and self.entity.world:
                 self.entity.world.players.discard(self)
-            if world:
-                world.players.add(self)
             self.lock.acquire()
             for chunk in self.observed_chunks:
                 chunk.observers.remove(self)
             self.observed_chunks.clear()
             self.outbox.append("clear")
+            if world:
+                world.players.add(self)
+                self.outbox.append("chunksize %s" %world.chunksize) #M# is that right here? Make sure it doesn't get reordered with setting of blocks
             self.lock_used = True
             self.lock.release()
         self.outbox[:] = (msg for msg in self.outbox if not msg.startswith("goto"))
@@ -527,7 +500,7 @@ class Player(object):
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
 
     def _notice_new_chunk(self,chunk):
-        if not setup["RENDERLIMIT"]:
+        if not self.renderlimit:
             if chunk not in self._lc:
                 self._lc.append(chunk)
 
@@ -572,11 +545,14 @@ class Game(object):
                  wait=True,
                  multiplayer=False,
                  name="MCG-CRAFT",
+                 renderlimit=False,
+                 suggested_texturepack="basic_colors",
                  socket_server=None, #only use this if you know what you're doing
                  ):
-        setup["users"].add(self)
         self.init_function = init_function
         self.wait = wait
+        self.renderlimit = renderlimit
+        self.suggested_texturepack = suggested_texturepack
 
         self.players = {}
         self.new_players = set()
@@ -637,8 +613,8 @@ class Game(object):
         """place at worldspawn"""
         if "-debug" in sys.argv:
             print(addr, "connected")
-        initmessages = ["setup "+setup["SETUP_PATH"]]
-        p = Player(initmessages)
+        initmessages = ["setup "+self.suggested_texturepack]
+        p = Player(self.renderlimit,initmessages)
         self.players[addr] = p
         self.new_players.add(p)
         self.init_function(p)

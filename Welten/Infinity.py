@@ -1,5 +1,6 @@
 import collections
 import random
+import sys
 
 def init(welt):
     pass
@@ -106,10 +107,19 @@ def erdhoehe(x,z):
 def steinhoehe(x,z):
     return grashoehe(x,z)-3
 
+def tree_structure(height):
+    #if 0 <= y-chunkpos[1] < chunksize:
+    for y in range(1,height):
+        yield (0,y,0), "HOLZ"
+    for x in range(-1,2):
+        for z in range(-1,2):
+            for y in range(3):
+                yield (x,y+height,z), "LAUB"
+
 def baum_function(chunk):
-    chunksize = 2**chunk.world.setup["CHUNKSIZE"]
+    chunksize = 2**chunk.world.chunksize
     chunkpos = chunk.position*chunksize
-    baumzahl = random.randint(0,1)
+    baumzahl = random.randint(1,3)
     for i in range(3):
         dx = random.choice(range(chunksize))
         dz = random.choice(range(chunksize))
@@ -117,13 +127,9 @@ def baum_function(chunk):
         x = chunkpos[0] + dx
         z = chunkpos[2] + dz
         y = grashoehe(x,z)
-        if 0 <= y-chunkpos[1] < chunksize:
-            for dy in range(1,baumhoehe):
-                chunk.set_block((x,y+dy,z),"HOLZ")
-            for dx in range(-1,2):
-                for dz in range(-1,2):
-                    for dy in range(3):
-                        chunk.set_block((x+dx,y+dy+baumhoehe,z+dz),"LAUB")
+        for d_pos, block in tree_structure(baumhoehe):
+            dx, dy, dz = d_pos
+            chunk.set_block((x+dx,y+dy,z+dz),block)
 
 relief_gras = terrain_generator_from_heightfunc(grashoehe,"GRASS")
 relief_dirt = terrain_generator_from_heightfunc(erdhoehe,"DIRT")

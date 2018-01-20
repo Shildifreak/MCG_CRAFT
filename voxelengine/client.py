@@ -1,8 +1,7 @@
 # -*- coding: cp1252 -*-
 import math
 import time
-import sys, os
-import inspect
+import sys, os, inspect
 import warnings
 from collections import deque
 import itertools
@@ -87,23 +86,23 @@ def tex_coords(textures):
         result.append(tex_coord(*textures[i]))
     return result
 
+focus_distance = 0
+
 def load_setup(path):
-    global CHUNKSIZE, TEXTURES, TRANSPARENCY, focus_distance, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID
-    setupfile = open(path,"r")
-    setup = ast.literal_eval(setupfile.read())
-    CHUNKSIZE = setup["CHUNKSIZE"]
-    focus_distance = setup["DEFAULT_FOCUS_DISTANCE"]
-    TEXTURE_SIDE_LENGTH = setup["TEXTURE_SIDE_LENGTH"]
-    TEXTURE_EDGE_CUTTING = setup.get("TEXTURE_EDGE_CUTTING",0)
-    ENTITY_MODELS = setup.get("ENTITY_MODELS",{})
-    if not os.path.isabs(setup["TEXTURE_PATH"]): #M# do something to support urls
-        setup["TEXTURE_PATH"] = os.path.join(os.path.dirname(path),setup["TEXTURE_PATH"])
-    TEXTURE_PATH = setup["TEXTURE_PATH"]
+    global TEXTURES, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID
+    if not os.path.isabs(path): #M# do something to support urls
+        path = os.path.join(PATH,"texturepacks",path)
+    with open(os.path.join(path,"description.py"),"r") as descriptionfile:
+        description = ast.literal_eval(descriptionfile.read())
+    TEXTURE_SIDE_LENGTH = description["TEXTURE_SIDE_LENGTH"]
+    TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
+    ENTITY_MODELS = description.get("ENTITY_MODELS",{})
+    TEXTURE_PATH = os.path.join(path,"textures.png")
     TEXTURES = {} #this first value is for air
     TRANSPARENCY = [True]
-    BLOCK_ID_BY_NAME = {"AIR":0}
+    BLOCK_ID_BY_NAME = {"AIR":0} #M# remove them when a better solution for <<random>> texture is found
     BLOCK_NAME_BY_ID = ["AIR"]
-    for i, (name, transparency, solidity, textures) in enumerate(setup["TEXTURE_INFO"]):
+    for i, (name, transparency, solidity, textures) in enumerate(description["TEXTURE_INFO"]):
         BLOCK_NAME_BY_ID.append(name)
         BLOCK_ID_BY_NAME[name] = i+1
         TEXTURES[name] = tex_coords(textures)
@@ -122,7 +121,7 @@ class SimpleChunk(object):
         self.blocks = {}
 
     def get_block(self,position):
-        return self.blocks.get(position,"AIR" if self.blocks else None)
+        return self.blocks.get(position,"AIR" if self.blocks else "AIR")
 
     def set_block(self,position,value):
         if value == "AIR":
@@ -179,9 +178,9 @@ class Model(object):
         """for immediate execution use private method"""
         self.queue.append((self._del_area,(position,)))
 
-    def set_area(self, position, compressed_blocks):
+    def set_area(self, position, codec, compressed_blocks):
         """for immediate execution use private method"""
-        self.queue.append((self._set_area,(position,compressed_blocks)))
+        self.queue.append((self._set_area,(position,codec,compressed_blocks)))
 
     def process_queue(self):
         start = time.clock()
@@ -320,7 +319,7 @@ class Model(object):
         self.chunks = Chunkdict()
 
     def _del_area(self, position):
-        self.chunks[position] = SimpleChunk()
+        #self.chunks[position] = SimpleChunk() #M# can most likely be removed?
         for relpos in iterchunk():
             self.hide((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
@@ -328,10 +327,9 @@ class Model(object):
             self.update_visibility((position<<CHUNKSIZE)+relpos)
         del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
-    def _set_area(self, position, compressed_blocks):
+    def _set_area(self, position, codec, compressed_blocks):
         if isinstance(self.chunks[position],Chunk):
-            raise Exception("Can't load chunk if there is already one.")
-        codec = (BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID)#M#
+            self._del_area(position)
         c = Chunk(CHUNKSIZE,codec)
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
@@ -423,7 +421,7 @@ class Window(pyglet.window.Window):
         return Vector((dx, dy, dz))
 
     def update(self, dt):
-        global focus_distance
+        global focus_distance, CHUNKSIZE
         if self.updating:
             return
         self.updating = True
@@ -432,10 +430,10 @@ class Window(pyglet.window.Window):
             if not c:
                 break
             if c.startswith("setarea"):
-                c = c.split(" ",4)
-                position = Vector(map(int,c[1:4]))
-                compressed_blocks = c[4]
-                self.model.set_area(position,compressed_blocks)
+                c = c.split(" ",1)
+                position, codec, compressed_blocks = ast.literal_eval(c[1])
+                position = Vector(position)
+                self.model.set_area(position,codec,compressed_blocks)
                 continue
             c = c.split(" ")
             #M# maybe define this function somewhere else
@@ -461,6 +459,8 @@ class Window(pyglet.window.Window):
                 self.position = position
             elif test("focusdist",2):
                 focus_distance = float(c[1])
+            elif test("chunksize",2):
+                CHUNKSIZE = int(c[1])
             elif test("setentity",8):
                 position = Vector(map(float,c[3:6]))
                 rotation = map(float,c[6:8])
@@ -522,8 +522,6 @@ class Window(pyglet.window.Window):
             y = max(-90, min(90, y))
             self.rotation = (x, y)
             self.client.send("rot %s %s" %self.rotation)
-        else:
-            print "non exclusive mouse"
 
     def send_key_change(self, symbol, modifiers, state):
         """ Called when the player presses a key. See pyglet docs for key
@@ -716,7 +714,7 @@ def show_on_window(client):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
                 break
-        window = Window(width=800, height=600, caption='MCG-Craft 1.0.4',
+        window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.
         window.set_exclusive_mouse(True)

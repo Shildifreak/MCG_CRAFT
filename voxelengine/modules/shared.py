@@ -110,15 +110,15 @@ class Chunk(object):
     using blockformat="H" and with 1 bit for transparency 32767 is highest possible block_id
     """
     blockformat = "H"
-    byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime
+    byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime... better just don't change it at all
     altered = False #M# not tracked yet
 
-    def __init__(self,chunksize,block_codec):
+    def __init__(self,chunksize,block_codec=None):
         self.chunksize = chunksize
-        self.block_id_by_name, self.block_name_by_id = block_codec
+        self.block_codec = block_codec or ["AIR"]
 
     def init_data(self):
-        """fill chunk with zeros"""
+        """fill chunk with AIR/zeros"""
         c = (1<<self.chunksize)**3*self.byte_per_block
         self.decompressed_data = bytearray(c)
         self._compressed_data = None
@@ -153,9 +153,19 @@ class Chunk(object):
                 print self._compressed_data
                 raise
 
+    def get_block_name_by_id(self,block_id):
+        return self.block_codec[block_id]
+    
+    def get_block_id_by_name(self,block_name):
+        try:
+            return self.block_codec.index(block_name)
+        except ValueError:
+            self.block_codec.append(block_name)
+            return len(self.block_codec)-1
+
     def __setitem__(self,key,value):
         """allow for setting slices so e.g. filling chunk by hightmap becomes easier"""
-        value = self.block_id_by_name[value]
+        value = self.get_block_id_by_name(value)
         self._load_decompressed()
         if isinstance(key,slice):
             s = self.byte_per_block
@@ -175,7 +185,7 @@ class Chunk(object):
     def __getitem__(self,index):
         self._load_decompressed()
         block_id = struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0]
-        return self.block_name_by_id[block_id]
+        return self.get_block_name_by_id(block_id)
 
     def get_block(self,position):
         return self[self.pos_to_i(position)]

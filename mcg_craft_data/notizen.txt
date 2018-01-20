@@ -1,0 +1,67 @@
+Plan:
+	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks)
+	Inventar anzeigen
+	Aufsammeln von Blöcken ermöglichen
+	Auswahl von Blöcken aus Inventar ermöglichen
+
+BLOCKS
+	DATA
+		mcgcraft:name {}
+		mcgcraft:chest {content:[{},{}]}
+		mcgcraft:redstone {powered:0b}
+		mcgcraft:furnace {rotation:4,lit:1,content:[],...}
+	MINING
+		when blocks are mined the get a link who mined them and what they were mined with, so they can drop the right item:
+			mcgcraft:player{Shildifreak}, mcgcraft:air{}                           -> mined by hand
+			mcgcraft:player{Shildifreak}, mcgcraft:iron_pickaxe{}                  -> mined by iron pickaxe
+			mcgcraft:player{Shildifreak}, mcgcraft:iron_pickaxe{echantments:[...]} -> mined by enchanted iron pickaxe
+			mcgcraft:creeper{0x00},       None                                     -> blown up by creeper
+			mcgcraft:block_collision{},   None                                     -> mined by piston
+			mcgcraft:tnt{},               None                                     -> mined by tnt
+
+ITEMS
+	INVENTORY
+		all existing items in one display -> simply select one to use
+		counts on them that are ignored in creative
+	STORAGE
+		just drop items on ground
+		click on them to pick them up
+		special block that prevents dropped items on top from despawning ("chest")
+	TRADING
+		there has to be a key for dropping items
+	CRAFTING
+		???
+PVP
+REDSTONE
+	WIRING
+		blocks that act like redstone in real minecraft, but can be pushed around, (stand on?), etc.
+	PISTONS
+		dont have real extension
+		push blocks (and items?) in front of them (up to 12) on rising edge
+		pull block in front of them on falling edge (all pistons are sticky?, but since they have no extension part it doesn't matter)
+	SOME FORM OF BLOCK ABLE OF CLICKING
+		can activate everything that players can do (break blocks, set blocks, change lever state)
+INTERNAL
+	block updates
+	setblocks are buffered so that all blocks see other blocks states from last tick so update order doesn't matter
+	if two setblocks are scheduled for the same block then the one with a lower mining level/blast resistance is "mined" so it drops as an item or something similar
+	when blocks are mined by pistons, explosions, endermen,... that counts as a special "mining kind"
+	blocks can have special right click action
+	Blocks that dont have full Hitbox (like torches) can be combined as long as their hitboxes dont collide
+
+
+
+
+
+
+grass
+	block_update
+		see if powered, update powered state
+	random tick
+		if block above turn to dirt
+	mined
+		drop grass block item at current position
+	right_clicked
+		pass
+	left_clicked
+		pass

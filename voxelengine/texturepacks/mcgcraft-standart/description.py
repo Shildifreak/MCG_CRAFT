@@ -1,12 +1,7 @@
 # A voxelengine setup file contains all information that is game specific but important to the client
 
 {
-"CHUNKSIZE" : 4, # (in bit -> length is 2**CHUNKSIZE)
 "TEXTURE_SIDE_LENGTH" : 16,
-"DEFAULT_FOCUS_DISTANCE" : 8,
-"TEXTURE_PATH" : "mc_texture.png",
-"RENDERLIMIT": False, # whether to show all chunks (False) or just some (True)
-
    #["Name",               transparenz, solid, [( oben), (unten), ( rest)]],
    #  oder
    #["Name",               transparenz, solid, [( oben), (unten), ( nord), ( sued), ( west), ( ost)]],
