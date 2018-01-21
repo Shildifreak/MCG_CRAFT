@@ -1,8 +1,10 @@
 import os,sys,math
 
 sys.path.append("Welten")
+sys.path.append(os.path.join("Welten","structures"))
 
 from voxelengine import *
+import resources
 import random
 
 #TODO:
@@ -23,63 +25,62 @@ def get_hitbox(width,height,eye_level):
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
 
-class Character(Entity):
-    """The entity that is controlled by a player"""
-    pass
 
 def init_player(player):
-    player.entity.set_texture("PLAYER")
+    player.entity["texture"] = "PLAYER"
     player.set_focus_distance(8)
-    player.flying = False
 
+    player.flying = False
     player.RENDERDISTANCE = 8
 
-    player.entity.SPEED = 10
-    player.entity.JUMPSPEED = 10
-    player.entity.hitbox = get_hitbox(0.4, 1.8, 1.6)
-    player.entity.velocity = Vector([0,0,0])
-    player.entity.last_update = time.time()
+    player.entity["SPEED"] = 10
+    player.entity["JUMPSPEED"] = 10
+    player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
+    player.entity["velocity"] = Vector([0,0,0])
+    player.entity["last_update"] = time.time()
+    player.entity["inventory"] = [{"id":"mcgcraft:grass"}]
 
 
 def init_schaf(world):
     schaf = Entity()
-    schaf.set_texture("SCHAF")
-    schaf.SPEED = 5
-    schaf.JUMPSPEED = 10
-    schaf.hitbox = get_hitbox(0.6,1.5,1)
-    has_position = False
-    while not has_position:
+    schaf["texture"] = "SCHAF"
+    schaf["SPEED"] = 5
+    schaf["JUMPSPEED"] = 10
+    schaf["hitbox"] = get_hitbox(0.6,1.5,1)
+    schaf.set_world(world,(0,0,0))
+    while True:
         x = random.randint(-40,40)
         z = random.randint(-40,40)
         y = random.randint(-40,40)
-        #y = grashoehe(x,z) + 2
-        schaf.set_position((x,y,z),world)
         if world.get_block((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
-            has_position = True
-    schaf.velocity = Vector([0,0,0])
-    schaf.last_update = time.time()
-    schaf.forward = False
-    schaf.turn = 0
-    schaf.nod = False
+            break
+    schaf["position"] = (x,y,z)
+    schaf["velocity"] = Vector([0,0,0])
+    schaf["last_update"] = time.time()
+    schaf["forward"] = False
+    schaf["turn"] = 0
+    schaf["nod"] = False
     schafe.append(schaf)
 
 def onground(entity):
-    return bool_collide_difference(entity,entity.position+(0,-0.2,0),entity.position)
+    return bool_collide_difference(entity,entity["position"]+(0,-0.2,0),entity["position"])
 
 def collide(entity,position):
     global debug_counter_2
     """blocks entity would collide with if it was at position"""
     blocks = set()
-    for relpos in entity.hitbox:
+    for relpos in entity["hitbox"]:
         debug_counter_2 += 1
         block_pos = (position+relpos).normalize()
         if entity.world.get_block(block_pos) != "AIR": #s.onground
             blocks.add(block_pos)
     return blocks
 
+Entity.collide = collide
+
 def potential_collide_blocks(entity,position):
     blocks = set()
-    for relpos in entity.hitbox:
+    for relpos in entity["hitbox"]:
         block_pos = (position+relpos).normalize()
         blocks.add(block_pos)
     return blocks
@@ -102,59 +103,64 @@ def bool_collide_difference(entity,new_position,previous_position):
 def horizontal_move(entity,jump):
     if onground(entity):
         s = 0.5*SLIDING**entity.dt
-        entity.velocity *= (1,0,1) #M# stop falling
+        entity["velocity"] *= (1,0,1) #M# stop falling
         if jump:
-            entity.velocity += (0,entity.JUMPSPEED,0)
+            entity["velocity"] += (0,entity["JUMPSPEED"],0)
     else:
         s = 0.5*AIRRESISTANCE**entity.dt
-        entity.velocity -= Vector([0,1,0])*GRAVITY*entity.dt
+        entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
     sv = Vector([s,1,s]) #no slowing down in y
-    entity.velocity *= sv
+    entity["velocity"] *= sv
     return sv
 
 def update_dt(entity):
-    entity.dt = time.time()-entity.last_update
+    entity.dt = time.time()-entity["last_update"]
     entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
-    entity.last_update = time.time()
+    entity["last_update"] = time.time()
 
 def update_position(entity):
-    steps = int(math.ceil(max(map(abs,entity.velocity*entity.dt))*10)) # 10 steps per block
-    pos = entity.position
+    steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
+    pos = entity["position"]
     for step in range(steps):
         for i in range(DIMENSION):
             mask          = Vector([int(i==j) for j in range(DIMENSION)])
             inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
-            new = pos + entity.velocity*entity.dt*mask*(1.0/steps)
+            new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
             if bool_collide_difference(entity,new,pos):
-                entity.velocity *= inverted_mask
+                entity["velocity"] *= inverted_mask
             else:
                 pos = new
-    if pos != entity.position:
-        entity.set_position(pos)
+    if pos != entity["position"]:
+        entity["position"] = pos
 
 def update_player(player):
     pe = player.entity
     if not player.is_active(): # freeze player if client doesnt respond
         return
     if player.was_pressed("right click"):
-        v = player.get_focused_pos()[1]
-        if v:
-            pe.world[v] = "GRASS"
-            if v in collide(pe,pe.position):
-                pe.world[v] = "AIR"
+        pos, face = player.get_focused_pos()
+        if pos:
+            block = pe.world[pos]
+            do_item_action = resources.blocks[block](pe.world,pos).right_clicked(pe)
+            if do_item_action:
+                item_data = pe["inventory"][0]
+                item = resources.items[item_data["id"]](item_data)
+                item.right_click_on_block(pe,pos,face)
     if player.was_pressed("left click"):
         v = player.get_focused_pos()[0]
         if v:
-            pe.world[v] = "AIR"
+            block = pe.world[v]
+            resources.blocks[block](pe.world,v).mined(pe)
+            
 
     if player.flying:
         if player.is_pressed("for"):
-            pe.set_position(pe.position+pe.get_sight_vector()*0.2)
+            pe.set_position(pe["position"]+pe.get_sight_vector()*0.2)
         return
     update_dt(pe)
     
     nv = Vector([0,0,0])
-    sx,sy,sz = pe.get_sight_vector()*pe.SPEED
+    sx,sy,sz = pe.get_sight_vector()*pe["SPEED"]
     if player.is_pressed("for"):
         nv += ( sx,0, sz)
     if player.is_pressed("back"):
@@ -167,44 +173,46 @@ def update_player(player):
     sv = horizontal_move(pe,player.is_pressed("jump"))
 
     
-    pe.velocity += ((1,1,1)-sv)*nv
+    pe["velocity"] += ((1,1,1)-sv)*nv
     update_position(pe)
 
 def update_schaf(schaf):
     r = random.randint(0,200)
     if r < 1:
-        schaf.turn = -5
-        schaf.nod = False
+        schaf["turn"] = -5
+        schaf["nod"] = False
     elif r < 2:
-        schaf.turn = 5
-        schaf.nod = False
+        schaf["turn"] = 5
+        schaf["nod"] = False
     elif r < 3:
-        schaf.forward = True
-        schaf.turn = 0
-        schaf.nod = False
+        schaf["forward"] = True
+        schaf["turn"] = 0
+        schaf["nod"] = False
     elif r < 5:
-        schaf.forward = False
-        schaf.nod = False
+        schaf["forward"] = False
+        schaf["nod"] = False
     elif r < 7:
-        schaf.forward = False
-        schaf.turn = 0
-        schaf.nod = True
-    
+        schaf["forward"] = False
+        schaf["turn"] = 0
+        schaf["nod"] = True
     
     update_dt(schaf)
     nv = Vector([0,0,0])
     sx,sy,sz = schaf.get_sight_vector()
-    if schaf.forward:
-        nv += Vector((sx,0,sz))*schaf.SPEED
-        jump = schaf.world.get_block((schaf.position+Vector((sx,-0.5,sz))).normalize()) != "AIR"
+    if schaf["forward"]:
+        nv += Vector((sx,0,sz))*schaf["SPEED"]
+        jump = schaf.world.get_block((schaf["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
     else:
         jump = not random.randint(0,2000)
     sv = horizontal_move(schaf,jump)
-    schaf.velocity += ((1,1,1)-sv)*nv
+    schaf["velocity"] += ((1,1,1)-sv)*nv
     update_position(schaf)
-    if schaf.turn:
-        y,p = schaf.rotation
-        schaf.set_rotation(y+schaf.turn,p)
+    y, p = schaf["rotation"]
+    dy = schaf["turn"]
+    dp = -schaf["nod"]*50 - p
+    if dy or dp:
+        schaf["rotation"] = y+dy, p+dp
+        
 
 debug_counter_1 = 1
 debug_counter_2 = 1
@@ -262,5 +270,5 @@ if __name__ == "__main__":
             for schaf in schafe:
                 update_schaf(schaf)
                 pass
-            if len(schafe) < 10:
+            if len(schafe) < 5:
                 init_schaf(w)

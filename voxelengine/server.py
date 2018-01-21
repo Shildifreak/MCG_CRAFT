@@ -14,6 +14,7 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"modules"))
 
 from shared import *
+from observableCollections import *
 import textures
 
 DOASYNCLOAD = True
@@ -140,7 +141,7 @@ class World(object):
     
     def spawn_player(self,player):
         spielfigur = Entity()
-        spielfigur.set_position(self.spawnpoint,self)
+        spielfigur.set_world(self,self.spawnpoint)
         player.observe(spielfigur)
 
     def _load(self,filename):
@@ -236,64 +237,64 @@ class ServerChunk(Chunk):
             return Chunk.set_block(self,position,block)
         return self.world.set_block(position,block,self.initlevel-1)
 
-    def get_block_name(self,position):
-        """get name of block at position"""
-        return self.get_block(position)
 
     def get_entities(self):
-        return (entity for entity in self.world.entities if (entity.position.normalize()>>self.chunksize) == self.position)
+        return (entity for entity in self.world.entities if (entity["position"].normalize()>>self.chunksize) == self.position)
     
     def is_fully_generated(self):
         return self.initlevel == len(self.world.worldgenerators)
 
-class Entity(object):
-    SPEED = 5
-    def __init__(self):
+class Entity(ObservableDict):
+    def __init__(self,data = None):
+        ObservableDict.__init__(self,data if data != None else {})
         self.world = None
-        self.position = None
-        self.rotation = (0,0)
         self.observers = set()
-        self.texture = 0
+        self.old_chunk_observers = set()
 
-    def get_position(self):
-        """return position of entity"""
-        return self.position
+        self.register_item_callback(self._on_position_change,"position")
+        self.register_item_callback(self._notify_chunk_observers,"rotation")
+        self.register_item_callback(self._notify_chunk_observers,"texture")
+        self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
-    def set_position(self, position, world=None):
+        self.setdefault("position",(0,0,0))
+        self.setdefault("rotation",(0,0))
+        self.setdefault("texture",0)
+        self.setdefault("speed",5)
+
+    def _on_position_change(self, new_position):
         """set position of entity"""
-        # observer of this entity (the player)
-        for observer in self.observers:
-            observer._notice_position(position, world)
-        #M# remove from chunk of old position & tell everyone
-        old_observers = self.world._get_chunk(self.position).observers if self.world else set()
-        changed_world = world and world != self.world
-        if changed_world:
-            if self.world:
-                self.world.entities.discard(self)
-            self.world = world
-            self.world.entities.add(self)
-        self.position = Vector(position)
-        #M# add to chunk of new position & tell everyone
-        new_observers = self.world._get_chunk(self.position).observers if self.world else set()
-        for o in old_observers.difference(new_observers):
+        # stuff so other players can see me move
+        new_chunk_observers = self.world._get_chunk(new_position).observers if self.world and new_position else set()
+        for o in self.old_chunk_observers.difference(new_chunk_observers):         # tell everyone who doesn't also observe the new position that I'm gone
             o._del_entity(self)
-        for o in new_observers:
+        for o in new_chunk_observers:        # tell everyone who is observing the new position that I'm now here
             o._set_entity(self)
+        self.old_chunk_observers = new_chunk_observers
+        
+        # stuff so own players move
+        for observer in self.observers:
+            observer._notice_position()
 
-    def set_texture(self,texture):
-        self.texture = texture
-        self._inform_observers()
-
-    def set_rotation(self, yaw, pitch):
-        self.rotation = yaw,pitch
-        self._inform_observers()
-
+    def set_world(self, new_world, new_position):
+        """ adjust to new world """
+        # savely remove from old world
+        old_world = self.world
+        if old_world:
+            self.world.entities.discard(self)
+        # add to new world:
+        self.world = new_world
+        if new_world:
+            new_world.entities.add(self)
+        self["position"] = new_position
+        for observer in self.observers:
+            observer._notice_world(old_world,new_world)
+        
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
         the entity is looking.
 
         """
-        x, y = self.rotation
+        x, y = self["rotation"]
         # y ranges from -90 to 90, or -pi/2 to pi/2, so m ranges from 0 to 1 and
         # is 1 when looking ahead parallel to the ground and 0 when looking
         # straight up or down.
@@ -305,9 +306,9 @@ class Entity(object):
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
 
-    def _inform_observers(self):
+    def _notify_chunk_observers(self,*_):
         if self.world:
-            for observer in self.world._get_chunk(self.position).observers:
+            for observer in self.world._get_chunk(self["position"]).observers:
                 observer._set_entity(self)
 
 class Player(object):
@@ -327,22 +328,23 @@ class Player(object):
         self._uc = set() #unload chunks
         if self.renderlimit:
             thread.start_new_thread(self._update_chunks_loop,())
-        else:
-            self._init_chunks()
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
     def observe(self,entity):
-        self._notice_position(entity.position,entity.world)
         self.lock.acquire()
         if self.entity:
             self.entity.observers.remove(self)
+            old_world = self.entity.world
+        else:
+            old_world = None
         self.entity = entity
         entity.observers.add(self)
         self.lock_used = True
         self.lock.release()
-        if not self.renderlimit:
-            self._init_chunks()
+
+        self._notice_world(old_world,entity.world)
+        self._notice_position()
 
     def is_pressed(self,key):
         """return whether key is pressed """
@@ -365,13 +367,15 @@ class Player(object):
         """ 
         if max_distance == None:
             max_distance = self.focus_distance
-        return hit_test(lambda v:self.entity.world.get_block(v)!="AIR",self.entity.position,
+        return hit_test(lambda v:self.entity.world.get_block(v)!="AIR",self.entity["position"],
                         self.entity.get_sight_vector(),max_distance)
 
     def set_focus_distance(self,distance):
         """Set maximum distance for focusing block"""
         self.outbox.append("focusdist %g" %distance)
         self.focus_distance = distance
+
+    ### it follows a long list of private methods that make sure a player acts like one ###
 
     def _init_chunks(self):
         if not self.entity or not self.entity.world:
@@ -383,7 +387,7 @@ class Player(object):
             self.lock.release()
         else:
             print "locking error"
-    ### it follows a long list of private methods that make sure a player acts like one ###
+
     def _update_chunks_loop(self):
         try:
             while True:
@@ -393,7 +397,7 @@ class Player(object):
                     while not self.entity or not self.entity.world:
                         time.sleep(0.1)
                     world = self.entity.world
-                    position = self.entity.position.normalize()
+                    position = self.entity["position"].normalize()
                     radius=self.RENDERDISTANCE
                     r = range(-radius,radius,1<<world.chunksize)+[radius]
                     chunks = set()
@@ -452,7 +456,7 @@ class Player(object):
         return self._priority_func(chunk.position<<chunk.chunksize)
 
     def _priority_func(self,position):
-        dist = position+(Vector([1,1,1])<<(self.entity.world.chunksize-1))-self.entity.position
+        dist = position+(Vector([1,1,1])<<(self.entity.world.chunksize-1))-self.entity["position"]
         return sum(map(abs,dist))
 
     def _update(self):
@@ -466,7 +470,7 @@ class Player(object):
             self.sentcount = 0
         if msg.startswith("rot"):
             x,y = map(float,msg.split(" ")[1:])
-            self.entity.set_rotation(x,y)
+            self.entity["rotation"] = (x,y)
         if msg in ("right click","left click"):
             self.was_pressed_set.add(msg)
         if msg.startswith("keys"):
@@ -477,24 +481,30 @@ class Player(object):
                     self.was_pressed_set.add(a)
                 self.action_states[a] = new_state
 
-    def _notice_position(self,position,world):
+    def _notice_position(self):
         """set position of camera/player"""
-        if world != None and (not self.entity or world != self.entity.world):
-            if self.entity and self.entity.world:
-                self.entity.world.players.discard(self)
-            self.lock.acquire()
-            for chunk in self.observed_chunks:
-                chunk.observers.remove(self)
-            self.observed_chunks.clear()
-            self.outbox.append("clear")
-            if world:
-                world.players.add(self)
-                self.outbox.append("chunksize %s" %world.chunksize) #M# is that right here? Make sure it doesn't get reordered with setting of blocks
-            self.lock_used = True
-            self.lock.release()
-        self.outbox[:] = (msg for msg in self.outbox if not msg.startswith("goto"))
-        self.outbox.insert(0,"goto %s %s %s" %position)
+        if self.entity["position"]:
+            self.outbox[:] = (msg for msg in self.outbox if not msg.startswith("goto"))
+            self.outbox.insert(0,"goto %s %s %s" %self.entity["position"])
 
+    def _notice_world(self, old_world, new_world):
+        """to be called when self.entity.world has changed """
+        self.lock.acquire()
+        if old_world:
+            old_world.players.discard(self)
+        for chunk in self.observed_chunks:
+            chunk.observers.remove(self)
+        self.observed_chunks.clear()
+        self.outbox.append("clear")
+        if new_world:
+            new_world.players.add(self)
+            self.outbox.append("chunksize %s" %new_world.chunksize) #M# is that right here? Make sure it doesn't get reordered with setting of blocks
+        self.lock_used = True
+        self.lock.release()
+        if not self.renderlimit:
+            self._init_chunks()
+
+        
     def _notice_block(self,position,block):
         """send blockinformation to client"""
         self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
@@ -505,7 +515,9 @@ class Player(object):
                 self._lc.append(chunk)
 
     def _set_entity(self,entity):
-        new_msg = "setentity %s %s %s %s %s %s %s" %(hash(entity),entity.texture,entity.position[0],entity.position[1],entity.position[2],entity.rotation[0],entity.rotation[1])
+        x,y,z = entity["position"]
+        yaw,pitch = entity["rotation"]
+        new_msg = "setentity %s %s %s %s %s %s %s" %(hash(entity),entity["texture"],x,y,z,yaw,pitch)
         for i,msg in enumerate(self.outbox):
             if msg.startswith("setentity %s" %hash(entity)):
                 self.outbox[i] = new_msg

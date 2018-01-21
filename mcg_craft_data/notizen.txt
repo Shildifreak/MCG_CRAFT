@@ -1,4 +1,7 @@
 Plan:
+	Ressourcen einbinden
+	Items in Inventar tun
+	HUD
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks)
 	Inventar anzeigen
 	Aufsammeln von Blöcken ermöglichen
@@ -32,16 +35,21 @@ ITEMS
 	CRAFTING
 		???
 PVP
+
 REDSTONE
 	WIRING
 		blocks that act like redstone in real minecraft, but can be pushed around, (stand on?), etc.
 	PISTONS
+		force in x y z -> sum of forces from around rounded to -1,0,1
+		if airblock: become block that gets pushed in
+
 		dont have real extension
 		push blocks (and items?) in front of them (up to 12) on rising edge
 		pull block in front of them on falling edge (all pistons are sticky?, but since they have no extension part it doesn't matter)
 	SOME FORM OF BLOCK ABLE OF CLICKING
 		can activate everything that players can do (break blocks, set blocks, change lever state)
 INTERNAL
+	STRICT CELLULAR AUTOMATA: ALL BLOCKS ONLY DEPEND ON THEIR (26) NEIGHBOURCELLS, THEMSELFES, AND RANDOM
 	block updates
 	setblocks are buffered so that all blocks see other blocks states from last tick so update order doesn't matter
 	if two setblocks are scheduled for the same block then the one with a lower mining level/blast resistance is "mined" so it drops as an item or something similar

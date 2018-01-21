@@ -7,7 +7,7 @@ import time
 w = voxelengine.World(filename="picture.zip")
 for x in xrange(-5,6):
     for y in xrange(-5,6):
-        if w[(x,y,-8)] == 0:
+        if w[(x,y,-8)] == "AIR":
             w[(x,y,-8)] = "BLACK"
 
 # Initialisierungsfunktion für den Spieler

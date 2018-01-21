@@ -1,6 +1,7 @@
 import collections
 import random
-import sys
+
+import tree
 
 def init(welt):
     pass
@@ -107,15 +108,6 @@ def erdhoehe(x,z):
 def steinhoehe(x,z):
     return grashoehe(x,z)-3
 
-def tree_structure(height):
-    #if 0 <= y-chunkpos[1] < chunksize:
-    for y in range(1,height):
-        yield (0,y,0), "HOLZ"
-    for x in range(-1,2):
-        for z in range(-1,2):
-            for y in range(3):
-                yield (x,y+height,z), "LAUB"
-
 def baum_function(chunk):
     chunksize = 2**chunk.world.chunksize
     chunkpos = chunk.position*chunksize
@@ -127,7 +119,7 @@ def baum_function(chunk):
         x = chunkpos[0] + dx
         z = chunkpos[2] + dz
         y = grashoehe(x,z)
-        for d_pos, block in tree_structure(baumhoehe):
+        for d_pos, block in tree.tree_structure(baumhoehe):
             dx, dy, dz = d_pos
             chunk.set_block((x+dx,y+dy,z+dz),block)
 
