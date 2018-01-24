@@ -1,11 +1,10 @@
 Plan:
-	Ressourcen einbinden
-	Items in Inventar tun
-	HUD
-	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks)
-	Inventar anzeigen
+	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
 	Aufsammeln von Blöcken ermöglichen
+	HUD
+	Inventar anzeigen
 	Auswahl von Blöcken aus Inventar ermöglichen
+	Speichern fixen
 
 BLOCKS
 	DATA
@@ -14,7 +13,7 @@ BLOCKS
 		mcgcraft:redstone {powered:0b}
 		mcgcraft:furnace {rotation:4,lit:1,content:[],...}
 	MINING
-		when blocks are mined the get a link who mined them and what they were mined with, so they can drop the right item:
+		when blocks are mined they get a link who mined them and what they were mined with, so they can drop the right item:
 			mcgcraft:player{Shildifreak}, mcgcraft:air{}                           -> mined by hand
 			mcgcraft:player{Shildifreak}, mcgcraft:iron_pickaxe{}                  -> mined by iron pickaxe
 			mcgcraft:player{Shildifreak}, mcgcraft:iron_pickaxe{echantments:[...]} -> mined by enchanted iron pickaxe
@@ -22,9 +21,15 @@ BLOCKS
 			mcgcraft:block_collision{},   None                                     -> mined by piston
 			mcgcraft:tnt{},               None                                     -> mined by tnt
 
+noshift		break block		activate block
+shift		left hand item	right hand item
+
 ITEMS
 	INVENTORY
-		all existing items in one display -> simply select one to use
+		open inventory with e -> infinitely big? -> scrolling through possible, first n are hotbar
+		empty slots possible
+		designated hands wich is(/are) not really part of the inventory
+		clicking item swaps whatever is in hand with the item
 		counts on them that are ignored in creative
 	STORAGE
 		just drop items on ground

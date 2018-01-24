@@ -38,7 +38,9 @@ def init_player(player):
     player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
     player.entity["velocity"] = Vector([0,0,0])
     player.entity["last_update"] = time.time()
-    player.entity["inventory"] = [{"id":"mcgcraft:grass"}]
+    player.entity["inventory"] = []
+    player.entity["left_hand"] = {"id":"AIR"}
+    player.entity["right_hand"] = {"id":"mcgcraft:grass"}
 
 
 def init_schaf(world):
@@ -137,21 +139,26 @@ def update_player(player):
     pe = player.entity
     if not player.is_active(): # freeze player if client doesnt respond
         return
-    if player.was_pressed("right click"):
-        pos, face = player.get_focused_pos()
-        if pos:
-            block = pe.world[pos]
-            do_item_action = resources.blocks[block](pe.world,pos).right_clicked(pe)
+
+    #           left click      right click
+    # no shift  mine block      activate block
+    # shift     use l item      use r. item
+    handstuff = (("right click","right_hand",lambda block:block.activated),
+                 ("left click", "left_hand", lambda block:block.mined))
+    for event_name, hand_name, primary_action in handstuff:
+        if player.was_pressed(event_name):
+            pos, face = player.get_focused_pos()
+            do_item_action = True
+            if pos and not player.is_pressed("shift"):
+                block = pe.world[pos]
+                do_item_action = primary_action(resources.blocks[block](pe.world,pos))(pe)
             if do_item_action:
-                item_data = pe["inventory"][0]
+                item_data = pe[hand_name]
                 item = resources.items[item_data["id"]](item_data)
-                item.right_click_on_block(pe,pos,face)
-    if player.was_pressed("left click"):
-        v = player.get_focused_pos()[0]
-        if v:
-            block = pe.world[v]
-            resources.blocks[block](pe.world,v).mined(pe)
-            
+                if pos:
+                    item.use_on_block(pe,pos,face)
+                else:
+                    item.use_on_air(pe)            
 
     if player.flying:
         if player.is_pressed("for"):
