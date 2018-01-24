@@ -52,7 +52,7 @@ def init_schaf(world):
     schaf.set_world(world,(0,0,0))
     while True:
         x = random.randint(-40,40)
-        z = random.randint(-40,40)
+        z = random.randint(-10,10)
         y = random.randint(-40,40)
         if world.get_block((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
             break
@@ -261,7 +261,7 @@ if __name__ == "__main__":
 
     settings = {"init_function" : i_f,
                 "multiplayer": multiplayer,
-                "renderlimit": True, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
+                "renderlimit": False, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
                 "suggested_texturepack" : "mcgcraft-standart",
                 }
 

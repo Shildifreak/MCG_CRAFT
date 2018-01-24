@@ -183,8 +183,8 @@ class Model(object):
         self.queue.append((self._set_area,(position,codec,compressed_blocks)))
 
     def process_queue(self):
-        start = time.clock()
-        while self.queue and time.clock() - start < 1.0 / TICKS_PER_SEC:
+        start = time.time()
+        while self.queue and time.time() - start < 1.0 / TICKS_PER_SEC:
             func,args = self.queue.popleft()
             func(*args)
 
@@ -469,7 +469,8 @@ class Window(pyglet.window.Window):
                 self.model.del_entity(int(c[1]))
             else:
                 print "unknown command", c
-        self.client.send("tick")
+        if len(self.model.queue) <= 10:
+            self.client.send("tick")
         self.model.process_queue()
         self.updating = False
 
@@ -607,7 +608,7 @@ class Window(pyglet.window.Window):
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(65.0, width / float(height), 0.1, 60.0)
+        gluPerspective(65.0, width / float(height), 0.1, 200.0) #last value is Renderdistance ... was once 60
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         yaw, pitch = self.rotation
@@ -702,7 +703,7 @@ def setup():
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 
-    setup_fog()
+    #setup_fog()
 
 def show_on_window(client):
     window = None

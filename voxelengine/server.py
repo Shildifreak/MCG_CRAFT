@@ -331,6 +331,10 @@ class Player(object):
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
+    def quit(self):
+        self.entity.set_world(None,(0,0,0))
+        del self
+
     def observe(self,entity):
         self.lock.acquire()
         if self.entity:
@@ -447,7 +451,7 @@ class Player(object):
             if not chunk in self.observed_chunks and chunk.is_fully_generated():
                 self.observed_chunks.add(chunk)
                 data = repr((chunk.position,chunk.block_codec,chunk.compressed_data))
-                self.outbox.append("setarea "+ data) #Send chunksize only once
+                self.outbox.append("setarea "+ data)
                 chunk.observers.add(self)
                 for entity in chunk.get_entities():
                     self._set_entity(entity)
@@ -635,7 +639,8 @@ class Game(object):
         if "-debug" in sys.argv:
             print(addr, "disconnected")
         # do something with player
-        del self.players[addr]
+        player = self.players.pop(addr)
+        player.quit()
 
     def update(self):
         """communicate with clients
