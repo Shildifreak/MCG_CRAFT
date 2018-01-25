@@ -328,12 +328,13 @@ class Player(object):
         self._uc = set() #unload chunks
         if self.renderlimit:
             thread.start_new_thread(self._update_chunks_loop,())
+        self.quit_flag = False
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
     def quit(self):
+        self.quit_flag = True
         self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
-        del self
 
     def observe(self,entity):
         self.lock.acquire()
@@ -432,7 +433,8 @@ class Player(object):
                         self._lc = lc
                     self.lock.release()
         except Exception as e:
-            raise
+            if "-debug" in sys.argv or not self.quit_flag:
+                raise e
 
     def _update_chunks(self):
         # unload chunks
@@ -614,6 +616,8 @@ class Game(object):
     def quit(self):
         """quit the game"""
         self.socket_server.close()
+        for player in self.players:
+            player.quit()
 
     def get_new_players(self):
         """get set of players connected since last call to this function"""

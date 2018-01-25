@@ -2,10 +2,9 @@
 # block entity data (and all other entities) are in chunk_entity_files and loaded with literal_eval into the game
 # metadata file in folder that contains stuff like which number is which item -> {1:"mcgcraft:stone",2:"mcgcraft:grass",...}
 # block entity files are autosaved in regular intervalls and on exit of the game
-# use bigger chunks for better efficiency (64)
 
 world = {
-    "chunksize":64,
+    "chunksize":4,
     "worldgenerator":"colorland",
     "entities" : {"someentity":[0,0,0],"Joram":[0,0,0]},
     # from seperate files:
@@ -26,6 +25,11 @@ world = {
                         "password":"schlumpf",
                         "mining":0, #ticks since started mining or last broken block
                         "inventory":[{"id":"minecraft:stuff","count":1,"tags":{}}],
+                        "left_hand":{"id":"AIR","count":1},
+                        "right_hand":{"id":"GRASS"},
+                        "texture":"PLAYER",
+                        "hitbox":[(0,0,0)], #list of relative points where collision is tested
+                        "health": 10,
                         },
                     },
                 "block_entity_data" : {
@@ -54,10 +58,3 @@ class World(object):
         pass
     def set_entity_data(name,value):
         pass
-
-class TrappedList(list):
-    pass
-
-class TrappedDict(dict):
-    pass
-

@@ -27,7 +27,6 @@ def get_hitbox(width,height,eye_level):
 
 
 def init_player(player):
-    player.entity["texture"] = "PLAYER"
     player.set_focus_distance(8)
 
     player.flying = False
@@ -35,12 +34,14 @@ def init_player(player):
 
     player.entity["SPEED"] = 10
     player.entity["JUMPSPEED"] = 10
+    player.entity["texture"] = "PLAYER"
     player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
     player.entity["velocity"] = Vector([0,0,0])
     player.entity["last_update"] = time.time()
     player.entity["inventory"] = []
     player.entity["left_hand"] = {"id":"AIR"}
-    player.entity["right_hand"] = {"id":"minecraft:grass"}
+    player.entity["right_hand"] = {"id":"GRASS"}
+    player.entity["health"] = 10
 
 
 def init_schaf(world):
@@ -150,8 +151,8 @@ def update_player(player):
             pos, face = player.get_focused_pos()
             do_item_action = True
             if pos and not player.is_pressed("shift"):
-                block = pe.world[pos]
-                do_item_action = primary_action(resources.blocks[block](pe.world,pos))(pe)
+                block_object = pe.world.get_block_object(pos)
+                do_item_action = primary_action(block_object)(pe, face)
             if do_item_action:
                 item_data = pe[hand_name]
                 item = resources.items[item_data["id"]](item_data)
@@ -220,9 +221,13 @@ def update_schaf(schaf):
     if dy or dp:
         schaf["rotation"] = y+dy, p+dp
         
-
 debug_counter_1 = 1
 debug_counter_2 = 1
+
+
+def get_block_object(world,position):
+    return resources.blocks[world[position]](world,position)
+World.get_block_object = get_block_object
 
 class MCGCraftWorld(World):
     def __init__(self,*args,**kwargs):
@@ -259,9 +264,10 @@ if __name__ == "__main__":
         w.spawn_player(player)
         init_player(player)
 
+    renderlimit = not multiplayer #fast loading for playing alone, hole world for multiplayer
     settings = {"init_function" : i_f,
                 "multiplayer": multiplayer,
-                "renderlimit": False, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
+                "renderlimit": renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
                 "suggested_texturepack" : "mcgcraft-standart",
                 }
 
@@ -277,5 +283,5 @@ if __name__ == "__main__":
             for schaf in schafe:
                 update_schaf(schaf)
                 pass
-            if len(schafe) < 5:
+            if len(schafe) < 0:
                 init_schaf(w)
