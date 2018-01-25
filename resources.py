@@ -25,7 +25,12 @@ class Item(object):
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def use_on_block(self,character,blockpos,face):
         """something like placing block depending on direction character is looking"""
-        self.use_on_air(character)
+        new_pos = blockpos + face
+        kind = self.item["id"]
+        character.world[new_pos] = kind
+        #M# remove grass if it collides with placer (check for all entities here later)
+        if new_pos in character.collide(character["position"]):
+            character.world[new_pos] = "AIR"        
 
     def use_on_entity(self,character,entity):
         """whatever this item should do when clicked on this entity"""
@@ -52,6 +57,8 @@ class Block(object):
 
     def mined(self,character):
         """drop item or something... also remember to set it to air. Return value see activated"""
+        block_id = self.world[self.position]
+        character["right_hand"] = {"id":block_id}
         self.world[self.position] = "AIR"
 
 #####################################################################################
@@ -60,11 +67,7 @@ class Block(object):
 class GrassItem(Item):
     def use_on_block(self,character,blockpos,face):
         """place some grass"""
-        new_pos = blockpos + face
-        character.world[new_pos] = "GRASS"
-        #M# remove grass if it collides with placer (check for all entities here later)
-        if new_pos in character.collide(character["position"]):
-            character.world[new_pos] = "AIR"
+        
         
 
 @register_block("STONE")

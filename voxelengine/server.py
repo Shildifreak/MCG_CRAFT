@@ -332,7 +332,7 @@ class Player(object):
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
 
     def quit(self):
-        self.entity.set_world(None,(0,0,0))
+        self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
         del self
 
     def observe(self,entity):
@@ -576,7 +576,7 @@ class Game(object):
         #M# why?: self.world[Vector([0,0,0])]
         if socket_server == None:
             if multiplayer:
-                import socket_connection
+                import socket_connection_2 as socket_connection
                 self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
                                                               on_disconnect=self._on_disconnect,name=name)
             else:

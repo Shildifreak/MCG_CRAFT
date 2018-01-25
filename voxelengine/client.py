@@ -4,6 +4,7 @@ import time
 import sys, os, inspect
 import warnings
 from collections import deque
+import collections
 import itertools
 import ast
 from __init__ import Vector, Chunk
@@ -19,7 +20,7 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
-import socket_connection
+import socket_connection_2 as socket_connection
 from shared import *
 
 
@@ -98,7 +99,7 @@ def load_setup(path):
     TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
     TEXTURE_PATH = os.path.join(path,"textures.png")
-    TEXTURES = {} #this first value is for air
+    TEXTURES = collections.defaultdict(lambda:TEXTURES["missing_texture"]) #this first value is for air
     TRANSPARENCY = [True]
     BLOCK_ID_BY_NAME = {"AIR":0} #M# remove them when a better solution for <<random>> texture is found
     BLOCK_NAME_BY_ID = ["AIR"]

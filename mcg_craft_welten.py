@@ -40,7 +40,7 @@ def init_player(player):
     player.entity["last_update"] = time.time()
     player.entity["inventory"] = []
     player.entity["left_hand"] = {"id":"AIR"}
-    player.entity["right_hand"] = {"id":"mcgcraft:grass"}
+    player.entity["right_hand"] = {"id":"minecraft:grass"}
 
 
 def init_schaf(world):

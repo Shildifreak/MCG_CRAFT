@@ -79,6 +79,7 @@
     ["Rissige_Steinziegel",      False,  True, [(11, 6), (11, 6), (11, 6)]],    
     ["Steinziegel",              False,  True, [(11, 8), (11, 8), (11, 8)]],
     ["Gemeisselter_Steinziegel", False,  True, [(11, 7), (11, 7), (11, 7)]],
+    ["missing_texture",          False,  True, [(15,15), (15,15), (15,15)]],
     ],
 
 "ENTITY_MODELS": {
