@@ -25,6 +25,12 @@ def get_hitbox(width,height,eye_level):
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
 
+def display_item(player,name,item,position,size,align):
+    w, h = size
+    player.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),90,size,align)
+    player.set_hud(name,item["id"],position,90,Vector(size)*0.8,align)
+    player.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),90,(0,0),align)
+Player.display_item = display_item
 
 def init_player(player):
     player.set_focus_distance(8)
@@ -33,6 +39,7 @@ def init_player(player):
     player.RENDERDISTANCE = 8
 
     player.entity["SPEED"] = 10
+    player.entity["FLYSPEED"] = 0.2
     player.entity["JUMPSPEED"] = 10
     player.entity["texture"] = "PLAYER"
     player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
@@ -40,8 +47,18 @@ def init_player(player):
     player.entity["last_update"] = time.time()
     player.entity["inventory"] = []
     player.entity["left_hand"] = {"id":"AIR"}
-    player.entity["right_hand"] = {"id":"GRASS"}
+    player.entity["right_hand"] = {"id":"GRASS","count":64}
     player.entity["health"] = 10
+    player.entity["open_inventars"] = []
+
+    def update_left_hand_image(item):
+        player.display_item("left_hand",item,(-0.9,0.9,0.5),(0.1,0.1),TOP|LEFT)
+    def update_right_hand_image(item):
+        player.display_item("right_hand",item,(0.9,0.9,0.5),(0.1,0.1),TOP|RIGHT)
+    def update_inventar(inventar):
+        pass
+    player.entity.register_item_callback(update_left_hand_image,"left_hand")
+    player.entity.register_item_callback(update_right_hand_image,"right_hand")
 
 
 def init_schaf(world):
@@ -161,14 +178,17 @@ def update_player(player):
                 else:
                     item.use_on_air(pe)            
 
-    if player.flying:
-        if player.is_pressed("for"):
-            pe.set_position(pe["position"]+pe.get_sight_vector()*0.2)
-        return
+    if player.was_pressed_set:
+        print player.was_pressed_set
+
+    if player.was_pressed("fly"):
+        player.flying = not player.flying
+
+    # Movement
     update_dt(pe)
     
     nv = Vector([0,0,0])
-    sx,sy,sz = pe.get_sight_vector()*pe["SPEED"]
+    sx,sy,sz = pe.get_sight_vector()
     if player.is_pressed("for"):
         nv += ( sx,0, sz)
     if player.is_pressed("back"):
@@ -178,10 +198,19 @@ def update_player(player):
     if player.is_pressed("left"):
         nv += ( sz,0,-sx)
 
+    # Flying
+    if player.flying:
+        if player.is_pressed("jump"):
+            nv += (0, 1, 0)
+        if player.is_pressed("shift"):
+            nv -= (0, 1, 0)
+        pe["position"] += nv*pe["FLYSPEED"]
+        return
+
+    # Walking
     sv = horizontal_move(pe,player.is_pressed("jump"))
 
-    
-    pe["velocity"] += ((1,1,1)-sv)*nv
+    pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
     update_position(pe)
 
 def update_schaf(schaf):

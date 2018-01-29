@@ -61,7 +61,7 @@ class Observable(object):
     def register_item_callback(self,callback,key,initial_call=True):
         self.item_callbacks[key].add(callback)
         if initial_call:
-            callback(self)
+            callback(self[key])
 
     def unregister_item_callback(self,callback,key):
         self.item_callbacks[key].remove(callback)

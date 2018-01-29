@@ -251,15 +251,15 @@ class Entity(ObservableDict):
         self.observers = set()
         self.old_chunk_observers = set()
 
-        self.register_item_callback(self._on_position_change,"position")
-        self.register_item_callback(self._notify_chunk_observers,"rotation")
-        self.register_item_callback(self._notify_chunk_observers,"texture")
-        self.register_item_sanitizer(lambda pos: Vector(pos),"position")
-
         self.setdefault("position",(0,0,0))
         self.setdefault("rotation",(0,0))
         self.setdefault("texture",0)
         self.setdefault("speed",5)
+
+        self.register_item_callback(self._on_position_change,"position")
+        self.register_item_callback(self._notify_chunk_observers,"rotation")
+        self.register_item_callback(self._notify_chunk_observers,"texture")
+        self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
     def _on_position_change(self, new_position):
         """set position of entity"""
@@ -380,6 +380,13 @@ class Player(object):
         self.outbox.append("focusdist %g" %distance)
         self.focus_distance = distance
 
+    def set_hud(self,element_id,texture,position,rotation,size,alignment):
+        x,y,z = position; w,h = size
+        self.outbox.append("sethud %s %s %s %s %s %s %s %s %s" %(element_id, texture, x, y, z, rotation, w, h, alignment))
+
+    def del_hud(self,element_id):
+        self.outbox.append("delhud %s" %element_id)
+
     ### it follows a long list of private methods that make sure a player acts like one ###
 
     def _init_chunks(self):
@@ -477,7 +484,7 @@ class Player(object):
         if msg.startswith("rot"):
             x,y = map(float,msg.split(" ")[1:])
             self.entity["rotation"] = (x,y)
-        if msg in ("right click","left click"):
+        if msg.startswith("right click") or msg.startswith("left click"):
             self.was_pressed_set.add(msg)
         if msg.startswith("keys"):
             action_states = int(msg.split(" ")[1])
@@ -617,7 +624,8 @@ class Game(object):
         """quit the game"""
         self.socket_server.close()
         for player in self.players:
-            player.quit()
+            if player:
+                player.quit()
 
     def get_new_players(self):
         """get set of players connected since last call to this function"""

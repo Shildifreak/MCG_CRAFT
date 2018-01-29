@@ -26,6 +26,15 @@ from shared import *
 
 TICKS_PER_SEC = 60
 
+class TextGroup(pyglet.graphics.OrderedGroup):
+    def set_state(self):
+        super(TextGroup,self).set_state()
+        glDisable(GL_DEPTH_TEST)
+    def unset_state(self):
+        super(TextGroup,self).unset_state()
+        glEnable(GL_DEPTH_TEST)
+textgroup = TextGroup(1)
+
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
 
@@ -153,6 +162,7 @@ class Model(object):
 
         # A Batch is a collection of vertex lists for batched rendering.
         self.batch = pyglet.graphics.Batch()
+        self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
         self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture()) #possible to use image.load(file=filedescriptor) if necessary
@@ -160,6 +170,7 @@ class Model(object):
         self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = Chunkdict()
         self.entities = {} #{entity_id: (vertex_list,...,...)}
+        self.hud_elements = {} #{hud_element_id: (vertex_list,element_data,corners)}
 
         self.queue = deque()
 
@@ -294,12 +305,51 @@ class Model(object):
                     vertex_lists.append(self.batch.add(4, GL_QUADS, self.group,
                         ('v3f/static', vertex_data),
                         ('t2f/static', texture_data)))
+                    #M# make only one vertex list per entity!
         self.entities[entity_id] = vertex_lists
 
     def del_entity(self,entity_id):
         vertex_lists = self.entities.pop(entity_id,[])
         for vertex_list in vertex_lists:
             vertex_list.delete()
+
+    def set_hud(self,element_data,window_size):#id,texture,position,rotation,size,align
+        element_id,texture,position,rotation,size,align = element_data
+        if element_id in self.hud_elements:
+            self.del_hud(element_id)
+        if texture == "AIR":
+            return
+        f = (max if OUTER & align else min)(window_size)
+        size = f*Vector(size)
+        center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
+                            for pa,na,ws,xy,si in zip((RIGHT,TOP),(LEFT,BOTTOM),window_size,position,size)
+                            )
+        corners = tuple(xy + (k*si / 2)
+                        for ks in ((-1,-1),(1,-1),(1,1),(-1,1))
+                        for xy, si, k in zip(center_pos,size,ks)
+                        )
+        i = iter(corners)
+        corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
+        texture_data = list(TEXTURES[texture][2])
+        #img = pygame.transform.rotate(img,rotation)
+        if not texture.startswith ("/"):
+            vertex_list = self.hud_batch.add(4, GL_QUADS, self.group,
+                            ('v3f/static', corners),
+                            ('t2f/static', texture_data))
+        else:
+            x,y = center_pos
+            label = pyglet.text.Label(texture[1:],x=x,y=y,anchor_x='center',anchor_y='center',batch=self.hud_batch,group=textgroup)
+            vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work for now
+        self.hud_elements[element_id] = (vertex_list,element_data,corners)
+        
+    def del_hud(self,element_id):
+        vertex_list = self.hud_elements.pop(element_id,None)[0]
+        if vertex_list:
+            vertex_list.delete()
+
+    def hud_resize(self, window_size):
+        for vertex_list,element_data,_ in self.hud_elements.values():
+            self.set_hud(element_data,window_size)
 
     def _add_block(self, position, block_name):
         if self.get_block(position):
@@ -468,6 +518,14 @@ class Window(pyglet.window.Window):
                 self.model.set_entity(int(c[1]),c[2],position,rotation)
             elif test("delentity",2):
                 self.model.del_entity(int(c[1]))
+            elif test("sethud",10):
+                position = Vector(map(float,c[3:6]))
+                rotation = float(c[6])
+                size = map(float,c[7:9])
+                element_data = c[1],c[2],position,rotation,size,int(c[9])
+                self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
+            elif test("delhud",2):
+                self.model.del_hud(c[1])
             else:
                 print "unknown command", c
         if len(self.model.queue) <= 10:
@@ -495,15 +553,27 @@ class Window(pyglet.window.Window):
             mouse button was clicked.
 
         """
+        if (button == mouse.RIGHT) or \
+            ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
+            # ON OSX, control + left click = right click.
+            event = "right click"
+        elif button == pyglet.window.mouse.LEFT:
+            event = "left click"
         if self.exclusive:
-            if (button == mouse.RIGHT) or \
-                    ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
-                # ON OSX, control + left click = right click.
-                self.client.send("right click")
-            elif button == pyglet.window.mouse.LEFT:
-                self.client.send("left click")
+            self.client.send(event)
         else:
-            self.set_exclusive_mouse(True)
+            focused = None
+            z = float("-inf")
+            for _,element_data,corners in self.model.hud_elements.values():
+                if corners[0] < x < corners[6]:
+                    if corners[1] < y < corners[7]:
+                        if corners[2] > z:
+                            focused = element_data[0]
+                            z = corners[2]
+            if focused:
+                self.client.send(event+"ed "+focused)
+            else:
+                self.set_exclusive_mouse(True)
 
     def on_mouse_motion(self, x, y, dx, dy):
         """ Called when the player moves the mouse.
@@ -586,13 +656,14 @@ class Window(pyglet.window.Window):
         self.reticle = pyglet.graphics.vertex_list(4,
             ('v2i', (x - n, y, x + n, y, x, y - n, x, y + n))
         )
+        self.model.hud_resize(self.get_size())
 
     def set_2d(self):
         """ Configure OpenGL to draw in 2d.
 
         """
         width, height = self.get_size()
-        glDisable(GL_DEPTH_TEST)
+        #glDisable(GL_DEPTH_TEST)
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -645,8 +716,9 @@ class Window(pyglet.window.Window):
         self.draw_reticle()
 
         glDisable(GL_COLOR_LOGIC_OP)
+        glColor3d(1, 1, 1)
         #glDisable(GL_BLEND)
-        #M# self.model.hud_batch.draw()
+        self.model.hud_batch.draw()
 
     def draw_focused_block(self):
         """ Draw black edges around the block that is currently under the

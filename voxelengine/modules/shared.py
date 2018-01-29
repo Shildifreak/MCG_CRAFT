@@ -14,6 +14,8 @@ ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
            "for" ,"back","left","right","jump","fly","inv","shift",]
 DIMENSION = 3 # don't change this, it won't work
 
+CENTER, INNER, OUTER, TOP, BOTTOM, LEFT, RIGHT = 0,1,2,4,8,16,32
+
 
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position.
