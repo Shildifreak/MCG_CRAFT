@@ -25,6 +25,9 @@ class Observable(object):
 
     def __repr__(self):
         return repr(self.data)
+    
+    def __len__(self):
+        return len(self.data)
 
     def __getitem__(self,key):
         return self.data[key]

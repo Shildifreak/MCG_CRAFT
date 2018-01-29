@@ -31,6 +31,69 @@ def display_item(player,name,item,position,size,align):
     player.set_hud(name,item["id"],position,90,Vector(size)*0.8,align)
     player.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),90,(0,0),align)
 Player.display_item = display_item
+def undisplay_item(player,name):
+    for suffix in ("_bgbox","","_count"):
+        player.del_hud(name+suffix)
+Player.undisplay_item = undisplay_item
+
+class InventoryDisplay():
+    def __init__(self,player):
+        self.player = player
+        self.is_open = True #Full inventory or only hotbar
+        self.inventory = self.player.entity["inventory"]
+        self.foreign_inventory = None
+        self.current_pages = [0,0]
+        self.inventory.register_callback(self.callback)
+
+    def callback(self,inventory):
+        self.display()
+
+    def display(self):
+        for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
+            for col in range(7):
+                for row in range(3):
+                    name = "inventory_slot_(%i,%i,%i)" %(k,col,row)
+                    if inventory and (self.is_open or k + row == 0):
+                        i = self.current_pages[k]*21 + row*7 + col
+                        if len(inventory) > i:
+                            item = inventory[i]
+                        else:
+                            item = {"id":"AIR"}
+                        x = 0.2*(col - 3)
+                        y = 0.2*(row) + k - 0.8
+                        position = (x,y,0)
+                        size = (0.1,0.1)
+                        self.player.display_item(name,item,position,size,INNER|CENTER)
+                    else:
+                        self.player.undisplay_item(name)            
+                       # print "hop",k,row,col,inventory
+
+    def open(self,foreign_inventory = None):
+        self.player.focus_hud()
+        if self.is_open:
+            self.close()
+        self.is_open = True
+        self.current_pages = [0,0]
+        if foreign_inventory != None:
+            self.foreign_inventory = foreign_inventory
+            if foreign_inventory != self.inventory:
+                foreign_inventory.register_callback(self.callback,False)
+        self.display()
+
+    def close(self):
+        self.is_open = False
+        if self.foreign_inventory != None:
+            if self.foreign_inventory != self.inventory:
+                self.foreign_inventory.unregister_callback(self.callback)
+            self.foreign_inventory = None
+        self.display()
+    
+    def toggle(self):
+        print "hey"
+        if self.is_open:
+            self.close()
+        else:
+            self.open()
 
 def init_player(player):
     player.set_focus_distance(8)
@@ -49,12 +112,18 @@ def init_player(player):
     player.entity["left_hand"] = {"id":"AIR"}
     player.entity["right_hand"] = {"id":"GRASS","count":64}
     player.entity["health"] = 10
-    player.entity["open_inventars"] = []
+
+    # inventory stuff
+    for i in range(60):
+        player.entity["inventory"].append({"id":"DIRT","count":i})
+
+    player.inventory_display = InventoryDisplay(player)
+    player.inventory_display.open(player.entity["inventory"])
 
     def update_left_hand_image(item):
-        player.display_item("left_hand",item,(-0.9,0.9,0.5),(0.1,0.1),TOP|LEFT)
+        player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
     def update_right_hand_image(item):
-        player.display_item("right_hand",item,(0.9,0.9,0.5),(0.1,0.1),TOP|RIGHT)
+        player.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
     def update_inventar(inventar):
         pass
     player.entity.register_item_callback(update_left_hand_image,"left_hand")
@@ -183,6 +252,8 @@ def update_player(player):
 
     if player.was_pressed("fly"):
         player.flying = not player.flying
+    if player.was_pressed("inv"):
+        player.inventory_display.toggle()
 
     # Movement
     update_dt(pe)

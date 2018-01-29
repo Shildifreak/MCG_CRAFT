@@ -387,6 +387,9 @@ class Player(object):
     def del_hud(self,element_id):
         self.outbox.append("delhud %s" %element_id)
 
+    def focus_hud(self):
+        self.outbox.append("focushud")
+
     ### it follows a long list of private methods that make sure a player acts like one ###
 
     def _init_chunks(self):
@@ -481,18 +484,18 @@ class Player(object):
         """do something so is_pressed and was_pressed work"""
         if msg == "tick":
             self.sentcount = 0
-        if msg.startswith("rot"):
+        elif msg.startswith("rot"):
             x,y = map(float,msg.split(" ")[1:])
             self.entity["rotation"] = (x,y)
-        if msg.startswith("right click") or msg.startswith("left click"):
-            self.was_pressed_set.add(msg)
-        if msg.startswith("keys"):
+        elif msg.startswith("keys"):
             action_states = int(msg.split(" ")[1])
             for i,a in enumerate(ACTIONS):
                 new_state = bool(action_states & (1<<(i+1)))
                 if new_state and not self.is_pressed(a):
                     self.was_pressed_set.add(a)
                 self.action_states[a] = new_state
+        else:
+            self.was_pressed_set.add(msg)
 
     def _notice_position(self):
         """set position of camera/player"""
@@ -604,10 +607,7 @@ class Game(object):
             print "game ready"
 
     def __del__(self):
-        try:
-            setup["users"].remove(self)
-        except:
-            pass
+        pass
 
     def __enter__(self):
         """for use with "with" statement"""

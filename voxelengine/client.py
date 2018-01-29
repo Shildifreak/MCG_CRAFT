@@ -343,7 +343,7 @@ class Model(object):
         self.hud_elements[element_id] = (vertex_list,element_data,corners)
         
     def del_hud(self,element_id):
-        vertex_list = self.hud_elements.pop(element_id,None)[0]
+        vertex_list = self.hud_elements.pop(element_id,[None])[0]
         if vertex_list:
             vertex_list.delete()
 
@@ -411,6 +411,7 @@ class Window(pyglet.window.Window):
 
         # Whether or not the window exclusively captures the mouse.
         self.exclusive = False
+        self.hud_open = False
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -526,6 +527,9 @@ class Window(pyglet.window.Window):
                 self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
             elif test("delhud",2):
                 self.model.del_hud(c[1])
+            elif test("focushud",1):
+                self.set_exclusive_mouse(False)
+                self.hud_open = True
             else:
                 print "unknown command", c
         if len(self.model.queue) <= 10:
@@ -573,8 +577,11 @@ class Window(pyglet.window.Window):
             if focused:
                 self.client.send(event+"ed "+focused)
             else:
+                if self.hud_open:
+                    self.client.send("inv")
+                    self.hud_open = False
                 self.set_exclusive_mouse(True)
-
+                
     def on_mouse_motion(self, x, y, dx, dy):
         """ Called when the player moves the mouse.
 
@@ -639,6 +646,10 @@ class Window(pyglet.window.Window):
         if symbol == key.ESCAPE:
             self.set_exclusive_mouse(False)
         else:
+            if symbol == key.E:
+                if self.hud_open:
+                    self.hud_open = False
+                    self.set_exclusive_mouse(True)
             self.send_key_change(symbol, modifiers, True)
                 
     def on_key_release(self, symbol, modifiers):

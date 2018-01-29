@@ -1,4 +1,4 @@
-# A voxelengine setup file contains all information that is game specific but important to the client
+# A texturepack file contains all information that is game specific and important to the client
 
 {
 "TEXTURE_SIDE_LENGTH" : 16,
