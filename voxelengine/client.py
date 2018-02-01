@@ -34,6 +34,7 @@ class TextGroup(pyglet.graphics.OrderedGroup):
         super(TextGroup,self).unset_state()
         glEnable(GL_DEPTH_TEST)
 textgroup = TextGroup(1)
+othergroup = pyglet.graphics.OrderedGroup(0)
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -165,7 +166,8 @@ class Model(object):
         self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture()) #possible to use image.load(file=filedescriptor) if necessary
+        self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture(),
+                                  parent = othergroup) #possible to use image.load(file=filedescriptor) if necessary
 
         self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = Chunkdict()
@@ -338,7 +340,10 @@ class Model(object):
                             ('t2f/static', texture_data))
         else:
             x,y = center_pos
-            label = pyglet.text.Label(texture[1:],x=x,y=y,anchor_x='center',anchor_y='center',batch=self.hud_batch,group=textgroup)
+            label = pyglet.text.Label(texture[1:],x=x,y=y,
+                                      anchor_x='center',anchor_y='center',
+                                      batch=self.hud_batch,group=textgroup,
+                                      font_name="Arial")
             vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work for now
         self.hud_elements[element_id] = (vertex_list,element_data,corners)
         

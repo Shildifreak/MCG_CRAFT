@@ -7,6 +7,7 @@ if sys.version >= "3":
 
 import zlib
 import struct
+import operator
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
@@ -102,6 +103,9 @@ class Vector(tuple):
 
     def normalize(self):
         return Vector(map(int,map(round,self)))
+
+    def length(self):
+        return sum(map(operator.mul,self,self))**0.5
 
 class Chunk(object):
     """

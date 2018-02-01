@@ -15,7 +15,7 @@ sys.path.append(os.path.join(PATH,"modules"))
 
 from shared import *
 from observableCollections import *
-import textures
+#import textures
 
 DOASYNCLOAD = True
 MAX_LOAD_THREADS = 1

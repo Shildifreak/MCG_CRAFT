@@ -81,6 +81,7 @@
     ["Gemeisselter_Steinziegel", False,  True, [(11, 7), (11, 7), (11, 7)]],
     ["CHEST",                    False,  True, [(15, 9), (14, 9), (14,10), (15,10), (15,10), (15,10)]],
     ["missing_texture",          False,  True, [(15,15), (15,15), (15,15)]],
+    ["HERZ",                     False,  True, [(12, 6), (12, 6), (12, 6)]], 
     ],
 
 "ENTITY_MODELS": {

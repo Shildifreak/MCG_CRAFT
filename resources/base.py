@@ -41,6 +41,7 @@ class Item(object):
         """whatever this item should do when clicked into air"""
 
 class Block(object):
+    blast_resistance = 0
     # Init function, don't care to much about this
     def __init__(self, world, position):
         self.world = world
@@ -63,3 +64,6 @@ class Block(object):
         block_id = self.world[self.position]
         character["right_hand"] = {"id":block_id}
         self.world[self.position] = "AIR"
+
+    def exploded(self,entf):
+        pass

@@ -148,6 +148,8 @@ def init_player(player):
     player.entity["right_hand"] = {"id":"GRASS","count":64}
     player.entity["health"] = 10
     player.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
+    player.entity["lives"] = 9
+    
 
     # inventory stuff
     for i in range(60):
@@ -169,9 +171,13 @@ def init_player(player):
         player.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
     def update_inventar(inventar):
         pass
+    def update_lives(lives):
+        for x in range(lives):
+            player.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
     player.entity.register_item_callback(update_left_hand_image,"left_hand")
     player.entity.register_item_callback(update_right_hand_image,"right_hand")
-
+    player.entity.register_item_callback(update_lives,"lives")
+    
 
 def init_schaf(world):
     schaf = Entity()

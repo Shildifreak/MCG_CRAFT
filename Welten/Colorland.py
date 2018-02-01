@@ -10,7 +10,11 @@ def init(welt):
     n = 50  # 1/2 width and height of world
     s = 1  # step size
     y = 0 # initial y height
-    
+
+    for _ in xrange(100):
+        a = random.randint(-n, n)
+        b = random.randint(-n, n)
+        welt[(a, y -1, b)] = "TNT"
     for x in xrange(-n, n + 1, s):
         for z in xrange(-n, n + 1, s):
             # create a layer stone an grass everywhere.
