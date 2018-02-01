@@ -27,9 +27,9 @@ def get_hitbox(width,height,eye_level):
 
 def display_item(player,name,item,position,size,align):
     w, h = size
-    player.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),90,size,align)
-    player.set_hud(name,item["id"],position,90,Vector(size)*0.8,align)
-    player.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),90,(0,0),align)
+    player.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
+    player.set_hud(name,item["id"],position,0,Vector(size)*0.8,align)
+    player.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),0,(0,0),align)
 Player.display_item = display_item
 def undisplay_item(player,name):
     for suffix in ("_bgbox","","_count"):
@@ -39,7 +39,7 @@ Player.undisplay_item = undisplay_item
 class InventoryDisplay():
     def __init__(self,player):
         self.player = player
-        self.is_open = True #Full inventory or only hotbar
+        self.is_open = False #Full inventory or only hotbar
         self.inventory = self.player.entity["inventory"]
         self.foreign_inventory = None
         self.current_pages = [0,0]
@@ -48,13 +48,18 @@ class InventoryDisplay():
     def callback(self,inventory):
         self.display()
 
+    def _calculate_index(self,k,row,col):
+        return self.current_pages[k]*7 + row*7 + col
+
     def display(self):
+        size = (0.1,0.1)
+        rows = 4# if self.foreign_inventory else 9
         for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
             for col in range(7):
-                for row in range(3):
-                    name = "inventory_slot_(%i,%i,%i)" %(k,col,row)
+                for row in range(rows):
+                    name = "inventory:%i,%i,%i" %(k,col,row)
                     if inventory and (self.is_open or k + row == 0):
-                        i = self.current_pages[k]*21 + row*7 + col
+                        i = self._calculate_index(k,row,col)
                         if len(inventory) > i:
                             item = inventory[i]
                         else:
@@ -62,17 +67,22 @@ class InventoryDisplay():
                         x = 0.2*(col - 3)
                         y = 0.2*(row) + k - 0.8
                         position = (x,y,0)
-                        size = (0.1,0.1)
                         self.player.display_item(name,item,position,size,INNER|CENTER)
                     else:
                         self.player.undisplay_item(name)            
                        # print "hop",k,row,col,inventory
+            if inventory and self.is_open:
+                self.player.set_hud("inventory:%s,%s" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
+                self.player.set_hud("inventory:%s,%s" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+            else:
+                self.player.del_hud("inventory:%s,%s" %(k,-1))
+                self.player.del_hud("inventory:%s,%s" %(k,+1))
 
     def open(self,foreign_inventory = None):
-        self.player.focus_hud()
         if self.is_open:
             self.close()
         self.is_open = True
+        self.player.focus_hud()
         self.current_pages = [0,0]
         if foreign_inventory != None:
             self.foreign_inventory = foreign_inventory
@@ -81,6 +91,8 @@ class InventoryDisplay():
         self.display()
 
     def close(self):
+        if not self.is_open:
+            return
         self.is_open = False
         if self.foreign_inventory != None:
             if self.foreign_inventory != self.inventory:
@@ -89,11 +101,34 @@ class InventoryDisplay():
         self.display()
     
     def toggle(self):
-        print "hey"
         if self.is_open:
             self.close()
         else:
             self.open()
+            
+    def handle_click(self,event):
+        if event.startswith("left"):
+            hand = "left_hand"
+        if event.startswith("right"):
+            hand = "right_hand"
+        args = event.rsplit(":",1)[1].split(",")
+        if len(args) == 3:
+            k, col, row = map(int,args)
+            inventory = self.inventory if k==0 else self.foreign_inventory
+            index = self._calculate_index(k,row,col)
+            self.swap(inventory,index,hand)
+        else:
+            k, direction = map(int,args)
+            inventory = self.inventory if k==0 else self.foreign_inventory
+            self.current_pages[k] = max(0,self.current_pages[k] + direction)
+            self.display()
+            
+    
+    def swap(self,inventory,index,hand):
+        x, y = self.player.entity[hand], inventory[index]
+        x.parent = None
+        y.parent = None
+        self.player.entity[hand], inventory[index] = y, x
 
 def init_player(player):
     player.set_focus_distance(8)
@@ -109,16 +144,24 @@ def init_player(player):
     player.entity["velocity"] = Vector([0,0,0])
     player.entity["last_update"] = time.time()
     player.entity["inventory"] = []
-    player.entity["left_hand"] = {"id":"AIR"}
+    player.entity["left_hand"] = {"id":"CHEST"}
     player.entity["right_hand"] = {"id":"GRASS","count":64}
     player.entity["health"] = 10
+    player.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
 
     # inventory stuff
     for i in range(60):
         player.entity["inventory"].append({"id":"DIRT","count":i})
 
     player.inventory_display = InventoryDisplay(player)
-    player.inventory_display.open(player.entity["inventory"])
+
+    def open_inventory_callback(boolean):
+        if boolean:
+            player.inventory_display.open(player.entity.foreign_inventory)
+            player.entity.foreign_inventory = None
+        else:
+            player.inventory_display.close()
+    player.entity.register_item_callback(open_inventory_callback,"open_inventory")
 
     def update_left_hand_image(item):
         player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
@@ -254,6 +297,9 @@ def update_player(player):
         player.flying = not player.flying
     if player.was_pressed("inv"):
         player.inventory_display.toggle()
+    for pressed in player.was_pressed_set:
+        if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
+            player.inventory_display.handle_click(pressed)
 
     # Movement
     update_dt(pe)

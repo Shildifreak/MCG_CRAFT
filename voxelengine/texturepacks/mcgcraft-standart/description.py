@@ -79,6 +79,7 @@
     ["Rissige_Steinziegel",      False,  True, [(11, 6), (11, 6), (11, 6)]],    
     ["Steinziegel",              False,  True, [(11, 8), (11, 8), (11, 8)]],
     ["Gemeisselter_Steinziegel", False,  True, [(11, 7), (11, 7), (11, 7)]],
+    ["CHEST",                    False,  True, [(15, 9), (14, 9), (14,10), (15,10), (15,10), (15,10)]],
     ["missing_texture",          False,  True, [(15,15), (15,15), (15,15)]],
     ],
 
