@@ -66,4 +66,4 @@ class Block(object):
         self.world[self.position] = "AIR"
 
     def exploded(self,entf):
-        pass
+        self.world[self.position] = "AIR"

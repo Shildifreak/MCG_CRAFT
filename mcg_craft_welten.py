@@ -57,7 +57,7 @@ class InventoryDisplay():
         for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
             for col in range(7):
                 for row in range(rows):
-                    name = "inventory:%i,%i,%i" %(k,col,row)
+                    name = "inventory:(%i,%i,%i)" %(k,col,row)
                     if inventory and (self.is_open or k + row == 0):
                         i = self._calculate_index(k,row,col)
                         if len(inventory) > i:
@@ -72,11 +72,11 @@ class InventoryDisplay():
                         self.player.undisplay_item(name)            
                        # print "hop",k,row,col,inventory
             if inventory and self.is_open:
-                self.player.set_hud("inventory:%s,%s" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
-                self.player.set_hud("inventory:%s,%s" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                self.player.set_hud("inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
+                self.player.set_hud("inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
             else:
-                self.player.del_hud("inventory:%s,%s" %(k,-1))
-                self.player.del_hud("inventory:%s,%s" %(k,+1))
+                self.player.del_hud("inventory:(%s,%s)" %(k,-1))
+                self.player.del_hud("inventory:(%s,%s)" %(k,+1))
 
     def open(self,foreign_inventory = None):
         if self.is_open:
@@ -111,7 +111,7 @@ class InventoryDisplay():
             hand = "left_hand"
         if event.startswith("right"):
             hand = "right_hand"
-        args = event.rsplit(":",1)[1].split(",")
+        args = event.rsplit("(",1)[1].split(")",1)[0].split(",")
         if len(args) == 3:
             k, col, row = map(int,args)
             inventory = self.inventory if k==0 else self.foreign_inventory
