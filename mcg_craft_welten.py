@@ -5,7 +5,7 @@ sys.path.append(os.path.join("Welten","structures"))
 
 from voxelengine import *
 import resources
-import random
+import random, itertools
 
 #TODO:
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
@@ -377,30 +377,33 @@ debug_counter_1 = 1
 debug_counter_2 = 1
 
 
-def get_block_object(world,position):
-    return resources.blocks[world[position]](world,position)
-World.get_block_object = get_block_object
-
 class MCGCraftWorld(World):
     def __init__(self,*args,**kwargs):
         World.__init__(self,*args,**kwargs)
-        self.set_block_buffer = {}
-        self.block_updates = []
+        self.changed_blocks = []
 
-    def schedule_blocks(self,positions,blocks,callback):
-        pass
+    def get_block_object(self,position):
+        return resources.blocks[self[position]](self,position)
 
-    #def set_block(self,position,block):
-    #    l = self.set_block_buffer.setdefault(position,[])
-    #    l.append(block)
+    def set_block(self,position,block):
+        if not isinstance(position,Vector):
+            position = Vector(position)
+        World.set_block(self, position, block)
+        self.changed_blocks.append(position)
 
     def tick(self):
-        for position, blocklist in self.set_block_buffer.items():
-            if len(blocklist) == 1:
-                World.set_block(self,position,blocklist[0])
-            elif len(blocklist) > 1:
-                print("can't set multiple block at one tick to the same position")
-                #M# drop 'em!
+        # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
+        new_blocks = [] #(position,block)
+        block_updates = ((position-face, face) for position in self.changed_blocks
+                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,0,-1),(0,0,-1),(0,0,1)))
+        for position, group in itertools.groupby(block_updates,lambda x:x[0]):
+            faces = [x[1] for x in group]
+            new_block = self.get_block_object(position).block_update(faces)
+            if new_block:
+                new_blocks.append((position,new_block))
+        self.changed_blocks = []
+        for position, block in new_blocks:
+            self[position] = block
 
 if __name__ == "__main__":
     multiplayer = select(["open server","play alone"])[0] == 0
@@ -411,7 +414,8 @@ if __name__ == "__main__":
 
     w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE)
     worldmod.init(w)
-
+    w.changed_blocks = []
+    
     def i_f(player):
         w.spawn_player(player)
         init_player(player)
@@ -430,6 +434,7 @@ if __name__ == "__main__":
         while g.get_players():
             #print "counter", debug_counter_1, debug_counter_2, debug_counter_2//debug_counter_1; debug_counter_1 += 1
             g.update()
+            w.tick()
             for player in g.get_players():
                 update_player(player)
             for schaf in schafe:

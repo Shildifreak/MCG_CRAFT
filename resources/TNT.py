@@ -4,6 +4,9 @@ import random
 
 class tntblock(Block):
     blast_resistance =  0
+    def block_update(self,faces):
+        self.activated(None,None)
+
     def activated(self,character,face):
         tntrange = 5
         for dx in range(-tntrange,tntrange+1):

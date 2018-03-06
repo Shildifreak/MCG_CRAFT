@@ -49,8 +49,8 @@ class Block(object):
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
-        """directions indicates where updates came from... usefull for observer etc."""
-        """for pure cellular automata action make sure to only change the block itself"""
+        """directions indicates where update(s) came from... usefull for observer etc."""
+        """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
 
     def random_ticked(self):
         """spread grass etc"""
