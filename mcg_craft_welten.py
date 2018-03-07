@@ -383,7 +383,7 @@ class MCGCraftWorld(World):
         self.changed_blocks = []
 
     def get_block_object(self,position):
-        return resources.blocks[self[position]](self,position)
+        return resources.blocks[self[position].rsplit(":",1)[0]](self,position)
 
     def set_block(self,position,block):
         if not isinstance(position,Vector):

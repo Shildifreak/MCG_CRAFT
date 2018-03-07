@@ -62,7 +62,7 @@ class Block(object):
     def mined(self,character,face):
         """drop item or something... also remember to set it to air. Return value see activated"""
         block_id = self.world[self.position]
-        character["right_hand"] = {"id":block_id}
+        character["right_hand"] = {"id":block_id.rsplit(":",1)[0]}
         self.world[self.position] = "AIR"
 
     def exploded(self,entf):

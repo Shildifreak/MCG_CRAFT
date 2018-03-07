@@ -99,8 +99,43 @@ def tex_coords(textures):
 
 focus_distance = 0
 
+class TextureDict(dict):
+    def __missing__(self, key):
+        parts = key.rsplit(":",1)
+        if len(parts) == 2:
+            blockid, state = parts
+            baseTexture = self[blockid]
+            texture = self.rotate(baseTexture, state)
+            self[key] = texture
+            return texture
+        return self["missing_texture"]
+
+    @staticmethod
+    def rotate(texture,state):
+        if "1" in state:
+            c = 1
+        elif "2" in state:
+            c = 2
+        elif "3" in state:
+            c = 3
+        else:
+            c = 0
+        clockwise = lambda blub: blub[2:]+blub[:2]
+        countercw = lambda blub: blub[-2:]+blub[:-2]
+        print texture
+        for _ in range(c):
+            top, bottom, left, right, front, back = texture
+            texture = clockwise(top), countercw(bottom),front ,back ,right ,left
+
+        #if "t" in state:
+        #    p = lambda x,y,z = x,y,z
+        #
+        #    for baseside in ("t","b","n","e","s","w"):
+        print texture
+        return texture
+        
 def load_setup(path):
-    global TEXTURES, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, BLOCK_ID_BY_NAME, BLOCK_NAME_BY_ID
+    global TEXTURES, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS
     if not os.path.isabs(path): #M# do something to support urls
         path = os.path.join(PATH,"texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
@@ -109,15 +144,11 @@ def load_setup(path):
     TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
     TEXTURE_PATH = os.path.join(path,"textures.png")
-    TEXTURES = collections.defaultdict(lambda:TEXTURES["missing_texture"]) #this first value is for air
-    TRANSPARENCY = [True]
-    BLOCK_ID_BY_NAME = {"AIR":0} #M# remove them when a better solution for <<random>> texture is found
-    BLOCK_NAME_BY_ID = ["AIR"]
+    TEXTURES = TextureDict() #this first value is for air
+    TRANSPARENCY = {"AIR":True}
     for i, (name, transparency, solidity, textures) in enumerate(description["TEXTURE_INFO"]):
-        BLOCK_NAME_BY_ID.append(name)
-        BLOCK_ID_BY_NAME[name] = i+1
         TEXTURES[name] = tex_coords(textures)
-        TRANSPARENCY.append(transparency)
+        TRANSPARENCY[name] = transparency
 
 
 FACES = [Vector([ 0, 1, 0]), #top
