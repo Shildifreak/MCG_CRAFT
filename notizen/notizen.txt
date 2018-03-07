@@ -1,4 +1,5 @@
 Verbesserungskram:
+	opendiff kdiff3 tkdiff xxdiff meld tortoisemerge gvimdiff diffuse diffmerge ecmerge p4merge araxis bc codecompare emerge vimdiff
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
 	Missing Texture so machen, dass man die Rotation trotzdem sehen kann

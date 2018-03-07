@@ -724,6 +724,8 @@ class Window(pyglet.window.Window):
         """
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
+        glEnable(GL_ALPHA_TEST);
+        glAlphaFunc(GL_GREATER, 0);
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
