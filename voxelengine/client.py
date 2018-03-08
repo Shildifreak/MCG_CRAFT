@@ -33,8 +33,23 @@ class TextGroup(pyglet.graphics.OrderedGroup):
     def unset_state(self):
         super(TextGroup,self).unset_state()
         glEnable(GL_DEPTH_TEST)
-textgroup = TextGroup(1)
-othergroup = pyglet.graphics.OrderedGroup(0)
+class ColorkeyGroup(pyglet.graphics.OrderedGroup):
+    def set_state(self):
+        super(ColorkeyGroup,self).set_state()
+        glDisable(GL_CULL_FACE)
+    def unset_state(self):
+        super(ColorkeyGroup,self).unset_state()
+        glEnable(GL_CULL_FACE)
+textgroup = TextGroup(2)
+colorkey_group = ColorkeyGroup(1)
+normal_group = pyglet.graphics.OrderedGroup(0)
+
+FACES = [Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([-1, 0, 0]), #front
+         Vector([ 1, 0, 0]), #back
+         Vector([ 0, 0,-1]), #left
+         Vector([ 0, 0, 1])] #right
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -43,20 +58,20 @@ def cube_vertices(x, y, z, n):
     return [
         x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n,  # top
         x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n,  # bottom
-        x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n,  # left
-        x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n,  # right
-        x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n,  # front
-        x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
+        x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n,  # front
+        x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n,  # back
+        x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # left
+        x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n,  # right
     ]
 
 def face_vertices(x, y, z, f, n):
     return (
         [x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n],  # top
         [x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n],  # bottom
-        [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # left
-        [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # right
-        [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # front
-        [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # back
+        [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # front
+        [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # back
+        [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # left
+        [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # right
     )[f]
 
 def face_vertices_noncube(x, y, z, f, size):
@@ -64,10 +79,10 @@ def face_vertices_noncube(x, y, z, f, size):
     return (
         [x-dx,y+dy,z-dz, x-dx,y+dy,z+dz, x+dx,y+dy,z+dz, x+dx,y+dy,z-dz],  # top
         [x-dx,y-dy,z-dz, x+dx,y-dy,z-dz, x+dx,y-dy,z+dz, x-dx,y-dy,z+dz],  # bottom
-        [x-dx,y-dy,z-dz, x-dx,y-dy,z+dz, x-dx,y+dy,z+dz, x-dx,y+dy,z-dz],  # left
-        [x+dx,y-dy,z+dz, x+dx,y-dy,z-dz, x+dx,y+dy,z-dz, x+dx,y+dy,z+dz],  # right
-        [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # front
-        [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # back
+        [x-dx,y-dy,z-dz, x-dx,y-dy,z+dz, x-dx,y+dy,z+dz, x-dx,y+dy,z-dz],  # front
+        [x+dx,y-dy,z+dz, x+dx,y-dy,z-dz, x+dx,y+dy,z-dz, x+dx,y+dy,z+dz],  # back
+        [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # left
+        [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # right
     )[f]
 
 def tex_coord(x, y):
@@ -91,7 +106,7 @@ def tex_coords(textures):
 
     """
     result = []
-    for i in range(6):
+    for i in range(7):
         if i >= len(textures):
             i = -1
         result.append(tex_coord(*textures[i]))
@@ -122,10 +137,21 @@ class TextureDict(dict):
             c = 0
         clockwise = lambda blub: blub[2:]+blub[:2]
         countercw = lambda blub: blub[-2:]+blub[:-2]
+        inversion = lambda blub: clockwise(clockwise(blub))
         print texture
         for _ in range(c):
-            top, bottom, left, right, front, back = texture
-            texture = clockwise(top), countercw(bottom),front ,back ,right ,left
+            top, bottom, front, back, left, right, icon = texture
+            texture = countercw(top), clockwise(bottom), right, left, front, back, icon
+        top, bottom, front, back, left, right, icon = texture
+        #  e
+        #n   s
+        #  w
+        if "t" in state:
+            texture = inversion(bottom), inversion(top), inversion(left), inversion(right), inversion(back), inversion(front), icon
+        elif "e" in state:
+            texture = back, front, top, bottom, clockwise(left), countercw(right), icon
+
+#        else:
 
         #if "t" in state:
         #    p = lambda x,y,z = x,y,z
@@ -150,20 +176,15 @@ def load_setup(path):
         TEXTURES[name] = tex_coords(textures)
         TRANSPARENCY[name] = transparency
 
-
-FACES = [Vector([ 0, 1, 0]), #top
-         Vector([ 0,-1, 0]), #bottom
-         Vector([-1, 0, 0]), #left
-         Vector([ 1, 0, 0]), #right
-         Vector([ 0, 0, 1]), #front
-         Vector([ 0, 0,-1])] #back
-
+def is_transparent(block_name):
+    return TRANSPARENCY[block_name.rsplit(":",1)[0]]
+         
 class SimpleChunk(object):
     def __init__(self):
         self.blocks = {}
 
     def get_block(self,position):
-        return self.blocks.get(position,"AIR" if self.blocks else "AIR")
+        return self.blocks.get(position,"AIR")
 
     def set_block(self,position,value):
         if value == "AIR":
@@ -197,8 +218,9 @@ class Model(object):
         self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture(),
-                                  parent = othergroup) #possible to use image.load(file=filedescriptor) if necessary
+        texture = image.load(TEXTURE_PATH).get_texture() #possible to use image.load(file=filedescriptor) if necessary
+        self.textured_normal_group = TextureGroup(texture, parent = normal_group) 
+        self.textured_colorkey_group = TextureGroup(texture, parent = colorkey_group)
 
         self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = Chunkdict()
@@ -240,11 +262,12 @@ class Model(object):
 
     def update_face(self,position,face):
         fv = FACES[face]
+        a = self.get_block(position)
         b = self.get_block(position+fv)
-        if b != None:
-            if b == "AIR": #M# test for transparency here!
-                self.show_face(position,face)
-                return
+        #if b != None:
+        if is_transparent(a) or is_transparent(b):
+            self.show_face(position,face)
+            return
         self.hide_face(position,face)
     
     def update_visibility_around(self,position):
@@ -259,13 +282,15 @@ class Model(object):
             return
         x, y, z = position
         block_name = self.get_block(position)
-        if not block_name or block_name == "AIR":
+        if block_name == "AIR":
             return
+        t = is_transparent(block_name)
         texture_data = list(TEXTURES[block_name][face])
-        vertex_data = face_vertices(x, y, z, face, 0.5)
+        vertex_data = face_vertices(x, y, z, face, 0.5 - 0.01*t)
+        group = self.textured_colorkey_group if t else self.textured_normal_group
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
-        self.shown[(position,face)] = self.batch.add(4, GL_QUADS, self.group,
+        self.shown[(position,face)] = self.batch.add(4, GL_QUADS, group,
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
 
@@ -320,9 +345,9 @@ class Model(object):
             for relpos,offset,size,texture in model[modelpart]:
                 x, y, z = offset if modelpart in ("head","legl","legr") else relpos
                 if texture == "<<random>>":
-                    texture = TEXTURES.values()[entity_id%len(TEXTURES)]
-                if isinstance(texture,basestring):
-                    texture = TEXTURES[texture]
+                    texture = TEXTURES.keys()[entity_id%len(TEXTURES)]
+                group = self.textured_colorkey_group if is_transparent(texture) else self.textured_normal_group
+                texture = TEXTURES[texture]
                 for face in range(len(FACES)):
                     texture_data = list(texture[face])
                     vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
@@ -335,7 +360,7 @@ class Model(object):
                     vertex_data = self._transform(body_matrix,position,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
-                    vertex_lists.append(self.batch.add(4, GL_QUADS, self.group,
+                    vertex_lists.append(self.batch.add(4, GL_QUADS, group,
                         ('v3f/static', vertex_data),
                         ('t2f/static', texture_data)))
                     #M# make only one vertex list per entity!
@@ -366,7 +391,7 @@ class Model(object):
         texture_data = list(TEXTURES[texture][2])
         #img = pygame.transform.rotate(img,rotation)
         if not texture.startswith ("/"):
-            vertex_list = self.hud_batch.add(4, GL_QUADS, self.group,
+            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_normal_group,
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:

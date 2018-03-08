@@ -2,9 +2,7 @@
 
 {
 "TEXTURE_SIDE_LENGTH" : 16,
-   #["Name",               transparenz, solid, [( oben), (unten), ( rest)]],
-   #  oder
-   #["Name",               transparenz, solid, [( oben), (unten), ( nord), ( sued), ( west), ( ost)]],
+   #["Name",               transparenz, solid, [( oben), (unten), ( vorne), ( hinten), ( links), ( rechts)]],
 "TEXTURE_INFO" : [
     ["GRASS",                    False,  True, [( 0, 2), ( 0, 0), ( 0, 1)]],
     ["SAND",                     False,  True, [( 1, 0), ( 1, 0), ( 1, 0)]],
@@ -57,7 +55,7 @@
     ["KOHLEERZ" ,                False,  True, [( 1, 2), ( 1, 2), ( 1, 2)]],
     ["Quarzsaule",               False,  True, [( 9, 2), ( 9, 2), ( 9, 1)]],
     #Erze
-    ["GESICHT" ,                 False,  True, [( 1,15), (1 ,15), ( 2,14), ( 0,14), ( 3,14), ( 1,14)]],
+    ["GESICHT" ,                 False,  True, [( 1,15), (1 ,15), ( 1,14), ( 3,14), ( 0,14), ( 2,14)]],
     ["CREEPER" ,                 False,  True, [( 3,13), (3 ,13), ( 2,13)]],
     ["Zombie" ,                  False,  True, [( 1,15), (1 ,15), ( 0,13)]],
     ["Skelett",                  False,  True, [(15, 0), (15, 0), ( 0,15)]],
@@ -81,7 +79,7 @@
     ["Gemeisselter_Steinziegel", False,  True, [(11, 7), (11, 7), (11, 7)]],
     ["CHEST",                    False,  True, [(15, 9), (14, 9), (14,10), (15,10), (15,10), (15,10)]],
     ["missing_texture",          False,  True, [(15,15), (15,15), (15,15)]],
-    ["HERZ",                     False,  True, [(12, 6), (12, 6), (12, 6)]], 
+    ["HERZ",                     True ,     1, [(14,15), (14,15), (14,15), (12, 6), (14,15)]], 
     ],
 
 "ENTITY_MODELS": {

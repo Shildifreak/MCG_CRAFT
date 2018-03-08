@@ -143,7 +143,7 @@ def init_player(player):
     player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
     player.entity["velocity"] = Vector([0,0,0])
     player.entity["last_update"] = time.time()
-    player.entity["inventory"] = []
+    player.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"}]
     player.entity["left_hand"] = {"id":"CHEST"}
     player.entity["right_hand"] = {"id":"GRASS","count":64}
     player.entity["health"] = 10
