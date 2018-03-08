@@ -14,6 +14,6 @@ class ChestItem(Item):
     def use_on_block(self,character,blockpos,face):
         new_pos = blockpos + face
         block_id = self.item["id"]
-        r = int((character["rotation"][0] - 45) // 90) % 4
+        r = int((character["rotation"][0] + 45) // 90) % 4
         character.world[new_pos] = block_id + ":%i" % r
         

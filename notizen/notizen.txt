@@ -3,15 +3,12 @@ Verbesserungskram:
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
 	Missing Texture so machen, dass man die Rotation trotzdem sehen kann
-	solid spalte entfernen und als Blockeigenschaft definieren
-	Listen die abschließende doppelte enthalten streichen.
+	backface culling für transparente Blöcke?
 
 Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
 	Aufsammeln von Blöcken ermöglichen
-	HUD
-	Inventar anzeigen
-	Auswahl von Blöcken aus Inventar ermöglichen
+	Inventar
 	Speichern fixen
 
 BLOCKS

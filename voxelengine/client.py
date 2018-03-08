@@ -37,6 +37,7 @@ class ColorkeyGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
         super(ColorkeyGroup,self).set_state()
         glDisable(GL_CULL_FACE)
+        
     def unset_state(self):
         super(ColorkeyGroup,self).unset_state()
         glEnable(GL_CULL_FACE)
@@ -46,10 +47,11 @@ normal_group = pyglet.graphics.OrderedGroup(0)
 
 FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 0,-1, 0]), #bottom
-         Vector([-1, 0, 0]), #front
-         Vector([ 1, 0, 0]), #back
-         Vector([ 0, 0,-1]), #left
-         Vector([ 0, 0, 1])] #right
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1]), #back
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0])] #right
+FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -58,20 +60,20 @@ def cube_vertices(x, y, z, n):
     return [
         x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n,  # top
         x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n,  # bottom
-        x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n,  # front
-        x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n,  # back
-        x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # left
-        x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n,  # right
+        x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n,  # front
+        x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
+        x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n,  # left
+        x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n,  # right
     ]
 
 def face_vertices(x, y, z, f, n):
     return (
         [x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n],  # top
         [x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n],  # bottom
-        [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # front
-        [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # back
-        [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # left
-        [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # right
+        [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # front
+        [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # back
+        [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # left
+        [x+n,y-n,z+n, x+n,y-n,z-n, x+n,y+n,z-n, x+n,y+n,z+n],  # right
     )[f]
 
 def face_vertices_noncube(x, y, z, f, size):
@@ -79,10 +81,10 @@ def face_vertices_noncube(x, y, z, f, size):
     return (
         [x-dx,y+dy,z-dz, x-dx,y+dy,z+dz, x+dx,y+dy,z+dz, x+dx,y+dy,z-dz],  # top
         [x-dx,y-dy,z-dz, x+dx,y-dy,z-dz, x+dx,y-dy,z+dz, x-dx,y-dy,z+dz],  # bottom
+        [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # right
+        [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # left
         [x-dx,y-dy,z-dz, x-dx,y-dy,z+dz, x-dx,y+dy,z+dz, x-dx,y+dy,z-dz],  # front
         [x+dx,y-dy,z+dz, x+dx,y-dy,z-dz, x+dx,y+dy,z-dz, x+dx,y+dy,z+dz],  # back
-        [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # left
-        [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # right
     )[f]
 
 def tex_coord(x, y):
@@ -101,67 +103,79 @@ def tex_coord(x, y):
     return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
 
 
-def tex_coords(textures):
+def cube_model(textures,n):
     """ Return a list of the texture squares for the top, bottom and side.
 
     """
     result = []
-    for i in range(7):
-        if i >= len(textures):
-            i = -1
-        result.append(tex_coord(*textures[i]))
-    return result
+    for f in range(6):
+        fv = face_vertices(0,0,0,f,n)
+        if f >= len(textures):
+            f = -1
+        texture = tex_coord(*textures[f])
+        result.append((fv,texture))
+    result.append(([],[]))
+    return tuple(result)
 
 focus_distance = 0
 
-class TextureDict(dict):
+class BlockModelDict(dict):
     def __missing__(self, key):
         parts = key.rsplit(":",1)
         if len(parts) == 2:
             blockid, state = parts
-            baseTexture = self[blockid]
-            texture = self.rotate(baseTexture, state)
-            self[key] = texture
-            return texture
+            baseModel = self[blockid]
+            model = self.rotate(baseModel, state)
+            self[key] = model
+            return model
         return self["missing_texture"]
 
     @staticmethod
-    def rotate(texture,state):
+    def rotate(model,state):
         if "1" in state:
-            c = 1
+            c = 3
         elif "2" in state:
             c = 2
         elif "3" in state:
-            c = 3
+            c = 1
         else:
             c = 0
-        clockwise = lambda blub: blub[2:]+blub[:2]
-        countercw = lambda blub: blub[-2:]+blub[:-2]
-        inversion = lambda blub: clockwise(clockwise(blub))
-        print texture
+        model = tuple((list(vertices),text_coords) for vertices, text_coords in model)
+        def r_x(model):
+            top, bottom, front, back, left, right, other = model
+            model = back, front, top, bottom, left, right, other
+            for vertices, text_coords in model:
+                for i in range(0,len(vertices),3):
+                    vertices[i+1],vertices[i+2] = -vertices[i+2],  vertices[i+1]
+            return model
+        def r_y(model):
+            top, bottom, front, back, left, right, other = model
+            model = top, bottom, left, right, back, front, other
+            for vertices, text_coords in model:
+                for i in range(0,len(vertices),3):
+                    vertices[i+0],vertices[i+2] =  vertices[i+2], -vertices[i+0]
+            return model
         for _ in range(c):
-            top, bottom, front, back, left, right, icon = texture
-            texture = countercw(top), clockwise(bottom), right, left, front, back, icon
-        top, bottom, front, back, left, right, icon = texture
+            model = r_y(model)
         #  e
         #n   s
         #  w
         if "t" in state:
-            texture = inversion(bottom), inversion(top), inversion(left), inversion(right), inversion(back), inversion(front), icon
-        elif "e" in state:
-            texture = back, front, top, bottom, clockwise(left), countercw(right), icon
-
-#        else:
+            pass
+        elif "n" in state:
+            pass
+        else:
+            pass
 
         #if "t" in state:
         #    p = lambda x,y,z = x,y,z
         #
         #    for baseside in ("t","b","n","e","s","w"):
-        print texture
-        return texture
+        print model
+        return model
         
 def load_setup(path):
-    global TEXTURES, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON
     if not os.path.isabs(path): #M# do something to support urls
         path = os.path.join(PATH,"texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
@@ -170,10 +184,13 @@ def load_setup(path):
     TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
     TEXTURE_PATH = os.path.join(path,"textures.png")
-    TEXTURES = TextureDict() #this first value is for air
     TRANSPARENCY = {"AIR":True}
-    for i, (name, transparency, solidity, textures) in enumerate(description["TEXTURE_INFO"]):
-        TEXTURES[name] = tex_coords(textures)
+    ICON = collections.defaultdict(lambda:ICON["missing_texture"])
+    BLOCKMODELS = BlockModelDict()
+    for i, (name, transparency, icon_index, textures) in enumerate(description["TEXTURE_INFO"]):
+        n = 0.5 - 0.01*transparency
+        BLOCKMODELS[name] = cube_model(textures,n) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
+        ICON[name] = tex_coord(*textures[icon_index])
         TRANSPARENCY[name] = transparency
 
 def is_transparent(block_name):
@@ -257,19 +274,17 @@ class Model(object):
 
     def update_visibility(self, position):
         if self.get_block(position):
-            for f in xrange(len(FACES)):
+            for f in xrange(len(FACES_PLUS)):
                 self.update_face(position,f)
 
     def update_face(self,position,face):
-        fv = FACES[face]
-        a = self.get_block(position)
+        fv = FACES_PLUS[face]
         b = self.get_block(position+fv)
-        #if b != None:
-        if is_transparent(a) or is_transparent(b):
+        if is_transparent(b):
             self.show_face(position,face)
-            return
-        self.hide_face(position,face)
-    
+        else:
+            self.hide_face(position,face)
+            
     def update_visibility_around(self,position):
         for f,fv in enumerate(FACES):
             self.update_face(position+fv,(f+1-(2*(f%2))))
@@ -284,10 +299,11 @@ class Model(object):
         block_name = self.get_block(position)
         if block_name == "AIR":
             return
-        t = is_transparent(block_name)
-        texture_data = list(TEXTURES[block_name][face])
-        vertex_data = face_vertices(x, y, z, face, 0.5 - 0.01*t)
-        group = self.textured_colorkey_group if t else self.textured_normal_group
+        vertex_data, texture_data = BLOCKMODELS[block_name][face]
+        if not (vertex_data and texture_data):
+            return
+        vertex_data = map(sum,zip(vertex_data,itertools.cycle(position)))
+        group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
         self.shown[(position,face)] = self.batch.add(4, GL_QUADS, group,
@@ -295,7 +311,7 @@ class Model(object):
             ('t2f/static', texture_data))
 
     def hide(self,position):
-        for face in xrange(len(FACES)):
+        for face in xrange(len(FACES_PLUS)):
             self.hide_face(position,face)
 
     def hide_face(self,position,face):
@@ -345,11 +361,10 @@ class Model(object):
             for relpos,offset,size,texture in model[modelpart]:
                 x, y, z = offset if modelpart in ("head","legl","legr") else relpos
                 if texture == "<<random>>":
-                    texture = TEXTURES.keys()[entity_id%len(TEXTURES)]
-                group = self.textured_colorkey_group if is_transparent(texture) else self.textured_normal_group
-                texture = TEXTURES[texture]
+                    texture = BLOCKMODELS.keys()[entity_id%len(BLOCKMODELS)]
+                blockmodel = BLOCKMODELS[texture] # using blockmodels here seems strange :(
                 for face in range(len(FACES)):
-                    texture_data = list(texture[face])
+                    texture_data = blockmodel[face][1]
                     vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     if modelpart == "head":
                         vertex_data = self._transform(head_matrix,relpos,vertex_data)
@@ -360,7 +375,7 @@ class Model(object):
                     vertex_data = self._transform(body_matrix,position,vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
-                    vertex_lists.append(self.batch.add(4, GL_QUADS, group,
+                    vertex_lists.append(self.batch.add(4, GL_QUADS, self.textured_normal_group,
                         ('v3f/static', vertex_data),
                         ('t2f/static', texture_data)))
                     #M# make only one vertex list per entity!
@@ -388,10 +403,10 @@ class Model(object):
                         )
         i = iter(corners)
         corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
-        texture_data = list(TEXTURES[texture][2])
         #img = pygame.transform.rotate(img,rotation)
         if not texture.startswith ("/"):
-            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_normal_group,
+            texture_data = list(ICON[texture])
+            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_colorkey_group,
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:
@@ -749,8 +764,6 @@ class Window(pyglet.window.Window):
         """
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
-        glEnable(GL_ALPHA_TEST);
-        glAlphaFunc(GL_GREATER, 0);
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -842,6 +855,9 @@ def setup():
     # Enable culling (not rendering) of back-facing facets -- facets that aren't
     # visible to you.
     glEnable(GL_CULL_FACE)
+    glEnable(GL_ALPHA_TEST)
+    glAlphaFunc(GL_GREATER, 0)
+
     # Set the texture minification/magnification function to GL_NEAREST (nearest
     # in Manhattan distance) to the specified texture coordinates. GL_NEAREST
     # "is generally faster than GL_LINEAR, but it can produce textured images
