@@ -145,7 +145,7 @@ def init_player(player):
     player.entity["last_update"] = time.time()
     player.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"}]
     player.entity["left_hand"] = {"id":"CHEST"}
-    player.entity["right_hand"] = {"id":"GRASS","count":64}
+    player.entity["right_hand"] = {"id":"DOORSTEP","count":1}
     player.entity["health"] = 10
     player.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
     player.entity["lives"] = 9
@@ -296,9 +296,6 @@ def update_player(player):
                 else:
                     item.use_on_air(pe)            
 
-    if player.was_pressed_set:
-        print player.was_pressed_set
-
     if player.was_pressed("fly"):
         player.flying = not player.flying
     if player.was_pressed("inv"):
@@ -335,6 +332,13 @@ def update_player(player):
 
     pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
     update_position(pe)
+
+def tick_around(player):
+    radius = 50
+    ticks = 5
+    for a in range(ticks):
+        dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
+        player.entity.world.get_block_object((player.entity["position"]+dp).normalize()).random_ticked()
 
 def update_schaf(schaf):
     r = random.randint(0,200)
@@ -437,6 +441,7 @@ if __name__ == "__main__":
             w.tick()
             for player in g.get_players():
                 update_player(player)
+                tick_around(player)
             for schaf in schafe:
                 update_schaf(schaf)
                 pass

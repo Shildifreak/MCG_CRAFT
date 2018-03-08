@@ -1,4 +1,5 @@
 import collections
+import random
 
 items  = collections.defaultdict(lambda:Item)
 blocks = collections.defaultdict(lambda:Block)
@@ -66,4 +67,6 @@ class Block(object):
         self.world[self.position] = "AIR"
 
     def exploded(self,entf):
-        self.world[self.position] = "AIR"
+        if entf < 1:
+            if random.random() > self.blast_resistance:
+                self.world[self.position] = "AIR"

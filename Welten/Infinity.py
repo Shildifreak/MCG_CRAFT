@@ -119,13 +119,16 @@ def baum_function(chunk):
         x = chunkpos[0] + dx
         z = chunkpos[2] + dz
         y = grashoehe(x,z)
-        for d_pos, block in tree.tree_structure(baumhoehe):
+        baumtyp = "eiche"
+        for d_pos, block in tree.tree_structure(baumtyp):
             dx, dy, dz = d_pos
             chunk.set_block((x+dx,y+dy,z+dz),block)
 
 relief_gras = terrain_generator_from_heightfunc(grashoehe,"GRASS")
 relief_dirt = terrain_generator_from_heightfunc(erdhoehe,"DIRT")
 relief_stein = terrain_generator_from_heightfunc(steinhoehe,"STONE")
+
+
 
 terrain_generator = [relief_gras,relief_dirt,relief_stein,baum_function]
 

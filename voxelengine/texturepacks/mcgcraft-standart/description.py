@@ -80,6 +80,9 @@
     ["CHEST",                    False,  True, [(15, 9), (14, 9), (14,10), (15,10), (15,10), (15,10)]],
     ["missing_texture",          False,  True, [(15,15), (15,15), (15,15)]],
     ["HERZ",                     True ,     1, [(14,15), (14,15), (14,15), (12, 6), (14,15)]], 
+    ["DOORTOP",                  False,  True, [(12, 6), (12, 6), (12, 6)]],
+    ["DOORSTEP",                 False,  True, [(0 , 4)]],
+    ["DOORBOTTOM",               False,  True, [(0 , 4)]],
     ],
 
 "ENTITY_MODELS": {
