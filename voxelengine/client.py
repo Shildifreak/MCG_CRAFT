@@ -161,17 +161,21 @@ class BlockModelDict(dict):
         #n   s
         #  w
         if "t" in state:
-            pass
-        elif "n" in state:
-            pass
+            model = r_x(r_x(model))
+            return model
+        if "n" in state:
+            c = 0
+        elif "e" in state:
+            c = 3
+        elif "s" in state:
+            c = 2
+        elif "w" in state:
+            c = 1
         else:
-            pass
-
-        #if "t" in state:
-        #    p = lambda x,y,z = x,y,z
-        #
-        #    for baseside in ("t","b","n","e","s","w"):
-        print model
+            return model
+        model = r_x(model)
+        for _ in range(c):
+            model = r_y(model)
         return model
         
 def load_setup(path):
