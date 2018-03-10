@@ -15,22 +15,15 @@ class RotatableBlockItem(Item):
                  }
         base = faces.get(tuple(map(int,face*-1)),"")
         if base == "b":
-            print character["rotation"]
-            print character["position"]
             r = int((character["rotation"][0] + 45) // 90) % 4
         else:
             r = 0
-        print base, r
-        character.world[new_pos] = block_id + ":%i%s" % (r, base)
+        block = {"id":block_id,"rotation":r,"base":base}
+        character.world[new_pos] = block
 
 @register_block("GESICHT")
 class RotatableBlock(Block):
     def activated(self,character,face):
         block = self.world[self.position]
-        key, state = block.rsplit(":",1)
-        state = state.replace("3","4")
-        state = state.replace("2","3")
-        state = state.replace("1","2")
-        state = state.replace("0","1")
-        state = state.replace("4","0")
-        self.world[self.position] = key+":"+state
+        block["rotation"] += 1
+        block["rotation"] %= 4

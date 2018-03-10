@@ -140,9 +140,13 @@ class ObservableList(Observable):
     def remove(self, value):
         self.pop(self.index(value))
 
+
+
 if __name__ == "__main__":
     root = observable_from({"a":7,"b":[1,2,3]})
     root.setdefault("c",[4])
     root["c"].append(2)
     root["c"].remove(4)
     print type(root["c"]), root["c"]
+    a = observable_from({1:2})
+    b = observable_from({1:2})

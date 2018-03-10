@@ -4,6 +4,7 @@ Verbesserungskram:
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
 	Missing Texture so machen, dass man die Rotation trotzdem sehen kann
 	backface culling für transparente Blöcke?
+	rendern wenn der Spieler gerade steht
 
 Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))

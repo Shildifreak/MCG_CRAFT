@@ -117,11 +117,12 @@ class Chunk(object):
     """
     blockformat = "H"
     byte_per_block = struct.calcsize(blockformat) #make sure to change this if you change the blockformat at runtime... better just don't change it at all
-    altered = False #M# not tracked yet
 
-    def __init__(self,chunksize,block_codec=None):
+    def __init__(self,chunksize,block_codec):
+        """block codec has to has at least one element (the default block)"""
         self.chunksize = chunksize
-        self.block_codec = block_codec or ["AIR"]
+        self.block_codec = block_codec
+        assert len(block_codec) >= 1
 
     def init_data(self):
         """fill chunk with AIR/zeros"""
@@ -139,7 +140,6 @@ class Chunk(object):
     def compressed_data(self,data):
         self._compressed_data = data
         self._decompressed_data = None    
-        self.altered = True
 
     @property
     def decompressed_data(self):
@@ -149,7 +149,6 @@ class Chunk(object):
     def decompressed_data(self,data):
         self._decompressed_data = bytearray(data)
         self._compressed_data = None
-        self.altered = True
 
     def _load_decompressed(self):
         if not self._decompressed_data:
@@ -187,6 +186,7 @@ class Chunk(object):
             struct.pack_into(self.blockformat,self._decompressed_data,key*self.byte_per_block,value)
         self._compressed_data = None
         self.altered = True
+        return self.get_block_name_by_id(value)
 
     def __getitem__(self,index):
         self._load_decompressed()
@@ -197,7 +197,7 @@ class Chunk(object):
         return self[self.pos_to_i(position)]
 
     def set_block(self,position,value):
-        self[self.pos_to_i(position)] = value
+        return self.__setitem__(self.pos_to_i(position), value)
 
     def pos_to_i(self, position):
         # reorder to y-first for better compression
@@ -212,7 +212,7 @@ class Chunk(object):
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
 
-#M# wozu:?
+"""#M# wozu:?
 class TrappedSet(object):
     def __init__(self, add_func, remove_func, *args, **kwargs):
         self.set = set(*args, **kwargs)
@@ -230,10 +230,4 @@ class TrappedSet(object):
     def discard(self, value):
         self.set.discard(value)
         self.remove_func(value)
-
-if __name__ == "__main__":
-    def p(v):
-        print v
-    t = TrappedSet(p,p,[1,2,3,4,5])
-    t.add(6)
-    t.remove(1)
+"""

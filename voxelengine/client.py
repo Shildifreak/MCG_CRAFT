@@ -564,6 +564,7 @@ class Window(pyglet.window.Window):
             if c.startswith("setarea"):
                 c = c.split(" ",1)
                 position, codec, compressed_blocks = ast.literal_eval(c[1])
+                print codec
                 position = Vector(position)
                 self.model.set_area(position,codec,compressed_blocks)
                 continue

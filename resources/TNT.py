@@ -15,7 +15,7 @@ class tntblock(Block):
                 for dz in range(-tntrange,tntrange+1):
                     tp = self.position+(dx,dy,dz)
                     dp = type(self.position)((dx,dy,dz))
-                    self.world.get_block_object(tp).exploded(dp.length()/tntrange)
+                    self.world[tp].exploded(dp.length()/tntrange)
         
     def exploded(self,entf):
         if entf < 1:

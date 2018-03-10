@@ -44,9 +44,9 @@ class Item(object):
 class Block(object):
     blast_resistance = 0
     # Init function, don't care to much about this
-    def __init__(self, world, position):
-        self.world = world
-        self.position = position
+    #def __init__(self, world, position):
+    #    self.world = world
+    #    self.position = position
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
@@ -62,8 +62,8 @@ class Block(object):
 
     def mined(self,character,face):
         """drop item or something... also remember to set it to air. Return value see activated"""
-        block_id = self.world[self.position]
-        character["right_hand"] = {"id":block_id.rsplit(":",1)[0]}
+        block = self.world[self.position]
+        character["right_hand"] = {"id":block["id"]}
         self.world[self.position] = "AIR"
 
     def exploded(self,entf):

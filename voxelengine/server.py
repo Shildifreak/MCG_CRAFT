@@ -34,12 +34,72 @@ class _Chunkdict(dict):
         self[chunkposition] = chunk
         return chunk
 
+class BlockData(dict):
+    def __eq__(self,other):
+        if isinstance(other,BlockData):
+            if self.immutable() and other.immutable():
+                return dict.__eq__(self, other)
+        return False
+    def __ne__(self,other):
+        return not (self == other)
+    def immutable(self):
+        for v in self.values():
+            try:
+                hash(v)
+            except TypeError:
+                return False
+        return True
+    def client_version(self):
+        state = self.get("base","")+str(self.get("rotation",""))
+        if state:
+            return self["id"]+":"+state
+        else:
+            return self["id"]
+    
+class Block(object):
+    def __init__(self,data):
+        if isinstance(data,basestring):
+            data = {"id":data}
+        else:
+            assert "id" in data
+        self.data = BlockData(data)
+        self.chunk = None
+        self.position = None
+        self.world = None
+    def __getitem__(self,key):
+        return self.data[key]
+    #def get(self,key,*default):
+    #    return self.data.get(key,*default)
+    def __setitem__(self,key,value):
+        if self.data.immutable() and (self.chunk != None): # <=> data may be used by multiple Blocks
+            self.data = BlockData(self.data.copy())
+            self.data[key] = value
+            self.chunk.set_block(self.position, self)
+        else:
+            self.data[key] = value
+    def __eq__(self,other):
+        if isinstance(other,Block):
+            return self.data == other.data
+        elif isinstance(other,dict):
+            print "hey", type(self.data)
+            return self.data == other
+        elif isinstance(other,basestring):
+            return self["id"] == other
+        else:
+            return False
+    def __ne__(self,other):
+        return not (self == other)
+
 class World(object):
-    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4):
+    BlockClass = Block
+    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4, defaultblock = "AIR"):
         """create new World instance"""
         self.chunksize = chunksize
         self.worldgenerators = worldgenerators
         self.spawnpoint = Vector(spawnpoint)
+        if not isinstance(defaultblock,Block):
+            defaultblock = self.BlockClass(defaultblock)
+        self.defaultblock = defaultblock
         self.loading_queue = []
         self.load_thread_count = 0
         self.chunks = _Chunkdict(self)
@@ -47,6 +107,7 @@ class World(object):
         self.players = set()
         if filename != None:
             self._load(filename)
+        assert issubclass(self.BlockClass, Block)
 
     def __getitem__(self, position):
         return self.get_block(position)
@@ -77,8 +138,6 @@ class World(object):
         if chunk == None:
             return False
         chunk.set_block(position,block)
-        for observer in chunk.observers:
-            observer._notice_block(position,block)
         return True
 
     def _get_chunk(self, position, minlevel = None, load_on_miss = True):
@@ -176,7 +235,6 @@ class World(object):
                     data = " ".join((initlevel,chunk.compressed_data))
                     zf.writestr(name,data)
 
-
 class ServerChunk(Chunk):
     """The (Server)Chunk class is only relevant when writing a world generator
     
@@ -185,7 +243,7 @@ class ServerChunk(Chunk):
     >>>     ...
     """
     def __init__(self, chunksize, world, position):
-        Chunk.__init__(self,chunksize)
+        Chunk.__init__(self,chunksize,[world.defaultblock.data])
         self.world = world
         self.position = position # used for sending chunk to player
         self.observers = set() #if empty and chunk not altered, it should be removed
@@ -222,8 +280,12 @@ class ServerChunk(Chunk):
         if not isinstance(position,Vector):
             position = Vector(position)
         if (position>>self.chunksize) == self.position:
-            return Chunk.get_block(self,position)
-        return self.world.get_block(position,self.initlevel-1)
+            block_data = Chunk.get_block(self,position)
+            block = self.world.BlockClass(block_data)
+            block.world, block.chunk, block.position = self.world, self, position
+            return block
+        else:
+            return self.world.get_block(position,self.initlevel-1)
     
     def set_block(self, position, block):
         """
@@ -231,12 +293,21 @@ class ServerChunk(Chunk):
         - searches world if position is not within chunk (with own initlevel-1)
         - recommended for setting blocks of other chunks in terrain generators
         """
+        if isinstance(block,self.world.BlockClass):
+            block_data = block.data
+        else:
+            block_data = self.world.BlockClass(block).data
         if not isinstance(position,Vector):
             position = Vector(position)
         if (position>>self.chunksize) == self.position:
-            return Chunk.set_block(self,position,block)
-        return self.world.set_block(position,block,self.initlevel-1)
-
+            for observer in self.observers:
+                observer._notice_block(position,block_data)
+            block_data = Chunk.set_block(self,position,block_data)
+            if isinstance(block, self.world.BlockClass):
+                block.data = block_data
+                block.world, block.chunk, block.position = self.world, self, position
+        else:
+            self.world.set_block(position,block_data,self.initlevel-1)
 
     def get_entities(self):
         return (entity for entity in self.world.entities if (entity["position"].normalize()>>self.chunksize) == self.position)
@@ -372,7 +443,7 @@ class Player(object):
         """ 
         if max_distance == None:
             max_distance = self.focus_distance
-        return hit_test(lambda v:self.entity.world.get_block(v)!="AIR",self.entity["position"],
+        return hit_test(lambda v:self.entity.world.get_block(v)["id"]!="AIR",self.entity["position"],
                         self.entity.get_sight_vector(),max_distance)
 
     def set_focus_distance(self,distance):
@@ -462,7 +533,8 @@ class Player(object):
             chunk = self._lc.pop()
             if not chunk in self.observed_chunks and chunk.is_fully_generated():
                 self.observed_chunks.add(chunk)
-                data = repr((chunk.position,chunk.block_codec,chunk.compressed_data))
+                codec = [b.client_version() for b in chunk.block_codec]
+                data = repr((chunk.position,codec,chunk.compressed_data))
                 self.outbox.append("setarea "+ data)
                 chunk.observers.add(self)
                 for entity in chunk.get_entities():
@@ -521,9 +593,9 @@ class Player(object):
             self._init_chunks()
 
         
-    def _notice_block(self,position,block):
+    def _notice_block(self,position,block_data):
         """send blockinformation to client"""
-        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block))
+        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block_data.client_version()))
 
     def _notice_new_chunk(self,chunk):
         if not self.renderlimit:

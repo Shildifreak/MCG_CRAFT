@@ -15,5 +15,5 @@ class ChestItem(Item):
         new_pos = blockpos + face
         block_id = self.item["id"]
         r = int((character["rotation"][0] + 45) // 90) % 4
-        character.world[new_pos] = block_id + ":%i" % r
+        character.world[new_pos] = {"id":block_id,"rotation":r}
         

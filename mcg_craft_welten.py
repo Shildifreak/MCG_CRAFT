@@ -190,7 +190,7 @@ def init_schaf(world):
         x = random.randint(-40,40)
         z = random.randint(-10,10)
         y = random.randint(-40,40)
-        if world.get_block((x,y-2,z)) != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
+        if world.get_block((x,y-2,z))["id"] != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
             break
     schaf["position"] = (x,y,z)
     schaf["velocity"] = Vector([0,0,0])
@@ -204,13 +204,11 @@ def onground(entity):
     return bool_collide_difference(entity,entity["position"]+(0,-0.2,0),entity["position"])
 
 def collide(entity,position):
-    global debug_counter_2
     """blocks entity would collide with if it was at position"""
     blocks = set()
     for relpos in entity["hitbox"]:
-        debug_counter_2 += 1
         block_pos = (position+relpos).normalize()
-        if entity.world.get_block(block_pos) != "AIR": #s.onground
+        if entity.world.get_block(block_pos)["id"] != "AIR": #s.onground
             blocks.add(block_pos)
     return blocks
 
@@ -229,10 +227,8 @@ def collide_difference(entity,new_position,previous_position):
     return collide(entity,new_position).difference(collide(entity,previous_position))
 
 def bool_collide_difference(entity,new_position,previous_position):
-    global debug_counter_2
     for block in potential_collide_blocks(entity,new_position).difference(potential_collide_blocks(entity,previous_position)):
-        debug_counter_2 += 1
-        if entity.world.get_block(block) != "AIR":
+        if entity.world.get_block(block)["id"] != "AIR":
             return True
     return False
     
@@ -286,8 +282,7 @@ def update_player(player):
             pos, face = player.get_focused_pos()
             do_item_action = True
             if pos and not player.is_pressed("shift"):
-                block_object = pe.world.get_block_object(pos)
-                do_item_action = primary_action(block_object)(pe, face)
+                do_item_action = primary_action(pe.world[pos])(pe, face)
             if do_item_action:
                 item_data = pe[hand_name]
                 item = resources.items[item_data["id"]](item_data)
@@ -338,7 +333,7 @@ def tick_around(player):
     ticks = 5
     for a in range(ticks):
         dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
-        player.entity.world.get_block_object((player.entity["position"]+dp).normalize()).random_ticked()
+        player.entity.world[(player.entity["position"]+dp).normalize()].random_ticked()
 
 def update_schaf(schaf):
     r = random.randint(0,200)
@@ -376,18 +371,24 @@ def update_schaf(schaf):
     dp = -schaf["nod"]*50 - p
     if dy or dp:
         schaf["rotation"] = y+dy, p+dp
-        
-debug_counter_1 = 1
-debug_counter_2 = 1
 
+class MCGCraftBlock(Block):
+    block_class = property(lambda self: resources.blocks[self["id"]])
+    def __getattr__(self, name):
+        #bc = resources.blocks[self["id"]]
+        attr = getattr(self.block_class,name)
+        if callable(attr):
+            return attr.__get__(self)
+        return attr
+    def __setitem__(self, key, value):
+        Block.__setitem__(self,key,value)
+        self.world.changed_blocks.append(self.position)
 
 class MCGCraftWorld(World):
+    BlockClass = MCGCraftBlock
     def __init__(self,*args,**kwargs):
         World.__init__(self,*args,**kwargs)
         self.changed_blocks = []
-
-    def get_block_object(self,position):
-        return resources.blocks[self[position].rsplit(":",1)[0]](self,position)
 
     def set_block(self,position,block):
         if not isinstance(position,Vector):
@@ -402,12 +403,20 @@ class MCGCraftWorld(World):
                                                for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,0,-1),(0,0,-1),(0,0,1)))
         for position, group in itertools.groupby(block_updates,lambda x:x[0]):
             faces = [x[1] for x in group]
-            new_block = self.get_block_object(position).block_update(faces)
+            new_block = self[position].block_update(faces)
             if new_block:
                 new_blocks.append((position,new_block))
         self.changed_blocks = []
         for position, block in new_blocks:
             self[position] = block
+
+def zeitmessung(ts = [0]*200, t = [time.time()]):
+    dt = time.time() - t[0]
+    t[0] += dt
+    dt = round(1/dt,2)
+    ts.append(dt)
+    ts.pop(0)
+    print dt, min(ts), max(ts)    
 
 if __name__ == "__main__":
     multiplayer = select(["open server","play alone"])[0] == 0
@@ -416,9 +425,10 @@ if __name__ == "__main__":
     worldtype = select(worldtypes)[1]
     worldmod = __import__(worldtype)
 
-    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE)
+    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
     worldmod.init(w)
     w.changed_blocks = []
+    print "hey"
     
     def i_f(player):
         w.spawn_player(player)
@@ -436,7 +446,7 @@ if __name__ == "__main__":
             g.update()
             time.sleep(0.5) #wait for players to connect
         while g.get_players():
-            #print "counter", debug_counter_1, debug_counter_2, debug_counter_2//debug_counter_1; debug_counter_1 += 1
+            #zeitmessung()
             g.update()
             w.tick()
             for player in g.get_players():
