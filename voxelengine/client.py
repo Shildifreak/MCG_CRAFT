@@ -58,8 +58,8 @@ def cube_vertices(x, y, z, n):
 
     """
     return [
-        x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n,  # top
-        x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n,  # bottom
+        x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n, x-n,y+n,z-n,  # top
+        x+n,y-n,z+n, x-n,y-n,z+n, x-n,y-n,z-n, x+n,y-n,z-n,  # bottom
         x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n,  # front
         x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
         x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n,  # left
@@ -68,8 +68,8 @@ def cube_vertices(x, y, z, n):
 
 def face_vertices(x, y, z, f, n):
     return (
-        [x-n,y+n,z-n, x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n],  # top
-        [x-n,y-n,z-n, x+n,y-n,z-n, x+n,y-n,z+n, x-n,y-n,z+n],  # bottom
+        [x-n,y+n,z+n, x+n,y+n,z+n, x+n,y+n,z-n, x-n,y+n,z-n],  # top
+        [x+n,y-n,z+n, x-n,y-n,z+n, x-n,y-n,z-n, x+n,y-n,z-n],  # bottom
         [x-n,y-n,z+n, x+n,y-n,z+n, x+n,y+n,z+n, x-n,y+n,z+n],  # front
         [x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n],  # back
         [x-n,y-n,z-n, x-n,y-n,z+n, x-n,y+n,z+n, x-n,y+n,z-n],  # left
@@ -79,8 +79,8 @@ def face_vertices(x, y, z, f, n):
 def face_vertices_noncube(x, y, z, f, size):
     dx,dy,dz = size
     return (
-        [x-dx,y+dy,z-dz, x-dx,y+dy,z+dz, x+dx,y+dy,z+dz, x+dx,y+dy,z-dz],  # top
-        [x-dx,y-dy,z-dz, x+dx,y-dy,z-dz, x+dx,y-dy,z+dz, x-dx,y-dy,z+dz],  # bottom
+        [x-dx,y+dy,z+dz, x+dx,y+dy,z+dz, x+dx,y+dy,z-dz, x-dx,y+dy,z-dz],  # top
+        [x+dx,y-dy,z+dz, x-dx,y-dy,z+dz, x-dx,y-dy,z-dz, x+dx,y-dy,z-dz],  # bottom
         [x-dx,y-dy,z+dz, x+dx,y-dy,z+dz, x+dx,y+dy,z+dz, x-dx,y+dy,z+dz],  # right
         [x+dx,y-dy,z-dz, x-dx,y-dy,z-dz, x-dx,y+dy,z-dz, x+dx,y+dy,z-dz],  # left
         [x-dx,y-dy,z-dz, x-dx,y-dy,z+dz, x-dx,y+dy,z+dz, x-dx,y+dy,z-dz],  # front
@@ -103,7 +103,7 @@ def tex_coord(x, y):
     return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
 
 
-def cube_model(textures,n):
+def cube_model(textures,n,sidehiding):
     """ Return a list of the texture squares for the top, bottom and side.
 
     """
@@ -114,7 +114,10 @@ def cube_model(textures,n):
             f = -1
         texture = tex_coord(*textures[f])
         result.append((fv,texture))
-    result.append(([],[]))
+    result.append(([],()))
+    if not sidehiding:
+        all_in_one = reduce(lambda a,b:(a[0]+b[0],a[1]+b[1]),result)
+        return (([],()),)*6+(all_in_one,)
     return tuple(result)
 
 focus_distance = 0
@@ -195,7 +198,7 @@ def load_setup(path):
     for i, (name, transparency, icon_index, textures) in enumerate(description["TEXTURE_INFO"]):
         n = 0.5 - 0.01*transparency
         BLOCKNAMES.append(name)
-        BLOCKMODELS[name] = cube_model(textures,n) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
+        BLOCKMODELS[name] = cube_model(textures,n,not transparency) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
         ICON[name] = tex_coord(*textures[icon_index])
         TRANSPARENCY[name] = transparency
 
@@ -312,7 +315,7 @@ class Model(object):
         group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
-        self.shown[(position,face)] = self.batch.add(4, GL_QUADS, group,
+        self.shown[(position,face)] = self.batch.add(len(vertex_data)/3, GL_QUADS, group,
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
 

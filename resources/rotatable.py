@@ -15,7 +15,9 @@ class RotatableBlockItem(Item):
                  }
         base = faces.get(tuple(map(int,face*-1)),"")
         if base == "b":
-            r = int((character["rotation"][0] + 45) // 90) % 4
+            r = int(( character["rotation"][0] + 45) // 90) % 4
+        elif base == "t":
+            r = int((-character["rotation"][0] + 45) // 90) % 4            
         else:
             r = 0
         block = {"id":block_id,"rotation":r,"base":base}
