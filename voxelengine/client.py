@@ -179,7 +179,7 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(path):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
     if not os.path.isabs(path): #M# do something to support urls
         path = os.path.join(PATH,"texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
@@ -191,8 +191,10 @@ def load_setup(path):
     TRANSPARENCY = {"AIR":True}
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
+    BLOCKNAMES = []
     for i, (name, transparency, icon_index, textures) in enumerate(description["TEXTURE_INFO"]):
         n = 0.5 - 0.01*transparency
+        BLOCKNAMES.append(name)
         BLOCKMODELS[name] = cube_model(textures,n) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
         ICON[name] = tex_coord(*textures[icon_index])
         TRANSPARENCY[name] = transparency
@@ -365,7 +367,7 @@ class Model(object):
             for relpos,offset,size,texture in model[modelpart]:
                 x, y, z = offset if modelpart in ("head","legl","legr") else relpos
                 if texture == "<<random>>":
-                    texture = BLOCKMODELS.keys()[entity_id%len(BLOCKMODELS)]
+                    texture = BLOCKNAMES[entity_id%len(BLOCKNAMES)] #make sure to select from list that doesn't change, cause otherwise players skins will change
                 blockmodel = BLOCKMODELS[texture] # using blockmodels here seems strange :(
                 for face in range(len(FACES)):
                     texture_data = blockmodel[face][1]
@@ -564,7 +566,6 @@ class Window(pyglet.window.Window):
             if c.startswith("setarea"):
                 c = c.split(" ",1)
                 position, codec, compressed_blocks = ast.literal_eval(c[1])
-                print codec
                 position = Vector(position)
                 self.model.set_area(position,codec,compressed_blocks)
                 continue

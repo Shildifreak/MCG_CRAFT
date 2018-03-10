@@ -24,16 +24,6 @@ MSGS_PER_TICK = 10
 # merke: wenn man from voxelengine import * macht werden neue globale Variablen nach dem import nicht übernommen :(
 # ergo: globale Variablen nicht mehr ändern zur Laufzeit (verändern der Objekte ist ok)
 
-class _Chunkdict(dict):
-    def __init__(self,world,*args,**kwargs):
-        dict.__init__(self,*args,**kwargs)
-        self.world = world
-
-    def __missing__(self, chunkposition):
-        chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
-        self[chunkposition] = chunk
-        return chunk
-
 class BlockData(dict):
     def __eq__(self,other):
         if isinstance(other,BlockData):
@@ -89,151 +79,6 @@ class Block(object):
             return False
     def __ne__(self,other):
         return not (self == other)
-
-class World(object):
-    BlockClass = Block
-    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4, defaultblock = "AIR"):
-        """create new World instance"""
-        self.chunksize = chunksize
-        self.worldgenerators = worldgenerators
-        self.spawnpoint = Vector(spawnpoint)
-        if not isinstance(defaultblock,Block):
-            defaultblock = self.BlockClass(defaultblock)
-        self.defaultblock = defaultblock
-        self.loading_queue = []
-        self.load_thread_count = 0
-        self.chunks = _Chunkdict(self)
-        self.entities = set()
-        self.players = set()
-        if filename != None:
-            self._load(filename)
-        assert issubclass(self.BlockClass, Block)
-
-    def __getitem__(self, position):
-        return self.get_block(position)
-
-    def __setitem__(self, position, block_id):
-        self.set_block(position, block_id)
-
-    def get_block(self, position, minlevel = None, load_on_miss = True):
-        """get ID of block at position
-
-        args (Argumente):
-            position    : (x,y,z)
-        kwargs (optionale Argumente):
-            minlevel    : required initlevel of chunk (defaults to max)
-            load_on_miss: whether to load chunk if necessary
-                          if False requests for unloaded chunks return None
-        """
-        position = Vector(position)
-        chunk = self._get_chunk(position, minlevel, load_on_miss)
-        if chunk == None:
-            return None
-        return chunk.get_block(position)
-
-    def set_block(self, position, block, minlevel = None, load_on_miss = True):
-        """set block at position"""
-        position = Vector(position)
-        chunk = self._get_chunk(position, minlevel, load_on_miss)
-        if chunk == None:
-            return False
-        chunk.set_block(position,block)
-        return True
-
-    def _get_chunk(self, position, minlevel = None, load_on_miss = True):
-        """
-        accepts floating point position
-        (minlevel, load_on_miss see get_block)
-        """
-        if minlevel == None:
-            minlevel = len(self.worldgenerators)
-        position = position.normalize()
-        chunk = self.chunks[position>>self.chunksize]
-        if chunk.initlevel < minlevel:
-            if not load_on_miss:
-                return
-            self._load_chunk(chunk,minlevel)
-        return chunk
-
-    def _load_chunk(self, chunk, minlevel, wait_if_locked=True):
-        if minlevel > len(self.worldgenerators):
-            raise ValueError("the requested initlevel %i cannot be provided" %minlevel)
-        if not chunk.lock.acquire(wait_if_locked):
-            return False
-        if chunk.initlevel == -1:
-            chunk.init_data()
-            chunk.initlevel = 0
-        while chunk.initlevel < minlevel:
-            self.worldgenerators[chunk.initlevel](chunk)
-            chunk.initlevel+=1
-        chunk.altered = False #M# make this True if generated chunks should be saved (because generation uses random...)
-        chunk.lock.release()
-        return True
-        
-    def _async_load_chunk(self, position):
-        self.loading_queue.append(position)
-        if self.load_thread_count < MAX_LOAD_THREADS:
-            thread.start_new_thread(self._async_load_loop,())
-
-    def _test_priority(self,position):
-        """priority for generating new chunk based on position"""
-        players = filter(lambda entity:isinstance(entity,Player),self.entities)
-        if players:
-            return min([player._priority_func(position) for player in players])
-        return 0
-
-    def _async_load_loop(self):
-        self.load_thread_count += 1
-        while self.loading_queue:
-            try:
-                position = min(self.loading_queue, key=self._test_priority)
-                self.loading_queue.remove(position)
-            except ValueError:
-                continue
-            self._get_chunk(position) # does exactly what we need so why don't use it
-        self.load_thread_count -= 1
-        return
-
-    def get_entities(self):
-        """return set of entities in world"""
-        return self.entities
-    
-    def spawn_player(self,player):
-        spielfigur = Entity()
-        spielfigur.set_world(self,self.spawnpoint)
-        player.observe(spielfigur)
-
-    def _load(self,filename):
-        if os.path.exists(filename):
-            with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
-                if zf.read("info_chunksize") != str(self.chunksize):
-                    raise RuntimeError("It is currently not possible to load Worlds that were saved with another chunksize.")
-                for name in zf.namelist():
-                    if name.startswith("c"):
-                        _,x,y,z = name.split("_")
-                        position = Vector(map(int,(x,y,z)))
-                        initlevel,compressed_data = zf.read(name).split(" ",1)
-                        initlevel = int(initlevel)
-
-                        c = ServerChunk(self.chunksize,self,position)
-                        c.initlevel = initlevel
-                        c.compressed_data = compressed_data
-                        self.chunks[position] = c
-        else:
-            if "-debug" in sys.argv:
-                print "File %s not found." %filename
-
-    def save(self,filename):
-        """not implemented yet"""
-        with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
-            zf.writestr("info_chunksize",str(self.chunksize))
-            for position,chunk in self.chunks.items():
-                if chunk.altered:
-                    x,y,z = map(str,chunk.position)
-                    name = "_".join(("c",x,y,z))
-                    initlevel = str(chunk.initlevel)
-                    data = " ".join((initlevel,chunk.compressed_data))
-                    zf.writestr(name,data)
 
 class ServerChunk(Chunk):
     """The (Server)Chunk class is only relevant when writing a world generator
@@ -616,6 +461,162 @@ class Player(object):
     def _del_entity(self,entity):
         self.outbox.append("delentity %s" %hash(entity))
 
+class _Chunkdict(dict):
+    def __init__(self,world,*args,**kwargs):
+        dict.__init__(self,*args,**kwargs)
+        self.world = world
+
+    def __missing__(self, chunkposition):
+        chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
+        self[chunkposition] = chunk
+        return chunk
+
+class World(object):
+    BlockClass = Block
+    EntityClass = Entity
+    def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4, defaultblock = "AIR"):
+        """create new World instance"""
+        self.chunksize = chunksize
+        self.worldgenerators = worldgenerators
+        self.spawnpoint = Vector(spawnpoint)
+        if not isinstance(defaultblock,Block):
+            defaultblock = self.BlockClass(defaultblock)
+        self.defaultblock = defaultblock
+        self.loading_queue = []
+        self.load_thread_count = 0
+        self.chunks = _Chunkdict(self)
+        self.entities = set()
+        self.players = set()
+        if filename != None:
+            self._load(filename)
+        assert issubclass(self.BlockClass, Block)
+
+    def __getitem__(self, position):
+        return self.get_block(position)
+
+    def __setitem__(self, position, block_id):
+        self.set_block(position, block_id)
+
+    def get_block(self, position, minlevel = None, load_on_miss = True):
+        """get ID of block at position
+
+        args (Argumente):
+            position    : (x,y,z)
+        kwargs (optionale Argumente):
+            minlevel    : required initlevel of chunk (defaults to max)
+            load_on_miss: whether to load chunk if necessary
+                          if False requests for unloaded chunks return None
+        """
+        position = Vector(position)
+        chunk = self._get_chunk(position, minlevel, load_on_miss)
+        if chunk == None:
+            return None
+        return chunk.get_block(position)
+
+    def set_block(self, position, block, minlevel = None, load_on_miss = True):
+        """set block at position"""
+        position = Vector(position)
+        chunk = self._get_chunk(position, minlevel, load_on_miss)
+        if chunk == None:
+            return False
+        chunk.set_block(position,block)
+        return True
+
+    def _get_chunk(self, position, minlevel = None, load_on_miss = True):
+        """
+        accepts floating point position
+        (minlevel, load_on_miss see get_block)
+        """
+        if minlevel == None:
+            minlevel = len(self.worldgenerators)
+        position = position.normalize()
+        chunk = self.chunks[position>>self.chunksize]
+        if chunk.initlevel < minlevel:
+            if not load_on_miss:
+                return
+            self._load_chunk(chunk,minlevel)
+        return chunk
+
+    def _load_chunk(self, chunk, minlevel, wait_if_locked=True):
+        if minlevel > len(self.worldgenerators):
+            raise ValueError("the requested initlevel %i cannot be provided" %minlevel)
+        if not chunk.lock.acquire(wait_if_locked):
+            return False
+        if chunk.initlevel == -1:
+            chunk.init_data()
+            chunk.initlevel = 0
+        while chunk.initlevel < minlevel:
+            self.worldgenerators[chunk.initlevel](chunk)
+            chunk.initlevel+=1
+        chunk.altered = False #M# make this True if generated chunks should be saved (because generation uses random...)
+        chunk.lock.release()
+        return True
+        
+    def _async_load_chunk(self, position):
+        self.loading_queue.append(position)
+        if self.load_thread_count < MAX_LOAD_THREADS:
+            thread.start_new_thread(self._async_load_loop,())
+
+    def _test_priority(self,position):
+        """priority for generating new chunk based on position"""
+        players = filter(lambda entity:isinstance(entity,Player),self.entities)
+        if players:
+            return min([player._priority_func(position) for player in players])
+        return 0
+
+    def _async_load_loop(self):
+        self.load_thread_count += 1
+        while self.loading_queue:
+            try:
+                position = min(self.loading_queue, key=self._test_priority)
+                self.loading_queue.remove(position)
+            except ValueError:
+                continue
+            self._get_chunk(position) # does exactly what we need so why don't use it
+        self.load_thread_count -= 1
+        return
+
+    def get_entities(self):
+        """return set of entities in world"""
+        return self.entities
+    
+    def spawn_player(self,player):
+        spielfigur = self.EntityClass()
+        spielfigur.set_world(self,self.spawnpoint)
+        player.observe(spielfigur)
+
+    def _load(self,filename):
+        if os.path.exists(filename):
+            with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
+                if zf.read("info_chunksize") != str(self.chunksize):
+                    raise RuntimeError("It is currently not possible to load Worlds that were saved with another chunksize.")
+                for name in zf.namelist():
+                    if name.startswith("c"):
+                        _,x,y,z = name.split("_")
+                        position = Vector(map(int,(x,y,z)))
+                        initlevel,compressed_data = zf.read(name).split(" ",1)
+                        initlevel = int(initlevel)
+
+                        c = ServerChunk(self.chunksize,self,position)
+                        c.initlevel = initlevel
+                        c.compressed_data = compressed_data
+                        self.chunks[position] = c
+        else:
+            if "-debug" in sys.argv:
+                print "File %s not found." %filename
+
+    def save(self,filename):
+        """not implemented yet"""
+        with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
+            zf.writestr("info_chunksize",str(self.chunksize))
+            for position,chunk in self.chunks.items():
+                if chunk.altered:
+                    x,y,z = map(str,chunk.position)
+                    name = "_".join(("c",x,y,z))
+                    initlevel = str(chunk.initlevel)
+                    data = " ".join((initlevel,chunk.compressed_data))
+                    zf.writestr(name,data)
+
 class Game(object):
     """
     Ein Game Objekt sorgt für die Kommunikation mit dem/den Klienten.
@@ -641,18 +642,20 @@ class Game(object):
     """
 
     def __init__(self,
-                 init_function=None,
+                 init_function=lambda player:None,
                  wait=True,
                  multiplayer=False,
                  name="MCG-CRAFT",
                  renderlimit=False,
                  suggested_texturepack="basic_colors",
+                 PlayerClass=Player,
                  socket_server=None, #only use this if you know what you're doing
                  ):
         self.init_function = init_function
         self.wait = wait
         self.renderlimit = renderlimit
         self.suggested_texturepack = suggested_texturepack
+        self.PlayerClass = PlayerClass
 
         self.players = {}
         self.new_players = set()
@@ -714,7 +717,7 @@ class Game(object):
         if "-debug" in sys.argv:
             print(addr, "connected")
         initmessages = ["setup "+self.suggested_texturepack]
-        p = Player(self.renderlimit,initmessages)
+        p = self.PlayerClass(self.renderlimit,initmessages)
         self.players[addr] = p
         self.new_players.add(p)
         self.init_function(p)

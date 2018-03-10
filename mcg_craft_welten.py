@@ -25,16 +25,131 @@ def get_hitbox(width,height,eye_level):
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
 
-def display_item(player,name,item,position,size,align):
-    w, h = size
-    player.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
-    player.set_hud(name,item["id"],position,0,Vector(size)*0.8,align)
-    player.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),0,(0,0),align)
-Player.display_item = display_item
-def undisplay_item(player,name):
-    for suffix in ("_bgbox","","_count"):
-        player.del_hud(name+suffix)
-Player.undisplay_item = undisplay_item
+class Player(Player):
+    RENDERDISTANCE = 8
+    def init(self): #called in init_function after world has created entity for player
+        self.set_focus_distance(8)
+
+        self.flying = False
+
+        self.entity["SPEED"] = 10
+        self.entity["FLYSPEED"] = 0.2
+        self.entity["JUMPSPEED"] = 10
+        self.entity["texture"] = "PLAYER"
+        self.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
+        self.entity["velocity"] = Vector([0,0,0])
+        self.entity["last_update"] = time.time()
+        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"}]
+        self.entity["left_hand"] = {"id":"CHEST"}
+        self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
+        self.entity["health"] = 10
+        self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
+        self.entity["lives"] = 9        
+
+        # inventory stuff
+        for i in range(60):
+            self.entity["inventory"].append({"id":"DIRT","count":i})
+
+        self.inventory_display = InventoryDisplay(self)
+
+        def open_inventory_callback(boolean):
+            if boolean:
+                self.inventory_display.open(self.entity.foreign_inventory)
+                self.entity.foreign_inventory = None
+            else:
+                self.inventory_display.close()
+        self.entity.register_item_callback(open_inventory_callback,"open_inventory")
+
+        def update_left_hand_image(item):
+            self.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
+        def update_right_hand_image(item):
+            self.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
+        def update_inventar(inventar):
+            pass
+        def update_lives(lives):
+            for x in range(lives):
+                self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
+        self.entity.register_item_callback(update_left_hand_image,"left_hand")
+        self.entity.register_item_callback(update_right_hand_image,"right_hand")
+        self.entity.register_item_callback(update_lives,"lives")
+
+    def update(self):
+        pe = self.entity
+        if not self.is_active(): # freeze player if client doesnt respond
+            return
+
+        #           left click      right click
+        # no shift  mine block      activate block
+        # shift     use l item      use r. item
+        handstuff = (("right click","right_hand",lambda block:block.activated),
+                     ("left click", "left_hand", lambda block:block.mined))
+        for event_name, hand_name, primary_action in handstuff:
+            if self.was_pressed(event_name):
+                pos, face = self.get_focused_pos()
+                do_item_action = True
+                if pos and not self.is_pressed("shift"):
+                    do_item_action = primary_action(pe.world[pos])(pe, face)
+                if do_item_action:
+                    item_data = pe[hand_name]
+                    item = resources.items[item_data["id"]](item_data)
+                    if pos:
+                        item.use_on_block(pe,pos,face)
+                    else:
+                        item.use_on_air(pe)            
+
+        if self.was_pressed("fly"):
+            self.flying = not self.flying
+        if self.was_pressed("inv"):
+            self.inventory_display.toggle()
+        for pressed in self.was_pressed_set:
+            if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
+                self.inventory_display.handle_click(pressed)
+
+        # Movement
+        pe.update_dt()
+        
+        nv = Vector([0,0,0])
+        sx,sy,sz = pe.get_sight_vector()
+        if self.is_pressed("for"):
+            nv += ( sx,0, sz)
+        if self.is_pressed("back"):
+            nv += (-sx,0,-sz)
+        if self.is_pressed("right"):
+            nv += (-sz,0, sx)
+        if self.is_pressed("left"):
+            nv += ( sz,0,-sx)
+
+        # Flying
+        if self.flying:
+            if self.is_pressed("jump"):
+                nv += (0, 1, 0)
+            if self.is_pressed("shift"):
+                nv -= (0, 1, 0)
+            pe["position"] += nv*pe["FLYSPEED"]
+            return
+
+        # Walking
+        sv = pe.horizontal_move(self.is_pressed("jump"))
+
+        pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
+        pe.update_position()
+
+    def do_random_ticks(player):
+        radius = 50
+        ticks = 5
+        for a in range(ticks):
+            dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
+            player.entity.world[(player.entity["position"]+dp).normalize()].random_ticked()
+
+    def display_item(self,name,item,position,size,align):
+        w, h = size
+        self.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
+        self.set_hud(name,item["id"],position,0,Vector(size)*0.8,align)
+        self.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),0,(0,0),align)
+
+    def undisplay_item(self,name):
+        for suffix in ("_bgbox","","_count"):
+            self.del_hud(name+suffix)
 
 class InventoryDisplay():
     def __init__(self,player):
@@ -128,251 +243,132 @@ class InventoryDisplay():
         x, y = self.player.entity[hand], inventory[index]
         x.parent = None
         y.parent = None
-        self.player.entity[hand], inventory[index] = y, x
+        self.player.entity[hand], inventory[index] = y, x    
 
-def init_player(player):
-    player.set_focus_distance(8)
+class Entity(Entity):
+    def onground(entity):
+        return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
 
-    player.flying = False
-    player.RENDERDISTANCE = 8
+    def collide(entity,position):
+        """blocks entity would collide with if it was at position"""
+        blocks = set()
+        for relpos in entity["hitbox"]:
+            block_pos = (position+relpos).normalize()
+            if entity.world.get_block(block_pos)["id"] != "AIR": #s.onground
+                blocks.add(block_pos)
+        return blocks
 
-    player.entity["SPEED"] = 10
-    player.entity["FLYSPEED"] = 0.2
-    player.entity["JUMPSPEED"] = 10
-    player.entity["texture"] = "PLAYER"
-    player.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
-    player.entity["velocity"] = Vector([0,0,0])
-    player.entity["last_update"] = time.time()
-    player.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"}]
-    player.entity["left_hand"] = {"id":"CHEST"}
-    player.entity["right_hand"] = {"id":"DOORSTEP","count":1}
-    player.entity["health"] = 10
-    player.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
-    player.entity["lives"] = 9
-    
-
-    # inventory stuff
-    for i in range(60):
-        player.entity["inventory"].append({"id":"DIRT","count":i})
-
-    player.inventory_display = InventoryDisplay(player)
-
-    def open_inventory_callback(boolean):
-        if boolean:
-            player.inventory_display.open(player.entity.foreign_inventory)
-            player.entity.foreign_inventory = None
-        else:
-            player.inventory_display.close()
-    player.entity.register_item_callback(open_inventory_callback,"open_inventory")
-
-    def update_left_hand_image(item):
-        player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
-    def update_right_hand_image(item):
-        player.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
-    def update_inventar(inventar):
-        pass
-    def update_lives(lives):
-        for x in range(lives):
-            player.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
-    player.entity.register_item_callback(update_left_hand_image,"left_hand")
-    player.entity.register_item_callback(update_right_hand_image,"right_hand")
-    player.entity.register_item_callback(update_lives,"lives")
-    
-
-def init_schaf(world):
-    schaf = Entity()
-    schaf["texture"] = "SCHAF"
-    schaf["SPEED"] = 5
-    schaf["JUMPSPEED"] = 10
-    schaf["hitbox"] = get_hitbox(0.6,1.5,1)
-    schaf.set_world(world,(0,0,0))
-    while True:
-        x = random.randint(-40,40)
-        z = random.randint(-10,10)
-        y = random.randint(-40,40)
-        if world.get_block((x,y-2,z))["id"] != "AIR" and len(collide(schaf,Vector((x,y,z)))) == 0:
-            break
-    schaf["position"] = (x,y,z)
-    schaf["velocity"] = Vector([0,0,0])
-    schaf["last_update"] = time.time()
-    schaf["forward"] = False
-    schaf["turn"] = 0
-    schaf["nod"] = False
-    schafe.append(schaf)
-
-def onground(entity):
-    return bool_collide_difference(entity,entity["position"]+(0,-0.2,0),entity["position"])
-
-def collide(entity,position):
-    """blocks entity would collide with if it was at position"""
-    blocks = set()
-    for relpos in entity["hitbox"]:
-        block_pos = (position+relpos).normalize()
-        if entity.world.get_block(block_pos)["id"] != "AIR": #s.onground
+    def potential_collide_blocks(entity,position):
+        blocks = set()
+        for relpos in entity["hitbox"]:
+            block_pos = (position+relpos).normalize()
             blocks.add(block_pos)
-    return blocks
+        return blocks
 
-Entity.collide = collide
+    def collide_difference(entity,new_position,previous_position):
+        """return blocks entity would newly collide with if it moved from previous_position to new_position"""
+        return collide(entity,new_position).difference(collide(entity,previous_position))
 
-def potential_collide_blocks(entity,position):
-    blocks = set()
-    for relpos in entity["hitbox"]:
-        block_pos = (position+relpos).normalize()
-        blocks.add(block_pos)
-    return blocks
-
-
-def collide_difference(entity,new_position,previous_position):
-    """return blocks entity would newly collide with if it moved from previous_position to new_position"""
-    return collide(entity,new_position).difference(collide(entity,previous_position))
-
-def bool_collide_difference(entity,new_position,previous_position):
-    for block in potential_collide_blocks(entity,new_position).difference(potential_collide_blocks(entity,previous_position)):
-        if entity.world.get_block(block)["id"] != "AIR":
-            return True
-    return False
+    def bool_collide_difference(entity,new_position,previous_position):
+        for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
+            if entity.world.get_block(block)["id"] != "AIR":
+                return True
+        return False
     
+    def horizontal_move(entity,jump): #M# name is misleading
+        if entity.onground():
+            s = 0.5*SLIDING**entity.dt
+            entity["velocity"] *= (1,0,1) #M# stop falling
+            if jump:
+                entity["velocity"] += (0,entity["JUMPSPEED"],0)
+        else:
+            s = 0.5*AIRRESISTANCE**entity.dt
+            entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
+        sv = Vector([s,1,s]) #no slowing down in y
+        entity["velocity"] *= sv
+        return sv
 
+    def update_dt(entity):
+        entity.dt = time.time()-entity["last_update"]
+        entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
+        entity["last_update"] = time.time()
 
-def horizontal_move(entity,jump):
-    if onground(entity):
-        s = 0.5*SLIDING**entity.dt
-        entity["velocity"] *= (1,0,1) #M# stop falling
-        if jump:
-            entity["velocity"] += (0,entity["JUMPSPEED"],0)
-    else:
-        s = 0.5*AIRRESISTANCE**entity.dt
-        entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
-    sv = Vector([s,1,s]) #no slowing down in y
-    entity["velocity"] *= sv
-    return sv
-
-def update_dt(entity):
-    entity.dt = time.time()-entity["last_update"]
-    entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
-    entity["last_update"] = time.time()
-
-def update_position(entity):
-    steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
-    pos = entity["position"]
-    for step in range(steps):
-        for i in range(DIMENSION):
-            mask          = Vector([int(i==j) for j in range(DIMENSION)])
-            inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
-            new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
-            if bool_collide_difference(entity,new,pos):
-                entity["velocity"] *= inverted_mask
-            else:
-                pos = new
-    if pos != entity["position"]:
-        entity["position"] = pos
-
-def update_player(player):
-    pe = player.entity
-    if not player.is_active(): # freeze player if client doesnt respond
-        return
-
-    #           left click      right click
-    # no shift  mine block      activate block
-    # shift     use l item      use r. item
-    handstuff = (("right click","right_hand",lambda block:block.activated),
-                 ("left click", "left_hand", lambda block:block.mined))
-    for event_name, hand_name, primary_action in handstuff:
-        if player.was_pressed(event_name):
-            pos, face = player.get_focused_pos()
-            do_item_action = True
-            if pos and not player.is_pressed("shift"):
-                do_item_action = primary_action(pe.world[pos])(pe, face)
-            if do_item_action:
-                item_data = pe[hand_name]
-                item = resources.items[item_data["id"]](item_data)
-                if pos:
-                    item.use_on_block(pe,pos,face)
+    def update_position(entity):
+        steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
+        pos = entity["position"]
+        for step in range(steps):
+            for i in range(DIMENSION):
+                mask          = Vector([int(i==j) for j in range(DIMENSION)])
+                inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
+                new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
+                if entity.bool_collide_difference(new,pos):
+                    entity["velocity"] *= inverted_mask
                 else:
-                    item.use_on_air(pe)            
+                    pos = new
+        if pos != entity["position"]:
+            entity["position"] = pos
 
-    if player.was_pressed("fly"):
-        player.flying = not player.flying
-    if player.was_pressed("inv"):
-        player.inventory_display.toggle()
-    for pressed in player.was_pressed_set:
-        if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
-            player.inventory_display.handle_click(pressed)
+class Schaf(Entity):
+    def __init__(self, world):
+        super(Schaf,self).__init__()
 
-    # Movement
-    update_dt(pe)
-    
-    nv = Vector([0,0,0])
-    sx,sy,sz = pe.get_sight_vector()
-    if player.is_pressed("for"):
-        nv += ( sx,0, sz)
-    if player.is_pressed("back"):
-        nv += (-sx,0,-sz)
-    if player.is_pressed("right"):
-        nv += (-sz,0, sx)
-    if player.is_pressed("left"):
-        nv += ( sz,0,-sx)
+        self["texture"] = "SCHAF"
+        self["SPEED"] = 5
+        self["JUMPSPEED"] = 10
+        self["hitbox"] = get_hitbox(0.6,1.5,1)
+        self.set_world(world,(0,0,0))
+        while True:
+            x = random.randint(-40,40)
+            z = random.randint(-10,10)
+            y = random.randint(-40,40)
+            if world.get_block((x,y-2,z))["id"] != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
+                break
+        self["position"] = (x,y,z)
+        self["velocity"] = Vector([0,0,0])
+        self["last_update"] = time.time()
+        self["forward"] = False
+        self["turn"] = 0
+        self["nod"] = False
+        schafe.append(self)
 
-    # Flying
-    if player.flying:
-        if player.is_pressed("jump"):
-            nv += (0, 1, 0)
-        if player.is_pressed("shift"):
-            nv -= (0, 1, 0)
-        pe["position"] += nv*pe["FLYSPEED"]
-        return
+    def update(schaf):
+        r = random.randint(0,200)
+        if r < 1:
+            schaf["turn"] = -5
+            schaf["nod"] = False
+        elif r < 2:
+            schaf["turn"] = 5
+            schaf["nod"] = False
+        elif r < 3:
+            schaf["forward"] = True
+            schaf["turn"] = 0
+            schaf["nod"] = False
+        elif r < 5:
+            schaf["forward"] = False
+            schaf["nod"] = False
+        elif r < 7:
+            schaf["forward"] = False
+            schaf["turn"] = 0
+            schaf["nod"] = True
+        
+        schaf.update_dt()
+        nv = Vector([0,0,0])
+        sx,sy,sz = schaf.get_sight_vector()
+        if schaf["forward"]:
+            nv += Vector((sx,0,sz))*schaf["SPEED"]
+            jump = schaf.world.get_block((schaf["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
+        else:
+            jump = not random.randint(0,2000)
+        sv = schaf.horizontal_move(jump)
+        schaf["velocity"] += ((1,1,1)-sv)*nv
+        schaf.update_position()
+        y, p = schaf["rotation"]
+        dy = schaf["turn"]
+        dp = -schaf["nod"]*50 - p
+        if dy or dp:
+            schaf["rotation"] = y+dy, p+dp
 
-    # Walking
-    sv = horizontal_move(pe,player.is_pressed("jump"))
-
-    pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
-    update_position(pe)
-
-def tick_around(player):
-    radius = 50
-    ticks = 5
-    for a in range(ticks):
-        dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
-        player.entity.world[(player.entity["position"]+dp).normalize()].random_ticked()
-
-def update_schaf(schaf):
-    r = random.randint(0,200)
-    if r < 1:
-        schaf["turn"] = -5
-        schaf["nod"] = False
-    elif r < 2:
-        schaf["turn"] = 5
-        schaf["nod"] = False
-    elif r < 3:
-        schaf["forward"] = True
-        schaf["turn"] = 0
-        schaf["nod"] = False
-    elif r < 5:
-        schaf["forward"] = False
-        schaf["nod"] = False
-    elif r < 7:
-        schaf["forward"] = False
-        schaf["turn"] = 0
-        schaf["nod"] = True
-    
-    update_dt(schaf)
-    nv = Vector([0,0,0])
-    sx,sy,sz = schaf.get_sight_vector()
-    if schaf["forward"]:
-        nv += Vector((sx,0,sz))*schaf["SPEED"]
-        jump = schaf.world.get_block((schaf["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
-    else:
-        jump = not random.randint(0,2000)
-    sv = horizontal_move(schaf,jump)
-    schaf["velocity"] += ((1,1,1)-sv)*nv
-    update_position(schaf)
-    y, p = schaf["rotation"]
-    dy = schaf["turn"]
-    dp = -schaf["nod"]*50 - p
-    if dy or dp:
-        schaf["rotation"] = y+dy, p+dp
-
-class MCGCraftBlock(Block):
+class Block(Block):
     block_class = property(lambda self: resources.blocks[self["id"]])
     def __getattr__(self, name):
         #bc = resources.blocks[self["id"]]
@@ -381,19 +377,21 @@ class MCGCraftBlock(Block):
             return attr.__get__(self)
         return attr
     def __setitem__(self, key, value):
-        Block.__setitem__(self,key,value)
+        super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)
 
-class MCGCraftWorld(World):
-    BlockClass = MCGCraftBlock
+class World(World):
+    BlockClass = Block
+    EntityClass = Entity
     def __init__(self,*args,**kwargs):
-        World.__init__(self,*args,**kwargs)
+        print args, kwargs
+        super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
 
     def set_block(self,position,block):
         if not isinstance(position,Vector):
             position = Vector(position)
-        World.set_block(self, position, block)
+        super(World,self).set_block(position, block)
         self.changed_blocks.append(position)
 
     def tick(self):
@@ -425,35 +423,33 @@ if __name__ == "__main__":
     worldtype = select(worldtypes)[1]
     worldmod = __import__(worldtype)
 
-    w = MCGCraftWorld(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
+    w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
     worldmod.init(w)
     w.changed_blocks = []
     print "hey"
     
     def i_f(player):
         w.spawn_player(player)
-        init_player(player)
+        player.init()
 
     renderlimit = not multiplayer #fast loading for playing alone, hole world for multiplayer
-    settings = {"init_function" : i_f,
+    settings = {"init_function": i_f,
                 "multiplayer": multiplayer,
                 "renderlimit": renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
                 "suggested_texturepack" : "mcgcraft-standart",
+                "PlayerClass" : Player,
                 }
-
+    joined = False
     with Game(**settings) as g:
-        while not g.get_players():
-            g.update()
-            time.sleep(0.5) #wait for players to connect
-        while g.get_players():
+        while g.get_players() or not joined:
+            joined = joined or g.get_players()
             #zeitmessung()
             g.update()
             w.tick()
             for player in g.get_players():
-                update_player(player)
-                tick_around(player)
+                player.update()
+                player.do_random_ticks()
             for schaf in schafe:
-                update_schaf(schaf)
-                pass
-            if len(schafe) < 0:
-                init_schaf(w)
+                schaf.update()
+            if len(schafe) < 1:
+                Schaf(w)

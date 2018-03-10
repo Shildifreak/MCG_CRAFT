@@ -94,9 +94,9 @@ class ObservableDict(Observable):
     def __init__(self,data):
         self.data = {}
         Observable.__init__(self)
-        self.update(data)
+        self.dict_update(data)
 
-    def update(self,data):
+    def dict_update(self,data):
         for key in data:
             self[key] = data[key]
 

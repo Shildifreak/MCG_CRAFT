@@ -44,9 +44,8 @@ class Item(object):
 class Block(object):
     blast_resistance = 0
     # Init function, don't care to much about this
-    #def __init__(self, world, position):
-    #    self.world = world
-    #    self.position = position
+    def __init__(self):
+        raise NotImplementedError("This Class is only used as 'quasi' superclass, don't instanciate it.")
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
