@@ -37,10 +37,12 @@ class ColorkeyGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
         super(ColorkeyGroup,self).set_state()
         glDisable(GL_CULL_FACE)
-        
+        glEnable(GL_ALPHA_TEST)
+        glAlphaFunc(GL_GREATER, 0)
     def unset_state(self):
         super(ColorkeyGroup,self).unset_state()
         glEnable(GL_CULL_FACE)
+        glDisable(GL_ALPHA_TEST)
 textgroup = TextGroup(2)
 colorkey_group = ColorkeyGroup(1)
 normal_group = pyglet.graphics.OrderedGroup(0)
@@ -121,6 +123,7 @@ def cube_model(textures,n,sidehiding):
     return tuple(result)
 
 focus_distance = 0
+CHUNKSIZE = None
 
 class BlockModelDict(dict):
     def __missing__(self, key):
@@ -472,10 +475,10 @@ class Model(object):
 
         for i,relpos in enumerate(iterchunk()):
             if c[i] != "AIR": #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
-                self.update_visibility((position<<CHUNKSIZE)+relpos)
+                self.queue.appendleft((self.update_visibility,((position<<CHUNKSIZE)+relpos,)))
         for relpos in iterframe():
             #M# hier gilt das selbe wie in _del_chunk
-            self.update_visibility((position<<CHUNKSIZE)+relpos)
+            self.queue.appendleft((self.update_visibility,((position<<CHUNKSIZE)+relpos,)))
 
     def get_block(self,position):
         return self.chunks[position>>CHUNKSIZE].get_block(position)
@@ -566,10 +569,11 @@ class Window(pyglet.window.Window):
             c = self.client.receive(0.001)
             if not c:
                 break
+            #print c.split(" ",1)[0]
             if c.startswith("setarea"):
-                c = c.split(" ",1)
-                position, codec, compressed_blocks = ast.literal_eval(c[1])
-                position = Vector(position)
+                c = c.split(" ",4)
+                position = Vector(map(int,c[1:4]))
+                codec, compressed_blocks = ast.literal_eval(c[4])
                 self.model.set_area(position,codec,compressed_blocks)
                 continue
             c = c.split(" ")
@@ -617,8 +621,8 @@ class Window(pyglet.window.Window):
                 self.hud_open = True
             else:
                 print "unknown command", c
-        if len(self.model.queue) <= 10:
-            self.client.send("tick")
+        #if len(self.model.queue) <= 10:
+        self.client.send("tick")
         self.model.process_queue()
         self.updating = False
 
@@ -802,8 +806,6 @@ class Window(pyglet.window.Window):
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
-        #glEnable(GL_BLEND)
-        #glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO)
         glEnable(GL_COLOR_LOGIC_OP)
         glLogicOp(GL_XOR)
 
@@ -813,7 +815,6 @@ class Window(pyglet.window.Window):
 
         glDisable(GL_COLOR_LOGIC_OP)
         glColor3d(1, 1, 1)
-        #glDisable(GL_BLEND)
         self.model.hud_batch.draw()
 
     def draw_focused_block(self):
@@ -822,6 +823,8 @@ class Window(pyglet.window.Window):
 
         """
         vector = self.get_sight_vector()
+        if CHUNKSIZE == None:
+            return
         block = hit_test(lambda pos:self.model.get_block(pos)!="AIR", self.position, vector, focus_distance)[0]
         if block:
             x, y, z = block
@@ -864,8 +867,6 @@ def setup():
     # Enable culling (not rendering) of back-facing facets -- facets that aren't
     # visible to you.
     glEnable(GL_CULL_FACE)
-    glEnable(GL_ALPHA_TEST)
-    glAlphaFunc(GL_GREATER, 0)
 
     # Set the texture minification/magnification function to GL_NEAREST (nearest
     # in Manhattan distance) to the specified texture coordinates. GL_NEAREST

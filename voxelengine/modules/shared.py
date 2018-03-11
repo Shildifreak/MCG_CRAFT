@@ -106,6 +106,9 @@ class Vector(tuple):
 
     def length(self):
         return sum(map(operator.mul,self,self))**0.5
+    
+    def __str__(self):
+        return " ".join(map(str,self))
 
 class Chunk(object):
     """

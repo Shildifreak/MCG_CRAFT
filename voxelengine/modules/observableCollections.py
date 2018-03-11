@@ -91,7 +91,7 @@ class Observable(object):
 
 class ObservableDict(Observable):
     static_keys = True
-    def __init__(self,data):
+    def __init__(self,data={}):
         self.data = {}
         Observable.__init__(self)
         self.dict_update(data)
@@ -107,7 +107,7 @@ class ObservableDict(Observable):
 
 class ObservableList(Observable):
     static_keys = False
-    def __init__(self,data):
+    def __init__(self,data=[]):
         self.data = []
         Observable.__init__(self)
         self.extend(data)

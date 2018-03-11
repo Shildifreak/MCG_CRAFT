@@ -1,10 +1,12 @@
+Bugs:
+	BlockModels für Entities ermöglichen oder ausschließen
+	auf leere slots klicken führt zum Absturz
+
 Verbesserungskram:
-	opendiff kdiff3 tkdiff xxdiff meld tortoisemerge gvimdiff diffuse diffmerge ecmerge p4merge araxis bc codecompare emerge vimdiff
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
-	Missing Texture so machen, dass man die Rotation trotzdem sehen kann
 	rendern wenn der Spieler gerade steht
-	BlockModels für Entities
+	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,...
 
 Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))

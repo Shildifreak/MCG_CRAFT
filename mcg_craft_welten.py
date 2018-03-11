@@ -25,8 +25,100 @@ def get_hitbox(width,height,eye_level):
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
 
+class InventoryDisplay():
+    def __init__(self,player):
+        self.player = player
+        self.is_open = False #Full inventory or only hotbar
+        self.inventory = self.player.entity["inventory"]
+        self.foreign_inventory = None
+        self.current_pages = [0,0]
+        self.inventory.register_callback(self.callback)
+
+    def callback(self,inventory):
+        self.display()
+
+    def _calculate_index(self,k,row,col):
+        return self.current_pages[k]*7 + row*7 + col
+
+    def display(self):
+        size = (0.1,0.1)
+        rows = 4# if self.foreign_inventory else 9
+        for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
+            for col in range(7):
+                for row in range(rows):
+                    name = "inventory:(%i,%i,%i)" %(k,col,row)
+                    if inventory and (self.is_open or k + row == 0):
+                        i = self._calculate_index(k,row,col)
+                        item = inventory.get(i,None)
+                        if item:
+                            x = 0.2*(col - 3)
+                            y = 0.2*(row) + k - 0.8
+                            position = (x,y,0)
+                            self.player.display_item(name,item,position,size,INNER|CENTER)
+                            continue
+                    self.player.undisplay_item(name)            
+            if inventory and self.is_open:
+                self.player.set_hud("inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
+                self.player.set_hud("inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+            else:
+                self.player.del_hud("inventory:(%s,%s)" %(k,-1))
+                self.player.del_hud("inventory:(%s,%s)" %(k,+1))
+
+    def open(self,foreign_inventory = None):
+        if self.is_open:
+            self.close()
+        self.is_open = True
+        self.player.focus_hud()
+        self.current_pages = [0,0]
+        if foreign_inventory != None:
+            self.foreign_inventory = foreign_inventory
+            if foreign_inventory != self.inventory:
+                foreign_inventory.register_callback(self.callback,False)
+        self.display()
+
+    def close(self):
+        if not self.is_open:
+            return
+        self.is_open = False
+        if self.foreign_inventory != None:
+            if self.foreign_inventory != self.inventory:
+                self.foreign_inventory.unregister_callback(self.callback)
+            self.foreign_inventory = None
+        self.display()
+    
+    def toggle(self):
+        if self.is_open:
+            self.close()
+        else:
+            self.open()
+            
+    def handle_click(self,event):
+        if event.startswith("left"):
+            hand = "left_hand"
+        if event.startswith("right"):
+            hand = "right_hand"
+        args = event.rsplit("(",1)[1].split(")",1)[0].split(",")
+        if len(args) == 3:
+            k, col, row = map(int,args)
+            inventory = self.inventory if k==0 else self.foreign_inventory
+            index = self._calculate_index(k,row,col)
+            self.swap(inventory,index,hand)
+        else:
+            k, direction = map(int,args)
+            inventory = self.inventory if k==0 else self.foreign_inventory
+            self.current_pages[k] = max(0,self.current_pages[k] + direction)
+            self.display()
+            
+    
+    def swap(self,inventory,index,hand):
+        x, y = self.player.entity[hand], inventory[index]
+        x.parent = None
+        y.parent = None
+        self.player.entity[hand], inventory[index] = y, x    
+
+
 class Player(Player):
-    RENDERDISTANCE = 8
+    RENDERDISTANCE = 10
     def init(self): #called in init_function after world has created entity for player
         self.set_focus_distance(8)
 
@@ -75,8 +167,8 @@ class Player(Player):
 
     def update(self):
         pe = self.entity
-        if not self.is_active(): # freeze player if client doesnt respond
-            return
+        #if not self.is_active(): # freeze player if client doesnt respond
+        #    return
 
         #           left click      right click
         # no shift  mine block      activate block
@@ -139,7 +231,9 @@ class Player(Player):
         ticks = 5
         for a in range(ticks):
             dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
-            player.entity.world[(player.entity["position"]+dp).normalize()].random_ticked()
+            block = player.entity.world.get_block((player.entity["position"]+dp).normalize(),load_on_miss = False)
+            if block:
+                block.random_ticked()
 
     def display_item(self,name,item,position,size,align):
         w, h = size
@@ -150,100 +244,6 @@ class Player(Player):
     def undisplay_item(self,name):
         for suffix in ("_bgbox","","_count"):
             self.del_hud(name+suffix)
-
-class InventoryDisplay():
-    def __init__(self,player):
-        self.player = player
-        self.is_open = False #Full inventory or only hotbar
-        self.inventory = self.player.entity["inventory"]
-        self.foreign_inventory = None
-        self.current_pages = [0,0]
-        self.inventory.register_callback(self.callback)
-
-    def callback(self,inventory):
-        self.display()
-
-    def _calculate_index(self,k,row,col):
-        return self.current_pages[k]*7 + row*7 + col
-
-    def display(self):
-        size = (0.1,0.1)
-        rows = 4# if self.foreign_inventory else 9
-        for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
-            for col in range(7):
-                for row in range(rows):
-                    name = "inventory:(%i,%i,%i)" %(k,col,row)
-                    if inventory and (self.is_open or k + row == 0):
-                        i = self._calculate_index(k,row,col)
-                        if len(inventory) > i:
-                            item = inventory[i]
-                        else:
-                            item = {"id":"AIR"}
-                        x = 0.2*(col - 3)
-                        y = 0.2*(row) + k - 0.8
-                        position = (x,y,0)
-                        self.player.display_item(name,item,position,size,INNER|CENTER)
-                    else:
-                        self.player.undisplay_item(name)            
-                       # print "hop",k,row,col,inventory
-            if inventory and self.is_open:
-                self.player.set_hud("inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
-                self.player.set_hud("inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
-            else:
-                self.player.del_hud("inventory:(%s,%s)" %(k,-1))
-                self.player.del_hud("inventory:(%s,%s)" %(k,+1))
-
-    def open(self,foreign_inventory = None):
-        if self.is_open:
-            self.close()
-        self.is_open = True
-        self.player.focus_hud()
-        self.current_pages = [0,0]
-        if foreign_inventory != None:
-            self.foreign_inventory = foreign_inventory
-            if foreign_inventory != self.inventory:
-                foreign_inventory.register_callback(self.callback,False)
-        self.display()
-
-    def close(self):
-        if not self.is_open:
-            return
-        self.is_open = False
-        if self.foreign_inventory != None:
-            if self.foreign_inventory != self.inventory:
-                self.foreign_inventory.unregister_callback(self.callback)
-            self.foreign_inventory = None
-        self.display()
-    
-    def toggle(self):
-        if self.is_open:
-            self.close()
-        else:
-            self.open()
-            
-    def handle_click(self,event):
-        if event.startswith("left"):
-            hand = "left_hand"
-        if event.startswith("right"):
-            hand = "right_hand"
-        args = event.rsplit("(",1)[1].split(")",1)[0].split(",")
-        if len(args) == 3:
-            k, col, row = map(int,args)
-            inventory = self.inventory if k==0 else self.foreign_inventory
-            index = self._calculate_index(k,row,col)
-            self.swap(inventory,index,hand)
-        else:
-            k, direction = map(int,args)
-            inventory = self.inventory if k==0 else self.foreign_inventory
-            self.current_pages[k] = max(0,self.current_pages[k] + direction)
-            self.display()
-            
-    
-    def swap(self,inventory,index,hand):
-        x, y = self.player.entity[hand], inventory[index]
-        x.parent = None
-        y.parent = None
-        self.player.entity[hand], inventory[index] = y, x    
 
 class Entity(Entity):
     def onground(entity):
@@ -361,7 +361,7 @@ class Schaf(Entity):
             jump = not random.randint(0,2000)
         sv = schaf.horizontal_move(jump)
         schaf["velocity"] += ((1,1,1)-sv)*nv
-        schaf.update_position()
+        #schaf.update_position()
         y, p = schaf["rotation"]
         dy = schaf["turn"]
         dp = -schaf["nod"]*50 - p
@@ -377,9 +377,12 @@ class Block(Block):
             return attr.__get__(self)
         return attr
     def __setitem__(self, key, value):
+        if key == "inventory":
+            print "hey"
         super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)
 
+blockread_counter = 0
 class World(World):
     BlockClass = Block
     EntityClass = Entity
@@ -388,10 +391,15 @@ class World(World):
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
 
-    def set_block(self,position,block):
+    def get_block(self,position,*args,**kwargs):
+        global blockread_counter
+        blockread_counter += 1
+        return super(World,self).get_block(position,*args,**kwargs)
+
+    def set_block(self,position,block,*args,**kwargs):
         if not isinstance(position,Vector):
             position = Vector(position)
-        super(World,self).set_block(position, block)
+        super(World,self).set_block(position, block,*args,**kwargs)
         self.changed_blocks.append(position)
 
     def tick(self):
@@ -435,15 +443,20 @@ if __name__ == "__main__":
     renderlimit = not multiplayer #fast loading for playing alone, hole world for multiplayer
     settings = {"init_function": i_f,
                 "multiplayer": multiplayer,
-                "renderlimit": renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
+                "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
                 "suggested_texturepack" : "mcgcraft-standart",
                 "PlayerClass" : Player,
                 }
     joined = False
     with Game(**settings) as g:
         while g.get_players() or not joined:
+            #for i in range(1000):
+            #    w.get_block((20,-7,3))
             joined = joined or g.get_players()
             #zeitmessung()
+            #print blockread_counter
+            blockread_counter = 0
+            #
             g.update()
             w.tick()
             for player in g.get_players():
@@ -451,5 +464,5 @@ if __name__ == "__main__":
                 player.do_random_ticks()
             for schaf in schafe:
                 schaf.update()
-            if len(schafe) < 1:
+            if len(schafe) < 0:
                 Schaf(w)

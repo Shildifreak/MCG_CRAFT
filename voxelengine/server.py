@@ -71,7 +71,6 @@ class Block(object):
         if isinstance(other,Block):
             return self.data == other.data
         elif isinstance(other,dict):
-            print "hey", type(self.data)
             return self.data == other
         elif isinstance(other,basestring):
             return self["id"] == other
@@ -227,14 +226,105 @@ class Entity(ObservableDict):
             for observer in self.world._get_chunk(self["position"]).observers:
                 observer._set_entity(self)
 
+class GotoGroup(object):
+    def __init__(self):
+        self.message = None
+    def add(self, message):
+        self.message = message
+    def pop(self):
+        m, self.message = self.message, None
+        return m
+class FifoGroup(collections.deque):
+    add = collections.deque.append
+    def pop(self):
+        if self:
+            return self.popleft()
+        #return None
+#class TellFifoGroup(FifoGroup):
+#    def pop(self):
+#        print len(self)
+#        return FifoGroup.pop(self)
+class EntityGroup(object):
+    def __init__(self):
+        self.content = collections.OrderedDict()
+    def add(self,message):
+        self.content[message[1]] = message
+    def pop(self):
+        if self.content:
+            return self.content.popitem(last=False)[1]
+        #return None
+class BlockGroup(object):
+    def __init__(self):
+        self.content = []
+    def add(self,message):
+        index = 0
+        for other_message in self.content:
+            if self.conflict(message,other_message):
+                break
+            index += 1
+        self.content.insert(index,message)
+    def pop(self):
+        if self.content:
+            return self.content.pop()
+        #return None
+    def conflict(self,msg1,msg2):
+        for msg in (msg1, msg2):
+            if msg[0] in ("clear","chunksize"):
+                return True
+        return True
+        
+            
+class MessageBuffer(object):
+    def __init__(self):
+        goto_group = GotoGroup()
+        entity_group = EntityGroup()
+        vip_entity_group = EntityGroup()
+        block_group = BlockGroup()
+        misc_group = FifoGroup()
+        hud_group = FifoGroup()
+        self.group_of = {"goto":(goto_group,),
+                         "setentity":(entity_group,vip_entity_group), "delentity":(entity_group,vip_entity_group),
+                         "set":(block_group,), "del":(block_group,), "setarea":(block_group,), "delarea":(block_group,), "clear":(block_group,), "chunksize":(block_group,),
+                         "focusdist":(misc_group,), "setup":(misc_group,),
+                         "sethud":(hud_group,), "delhud":(hud_group,), "focushud":(hud_group,),
+                        }
+        self.groups = (misc_group, vip_entity_group, goto_group, hud_group, block_group, entity_group)
+    def add(self,*message,**args): #M# cause named after * doesn't work in python2.x
+        """Entities have 2 Priority Levels (0: normal, 1: the player himself) for now"""
+        priority = args.get("priority",0)
+        group = self.group_of[message[0]][priority]
+        group.add(message)
+
+    def __iter__(self):
+        # not round robin
+        if False:
+            for group in self.groups:
+                while True:
+                    m = group.pop()
+                    if not m:
+                        break
+                    yield " ".join(str(part) for part in m)
+            return
+        # round robin
+        last_hit = self.groups[-1]
+        for group in itertools.cycle(self.groups):
+            msg = group.pop()
+            if msg != None:
+                yield " ".join(str(part) for part in msg)
+                last_hit = group
+            elif last_hit == group: #eine Runde rum ohne was zu finden
+                break
+                
+
 class Player(object):
     """a player/observer is someone how looks through the eyes of an entity"""
     RENDERDISTANCE = 16
     def __init__(self,renderlimit,initmessages=()):
         self.renderlimit = renderlimit
         self.entity = None
-        self.outbox = []
-        self.outbox.extend(initmessages)
+        self.outbox = MessageBuffer()
+        for msg in initmessages:
+            self.outbox.add(*msg)
         self.focus_distance = 0
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = {}
@@ -247,6 +337,8 @@ class Player(object):
         self.quit_flag = False
         self.lock = thread.allocate_lock() # lock this while making changes to entity, observed_chunks, _lc, _uc
         self.lock_used = False             # and activate this to tell update_chunks_loop to dismiss changes
+        
+        self.hud_cache = {}
 
     def quit(self):
         self.quit_flag = True
@@ -293,18 +385,26 @@ class Player(object):
 
     def set_focus_distance(self,distance):
         """Set maximum distance for focusing block"""
-        self.outbox.append("focusdist %g" %distance)
+        self.outbox.add("focusdist","%g"%distance)
         self.focus_distance = distance
 
     def set_hud(self,element_id,texture,position,rotation,size,alignment):
+        if texture == "AIR":
+            self.del_hud(element_id)
+            return
+        if self.hud_cache.get(element_id,None) == (texture,position,rotation,size,alignment):
+            return
         x,y,z = position; w,h = size
-        self.outbox.append("sethud %s %s %s %s %s %s %s %s %s" %(element_id, texture, x, y, z, rotation, w, h, alignment))
+        self.outbox.add("sethud", element_id, texture, x, y, z, rotation, w, h, alignment)
+        self.hud_cache[element_id] = (texture,position,rotation,size,alignment)
 
     def del_hud(self,element_id):
-        self.outbox.append("delhud %s" %element_id)
+        if element_id in self.hud_cache:
+            self.outbox.add("delhud", element_id)
+            self.hud_cache.pop(element_id)
 
     def focus_hud(self):
-        self.outbox.append("focushud")
+        self.outbox.add("focushud")
 
     ### it follows a long list of private methods that make sure a player acts like one ###
 
@@ -369,8 +469,7 @@ class Player(object):
             if chunk in self.observed_chunks:
                 self.observed_chunks.remove(chunk)
                 chunk.observers.remove(self)
-                self.outbox.append("delarea %s %s %s"
-                               %(tuple(chunk.position)))
+                self.outbox.add("delarea",chunk.position)
                 for entity in chunk.get_entities():
                     self._del_entity(entity)
         # load chunks
@@ -379,8 +478,8 @@ class Player(object):
             if not chunk in self.observed_chunks and chunk.is_fully_generated():
                 self.observed_chunks.add(chunk)
                 codec = [b.client_version() for b in chunk.block_codec]
-                data = repr((chunk.position,codec,chunk.compressed_data))
-                self.outbox.append("setarea "+ data)
+                data = repr((codec,chunk.compressed_data))
+                self.outbox.add("setarea",chunk.position,data)
                 chunk.observers.add(self)
                 for entity in chunk.get_entities():
                     self._set_entity(entity)
@@ -417,8 +516,7 @@ class Player(object):
     def _notice_position(self):
         """set position of camera/player"""
         if self.entity["position"]:
-            self.outbox[:] = (msg for msg in self.outbox if not msg.startswith("goto"))
-            self.outbox.insert(0,"goto %s %s %s" %self.entity["position"])
+            self.outbox.add("goto",*self.entity["position"])
 
     def _notice_world(self, old_world, new_world):
         """to be called when self.entity.world has changed """
@@ -428,10 +526,10 @@ class Player(object):
         for chunk in self.observed_chunks:
             chunk.observers.remove(self)
         self.observed_chunks.clear()
-        self.outbox.append("clear")
+        self.outbox.add("clear")
         if new_world:
             new_world.players.add(self)
-            self.outbox.append("chunksize %s" %new_world.chunksize) #M# is that right here? Make sure it doesn't get reordered with setting of blocks
+            self.outbox.add("chunksize", new_world.chunksize) #M# is that right here? Make sure it doesn't get reordered with setting of blocks
         self.lock_used = True
         self.lock.release()
         if not self.renderlimit:
@@ -440,7 +538,7 @@ class Player(object):
         
     def _notice_block(self,position,block_data):
         """send blockinformation to client"""
-        self.outbox.append("set %s %s %s %s" %(position[0],position[1],position[2],block_data.client_version()))
+        self.outbox.add("set", position, block_data.client_version())
 
     def _notice_new_chunk(self,chunk):
         if not self.renderlimit:
@@ -448,28 +546,11 @@ class Player(object):
                 self._lc.append(chunk)
 
     def _set_entity(self,entity):
-        x,y,z = entity["position"]
-        yaw,pitch = entity["rotation"]
-        new_msg = "setentity %s %s %s %s %s %s %s" %(hash(entity),entity["texture"],x,y,z,yaw,pitch)
-        for i,msg in enumerate(self.outbox):
-            if msg.startswith("setentity %s" %hash(entity)):
-                self.outbox[i] = new_msg
-                break
-        else:
-            self.outbox.append(new_msg)
+        priority = 1 if entity == self.entity else 0
+        self.outbox.add("setentity",hash(entity),entity["texture"],entity["position"],*entity["rotation"], priority=priority)
 
     def _del_entity(self,entity):
-        self.outbox.append("delentity %s" %hash(entity))
-
-class _Chunkdict(dict):
-    def __init__(self,world,*args,**kwargs):
-        dict.__init__(self,*args,**kwargs)
-        self.world = world
-
-    def __missing__(self, chunkposition):
-        chunk = ServerChunk(self.world.chunksize,self.world,chunkposition)
-        self[chunkposition] = chunk
-        return chunk
+        self.outbox.add("delentity",hash(entity))
 
 class World(object):
     BlockClass = Block
@@ -484,7 +565,7 @@ class World(object):
         self.defaultblock = defaultblock
         self.loading_queue = []
         self.load_thread_count = 0
-        self.chunks = _Chunkdict(self)
+        self.chunks = {}
         self.entities = set()
         self.players = set()
         if filename != None:
@@ -529,11 +610,16 @@ class World(object):
         """
         if minlevel == None:
             minlevel = len(self.worldgenerators)
-        position = position.normalize()
-        chunk = self.chunks[position>>self.chunksize]
+        chunkposition = position.normalize()>>self.chunksize
+        chunk = self.chunks.get(chunkposition,None)
+        if not chunk:
+            if not load_on_miss:
+                return None
+            chunk = ServerChunk(self.chunksize,self,chunkposition)
+            self.chunks[chunkposition] = chunk
         if chunk.initlevel < minlevel:
             if not load_on_miss:
-                return
+                return None
             self._load_chunk(chunk,minlevel)
         return chunk
 
@@ -716,7 +802,7 @@ class Game(object):
         """place at worldspawn"""
         if "-debug" in sys.argv:
             print(addr, "connected")
-        initmessages = ["setup "+self.suggested_texturepack]
+        initmessages = [("setup",self.suggested_texturepack)]
         p = self.PlayerClass(self.renderlimit,initmessages)
         self.players[addr] = p
         self.new_players.add(p)
@@ -733,8 +819,8 @@ class Game(object):
         """communicate with clients
         call regularly to make sure internal updates are performed"""
         for addr,player in self.players.items():
-            while player.outbox:
-                msg = player.outbox.pop(0)
+            player.sentcount -= 2 #make sure at least two massages are sent anyway: goto and setentity of own player
+            for msg in player.outbox:
                 player.sentcount += 1
                 self.socket_server.send(msg,addr)
                 if player.sentcount >= MSGS_PER_TICK:
