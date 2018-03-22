@@ -131,7 +131,7 @@ class Player(Player):
         self.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"}]
+        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"},{"id":"Setzling"}]
         self.entity["left_hand"] = {"id":"CHEST"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["health"] = 10
@@ -140,7 +140,7 @@ class Player(Player):
 
         # inventory stuff
         for i in range(60):
-            self.entity["inventory"].append({"id":"DIRT","count":i})
+            self.entity["inventory"].append({"id":"AIR","count":i})
 
         self.inventory_display = InventoryDisplay(self)
 
@@ -254,7 +254,7 @@ class Entity(Entity):
         blocks = set()
         for relpos in entity["hitbox"]:
             block_pos = (position+relpos).normalize()
-            if entity.world.get_block(block_pos)["id"] != "AIR": #s.onground
+            if entity.world.get_block(block_pos).collides_with(entity): #s.onground
                 blocks.add(block_pos)
         return blocks
 
@@ -271,7 +271,7 @@ class Entity(Entity):
 
     def bool_collide_difference(entity,new_position,previous_position):
         for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
-            if entity.world.get_block(block)["id"] != "AIR":
+            if entity.world.get_block(block).collides_with(entity):
                 return True
         return False
     
@@ -460,7 +460,7 @@ if __name__ == "__main__":
             #for i in range(1000):
             #    w.get_block((20,-7,3))
             joined = joined or g.get_players()
-            zeitmessung()
+            #zeitmessung()
             #print blockread_counter
             blockread_counter = 0
             #
@@ -471,5 +471,5 @@ if __name__ == "__main__":
                 player.do_random_ticks()
             for schaf in schafe:
                 schaf.update()
-            if len(schafe) < 10:
+            if len(schafe) < 0:
                 Schaf(w)

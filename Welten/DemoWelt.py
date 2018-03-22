@@ -1,10 +1,10 @@
 import random
 
 def init(welt):
-    n = 10*10
+    n = 100
     for x in range(n):
         for z in range(n):
-            welt[(x,int((x-z)/2),z)] = random.choice(["STEIN","GRASS","DIRT"])
+            welt[(x,0,z)] = random.choice(["STEIN","GRASS","DIRT"])
 
 terrain_generator = []
 

@@ -1,7 +1,7 @@
 from base import *
 
 
-@register_block("STONE")
+@register_block("BEDROCK")
 @register_block("mcgcraft:bedrock")
 class StoneBlock(Block):
     blast_resistance = 1

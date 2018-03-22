@@ -69,3 +69,15 @@ class Block(object):
         if entf < 1:
             if random.random() > self.blast_resistance:
                 self.world[self.position] = "AIR"
+
+    def collides_with(self,entity):
+        return True
+
+#######################################################################
+#   essential blocks
+
+@register_block("AIR")
+class AirBlock(Block):
+    def collides_with(self,entity):
+        return False
+
