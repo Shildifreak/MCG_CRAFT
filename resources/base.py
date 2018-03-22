@@ -72,12 +72,3 @@ class Block(object):
 
     def collides_with(self,entity):
         return True
-
-#######################################################################
-#   essential blocks
-
-@register_block("AIR")
-class AirBlock(Block):
-    def collides_with(self,entity):
-        return False
-

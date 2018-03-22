@@ -2,6 +2,7 @@ from base import *
 
 @register_item("HERZ")
 @register_item("GESICHT")
+@register_item("HEBEL")
 class RotatableBlockItem(Item):
     def use_on_block(self,character,blockpos,face):
         new_pos = blockpos + face

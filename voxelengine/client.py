@@ -122,6 +122,20 @@ def cube_model(textures,n,sidehiding):
         return (([],()),)*6+(all_in_one,)
     return tuple(result)
 
+def block_model(vertices, textures):
+    sides = zip(vertices, textures)
+    result = []
+    for raw_side_vertices, raw_side_textures in sides:
+        side_vertices = []
+        side_textures = []
+        for raw_face_vertices in raw_side_vertices:
+            for coord in raw_face_vertices:
+                side_vertices.append(coord-0.5)
+        for raw_face_textures in raw_side_textures:
+            side_textures.extend(tex_coord(*raw_face_textures))
+        result.append((side_vertices,side_textures))
+    return result
+
 focus_distance = 0
 CHUNKSIZE = None
 
@@ -198,11 +212,16 @@ def load_setup(path):
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
     BLOCKNAMES = []
-    for i, (name, transparency, icon_index, textures) in enumerate(description["TEXTURE_INFO"]):
+    for name, transparency, icon_index, textures in description["TEXTURE_INFO"]:
         n = 0.5 - 0.01*transparency
-        BLOCKNAMES.append(name)
+        if not transparency:
+            BLOCKNAMES.append(name)
         BLOCKMODELS[name] = cube_model(textures,n,not transparency) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
         ICON[name] = tex_coord(*textures[icon_index])
+        TRANSPARENCY[name] = transparency
+    for name, transparency, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
+        BLOCKMODELS[name] = block_model(vertices, textures)
+        ICON[name] = tex_coord(*icon_coords)
         TRANSPARENCY[name] = transparency
 
 def is_transparent(block_name):
@@ -286,11 +305,12 @@ class Model(object):
 
     def update_visibility(self, position):
         if self.get_block(position):
-            for f in xrange(len(FACES_PLUS)):
+            for f in xrange(len(FACES)):
                 self.update_face(position,f)
+            self.show_face(position,6) # show "inner face" always
 
     def update_face(self,position,face):
-        fv = FACES_PLUS[face]
+        fv = FACES[face]
         b = self.get_block(position+fv)
         if is_transparent(b):
             self.show_face(position,face)

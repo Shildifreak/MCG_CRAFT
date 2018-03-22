@@ -131,7 +131,7 @@ class Player(Player):
         self.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"},{"id":"Setzling"}]
+        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"},{"id":"Setzling"},{"id":"HEBEL"}]
         self.entity["left_hand"] = {"id":"CHEST"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["health"] = 10

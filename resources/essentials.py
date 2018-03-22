@@ -1,6 +1,13 @@
 from base import *
 
 
+@register_block("AIR")
+class AirBlock(Block):
+    def collides_with(self,entity):
+        return False
+
+
+
 @register_block("BEDROCK")
 @register_block("mcgcraft:bedrock")
 class StoneBlock(Block):
