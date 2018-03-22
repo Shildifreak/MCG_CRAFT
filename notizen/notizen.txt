@@ -1,18 +1,22 @@
 Bugs:
-	BlockModels für Entities ermöglichen oder ausschließen
-	auf leere slots klicken führt zum Absturz
+	BlockModels für Entities ermöglichen (oder ausschließen)
+	Speichern/Laden ignoriert block_codecs
 
 Verbesserungskram:
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
-	rendern wenn der Spieler gerade steht
-	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,...
+	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,... -> muss auch clientseitig beachtet werden
+	start multiplayer world -> trotzdem clienten starten
+	singleplayer -> schauen ob multiprocessing + pipe was bringt
+	Name des Servers soll sagen wer ihn gestartet hat -> bei MooMoo abgucken?
 
 Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
+		-> Block-Entity-Updates -> called to entities in same chunk as changed block
 	Aufsammeln von Blöcken ermöglichen
-	Inventar
-	Speichern fixen
+	Inventar -> abbauen/platzieren von Blöcken soll Anzahl verändern
+	Speichern um entities erweitern
+	Blocks with custom hitbox -> Entities walking up halfslabs, stairs, etc. without jumping
 
 BLOCKS
 	DATA
@@ -34,17 +38,17 @@ shift		left hand item	right hand item
 
 ITEMS
 	INVENTORY
-		open inventory with e -> infinitely big? -> scrolling through possible, first n are hotbar
-		empty slots possible
-		designated hands wich is(/are) not really part of the inventory
-		clicking item swaps whatever is in hand with the item
+		open inventory with e
+		infinitely big, if you have no place in inventory but break a block your inventory grows
+		scrolling through possible, first 7 are hotbar
+		slots are made available for user by putting air in them
+		designated hands wich are not really part of the inventory
+		left/right clicking item swaps whatever is in corresponding hand with the item
 		counts on them that are ignored in creative
 	STORAGE
-		just drop items on ground
-		click on them to pick them up
-		special block that prevents dropped items on top from despawning ("chest")
+		blocks can have inventory -> for instance chest
 	TRADING
-		there has to be a key for dropping items
+		use chests for now since there are no dropped items
 	CRAFTING
 		???
 PVP

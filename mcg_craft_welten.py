@@ -227,7 +227,7 @@ class Player(Player):
         pe.update_position()
 
     def do_random_ticks(player):
-        radius = 50
+        radius = 10
         ticks = 5
         for a in range(ticks):
             dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
@@ -307,6 +307,10 @@ class Entity(Entity):
                     pos = new
         if pos != entity["position"]:
             entity["position"] = pos
+    
+    def block_update(self):
+        """called when block "near" entity is changed"""
+        pass
 
 class Schaf(Entity):
     def __init__(self, world):
@@ -321,7 +325,8 @@ class Schaf(Entity):
             x = random.randint(-40,40)
             z = random.randint(-10,10)
             y = random.randint(-40,40)
-            if world.get_block((x,y-2,z))["id"] != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
+            block = world.get_block((x,y-2,z),load_on_miss = False)
+            if block and block != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
                 break
         self["position"] = (x,y,z)
         self["velocity"] = Vector([0,0,0])
@@ -361,7 +366,7 @@ class Schaf(Entity):
             jump = not random.randint(0,2000)
         sv = schaf.horizontal_move(jump)
         schaf["velocity"] += ((1,1,1)-sv)*nv
-        #schaf.update_position()
+        schaf.update_position()
         y, p = schaf["rotation"]
         dy = schaf["turn"]
         dp = -schaf["nod"]*50 - p
@@ -377,8 +382,6 @@ class Block(Block):
             return attr.__get__(self)
         return attr
     def __setitem__(self, key, value):
-        if key == "inventory":
-            print "hey"
         super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)
 
@@ -403,6 +406,10 @@ class World(World):
         self.changed_blocks.append(position)
 
     def tick(self):
+        # do entity updates
+        if self.changed_blocks:
+            for entity in self.get_entities(): #M# limited distance, not all?
+                entity.block_update()
         # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
         new_blocks = [] #(position,block)
         block_updates = ((position-face, face) for position in self.changed_blocks
@@ -453,7 +460,7 @@ if __name__ == "__main__":
             #for i in range(1000):
             #    w.get_block((20,-7,3))
             joined = joined or g.get_players()
-            #zeitmessung()
+            zeitmessung()
             #print blockread_counter
             blockread_counter = 0
             #
@@ -464,5 +471,5 @@ if __name__ == "__main__":
                 player.do_random_ticks()
             for schaf in schafe:
                 schaf.update()
-            if len(schafe) < 0:
+            if len(schafe) < 10:
                 Schaf(w)
