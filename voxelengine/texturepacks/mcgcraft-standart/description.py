@@ -11,7 +11,7 @@
     ["DIRT",                     False,     0, [( 0, 0)]],
     ["STONE",                    False,     0, [( 5, 0)]],
     ["HOLZ",                     False,     0, [( 4, 0), ( 4, 0), ( 4, 1)]],
-    ["LAUB",                     False,     0, [(14, 0)]],
+    ["LAUB",                     True,      0, [(14, 0)]],
     ["GREEN" ,                   False,     0, [( 0, 2)]],
     ["HOLZBRETTER" ,             False,     0, [( 7, 0)]],
     #bis hier INVENTAR 1
@@ -84,6 +84,11 @@
     ["DOORSTEP",                 False,     0, [(10, 6)]],
     ["DOORBOTTOM",               False,     0, [(10, 6), (10, 6), (10, 7)]],
     ["Setzling",                 True ,     2, [(14,15), (14,15), ( 2, 3)]],
+    ["BARRIER",                  True,      0, [(14,15)]],
+    ["WAND",                     False,     0, [( 2,11)]],
+    ["TORCH",                    True,      2, [(14,15), (14,15), ( 7, 5)]],
+    ["LAMPON",                   False,     0, [( 7,10)]],
+    ["LAMPOFF",                  False,     0, [( 6,10)]],
     ],
 
 "BLOCK_MODELS": [

@@ -131,13 +131,13 @@ class Player(Player):
         self.entity["hitbox"] = get_hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"HERZ"},{"id":"GESICHT"},{"id":"Setzling"},{"id":"HEBEL"}]
+        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMPOFF"},{"id":"TORCH"}]
         self.entity["left_hand"] = {"id":"CHEST"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["health"] = 10
         self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
-        self.entity["lives"] = 9        
-
+        self.entity["lives"] = 9
+        
         # inventory stuff
         for i in range(60):
             self.entity["inventory"].append({"id":"AIR","count":i})
@@ -320,6 +320,7 @@ class Schaf(Entity):
         self["SPEED"] = 5
         self["JUMPSPEED"] = 10
         self["hitbox"] = get_hitbox(0.6,1.5,1)
+        self["sprint"] = 20
         self.set_world(world,(0,0,0))
         while True:
             x = random.randint(-40,40)
@@ -381,6 +382,11 @@ class Block(Block):
         if callable(attr):
             return attr.__get__(self)
         return attr
+    def __getitem__(self, key):
+        try:
+            return super(Block, self).__getitem__(key)
+        except KeyError:
+            return self.block_class.defaults[key]
     def __setitem__(self, key, value):
         super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)

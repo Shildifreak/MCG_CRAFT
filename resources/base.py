@@ -43,6 +43,7 @@ class Item(object):
 
 class Block(object):
     blast_resistance = 0
+    defaults = {"powered":0, "powering":(),}#"rotation":0,"base":"b"}
     # Init function, don't care to much about this
     def __init__(self):
         raise NotImplementedError("This Class is only used as 'quasi' superclass, don't instanciate it.")

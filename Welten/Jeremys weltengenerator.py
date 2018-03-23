@@ -6,4 +6,5 @@ def init(welt):
 terrain_generator = []
 
 spawnpoint = (0,10,0)
+print "lolololololololololololololololololololol"
 

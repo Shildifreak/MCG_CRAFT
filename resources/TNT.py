@@ -1,11 +1,16 @@
 from base import *
-import random 
-@register_block("TNT")
+import random
 
+@register_block("TNT")
 class tntblock(Block):
     blast_resistance =  0
     def block_update(self,faces):
-        self.activated(None,None)
+        for face in faces:
+            nachbarblockposition = self.position + face
+            nachbarblock = self.world[nachbarblockposition]
+            if nachbarblock["powered"]:
+                self.activated(None,None)
+                break
 
     def activated(self,character,face):
         tntrange = random.randint(3,7)
@@ -20,4 +25,3 @@ class tntblock(Block):
     def exploded(self,entf):
         if entf < 1:
             self.activated(None,None)
-                    

@@ -1,6 +1,7 @@
 Bugs:
 	BlockModels für Entities ermöglichen (oder ausschließen)
 	Speichern/Laden ignoriert block_codecs
+	Fehler bei Mittelclick
 
 Verbesserungskram:
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
