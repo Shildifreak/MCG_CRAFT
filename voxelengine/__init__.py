@@ -30,7 +30,9 @@ Programme zu schreiben.
 
 This module is designed to provide a simple interface for 3D voxel based
 applications.
-
+"""
+#M# The following example is not up to date!
+"""
 Beispiel/Example:
 >>> import voxelengine
 >>> w = voxelengine.World()

@@ -47,6 +47,7 @@ class BlockData(dict):
             return self["id"]
     
 class Block(object):
+    delvalue = object()
     def __init__(self,data):
         if isinstance(data,basestring):
             data = {"id":data}
@@ -60,13 +61,20 @@ class Block(object):
         return self.data[key]
     #def get(self,key,*default):
     #    return self.data.get(key,*default)
-    def __setitem__(self,key,value):
+    def __setitem__(self,key,value=delvalue):
         if self.data.immutable() and (self.chunk != None): # <=> data may be used by multiple Blocks
             self.data = BlockData(self.data.copy())
             self.data[key] = value
             self.chunk.set_block(self.position, self)
         else:
             self.data[key] = value
+    def __delitem__(self,key): # make that stuff prettier
+        if self.data.immutable() and (self.chunk != None):
+            self.data = BlockData(self.data.copy())
+            del self.data[key]
+            self.chunk.set_block(self.position, self)
+        else:
+            del self.data[key]
     def __eq__(self,other):
         if isinstance(other,Block):
             return self.data == other.data
@@ -730,7 +738,6 @@ class Game(object):
     def __init__(self,
                  init_function=lambda player:None,
                  wait=True,
-                 multiplayer=False,
                  name="MCG-CRAFT",
                  renderlimit=False,
                  suggested_texturepack="basic_colors",
@@ -745,23 +752,15 @@ class Game(object):
 
         self.players = {}
         self.new_players = set()
-        #M# set priority function somewhere self.world = World(worldgenerators,self._test_priority)
-        #M# why?: self.world[Vector([0,0,0])]
+
         if socket_server == None:
-            if multiplayer:
-                import socket_connection_2 as socket_connection
-                self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
-                                                              on_disconnect=self._on_disconnect,name=name)
-            else:
-                def singleplayer_client_thread(socket_client):
-                    import client
-                    client.main(socket_client)
-                    self._on_disconnect(None)
-                import local_connection
-                connector = local_connection.Connector()
-                thread.start_new_thread(singleplayer_client_thread,(connector.client,))
-                self.socket_server = connector.server
-                self._on_connect(None)
+            import socket_connection_2 as socket_connection
+            self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
+                                                          on_disconnect=self._on_disconnect,name=name)
+            import subprocess
+            command = ["python",os.path.join("voxelengine","client.py")]
+            
+            p = subprocess.Popen(command)
         else:
             self.socket_server = socket_server
         if "-debug" in sys.argv:

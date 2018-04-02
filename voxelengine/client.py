@@ -89,20 +89,23 @@ def face_vertices_noncube(x, y, z, f, size):
         [x+dx,y-dy,z+dz, x+dx,y-dy,z-dz, x+dx,y+dy,z-dz, x+dx,y+dy,z+dz],  # back
     )[f]
 
-def tex_coord(x, y):
+def tex_coord(x, y, dx = 1, dy = 1):
     """ Return the bounding vertices of the texture square.
 
     """
+    p = TEXTURE_EDGE_CUTTING
+    x += p
+    y += p
+    dx -= 2 * p
+    dy -= 2 * p
+
     m = 1.0 / TEXTURE_SIDE_LENGTH
-    dx = x * m
-    dy = y * m
-    
-    p = TEXTURE_EDGE_CUTTING*m
-    dx += p
-    dy += p
-    m  -= p * 2
-    
-    return dx, dy, dx + m, dy, dx + m, dy + m, dx, dy + m
+    x  *= m
+    y  *= m
+    dx *= m
+    dy *= m
+
+    return x, y, x + dx, y, x + dx, y + dy, x, y + dy
 
 
 def cube_model(textures,n,sidehiding):
@@ -225,8 +228,8 @@ def load_setup(path):
         TRANSPARENCY[name] = transparency
 
 def is_transparent(block_name):
-    return TRANSPARENCY[block_name.rsplit(":",1)[0]]
-         
+    return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
+
 class SimpleChunk(object):
     def __init__(self):
         self.blocks = {}
@@ -589,7 +592,6 @@ class Window(pyglet.window.Window):
             c = self.client.receive(0.001)
             if not c:
                 break
-            #print c.split(" ",1)[0]
             if c.startswith("setarea"):
                 c = c.split(" ",4)
                 position = Vector(map(int,c[1:4]))
@@ -924,28 +926,41 @@ def show_on_window(client):
         if window:
             window.on_close()
 
-def main(socket_client = None):
-    if socket_client == None:
+def main():
+    if options.host and options.port:
+        addr = (options.host, options.port)
+    else:
         servers = socket_connection.search_servers(key="voxelgame")
-        if servers:
+        print servers
+        if options.host:
+            servers[:] = [server for server in servers if server[0] == options.host]
+        if options.port:
+            servers[:] = [server for server in servers if server[1] == options.port]
+        if len(servers) == 1:
+            addr = servers[0][0]
+        elif len(servers) > 1:
             print "SELECT SERVER"
             addr = servers[select([i[1] for i in servers])[0]][0]
-            with socket_connection.client(addr) as socket_client:
-                show_on_window(socket_client)
         else:
             print("No Server found.")
             time.sleep(1)
+            exit()
+    try:
+        with socket_connection.client(addr) as socket_client:
+            show_on_window(socket_client)
+    except socket_connection.Disconnect:
+        print "Client closed due to disconnect."
 
-    else:
-        if "-debug" in sys.argv:
-            print "doing something clienty"
-        show_on_window(socket_client)
-
-def autoclient():
-    while True:
-        main()
-        time.sleep(10)
-
+from optparse import OptionParser
+parser = OptionParser()
+parser.add_option("-H",
+              "--host", dest="host",
+              help="only consider servers on this HOST", metavar="HOST",
+              action="store")
+parser.add_option("-P",
+              "--port", dest="port",
+              help="only consider servers on this PORT", metavar="PORT", type="int",
+              action="store")
+options, args = parser.parse_args()
 if __name__ == '__main__':
-    #autoclient()
     main()

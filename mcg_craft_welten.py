@@ -1,4 +1,4 @@
-import os,sys,math
+import os,sys,math,thread
 
 sys.path.append("Welten")
 sys.path.append(os.path.join("Welten","structures"))
@@ -15,6 +15,7 @@ CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a
 GRAVITY = 35
 AIRRESISTANCE = 5
 SLIDING = 0.001
+SCHAFLIMIT = 0
 schafe = []
 
 def floatrange(a,b):
@@ -388,7 +389,12 @@ class Block(Block):
         except KeyError:
             return self.block_class.defaults[key]
     def __setitem__(self, key, value):
-        super(Block,self).__setitem__(key,value)
+        if value == self[key]:
+            return
+        if value == self.block_class.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
+            super(Block,self).__delitem__(key)
+        else:
+            super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)
 
 blockread_counter = 0
@@ -396,7 +402,6 @@ class World(World):
     BlockClass = Block
     EntityClass = Entity
     def __init__(self,*args,**kwargs):
-        print args, kwargs
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
 
@@ -419,7 +424,7 @@ class World(World):
         # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
         new_blocks = [] #(position,block)
         block_updates = ((position-face, face) for position in self.changed_blocks
-                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,0,-1),(0,0,-1),(0,0,1)))
+                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,0,-1),(0,0,-1),(0,0,1))) #M# ,(0,0,0)
         for position, group in itertools.groupby(block_updates,lambda x:x[0]):
             faces = [x[1] for x in group]
             new_block = self[position].block_update(faces)
@@ -429,44 +434,50 @@ class World(World):
         for position, block in new_blocks:
             self[position] = block
 
+class UI(object):
+    def __init__(self, config):
+        worldtypes = os.listdir("Welten")
+        worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
+        config["worldtype"] = select(worldtypes)[1]
+        config["run"] = True
+    def stats(self, name, value):
+        print name, value
+
 def zeitmessung(ts = [0]*200, t = [time.time()]):
     dt = time.time() - t[0]
     t[0] += dt
     dt = round(1/dt,2)
     ts.append(dt)
     ts.pop(0)
-    print dt, min(ts), max(ts)    
+    ui.stats("dt",dt)
+    ui.stats("min dt", min(ts))
+    ui.stats("max dt", max(ts))
 
-if __name__ == "__main__":
-    multiplayer = select(["open server","play alone"])[0] == 0
-    worldtypes = os.listdir("Welten")
-    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
-    worldtype = select(worldtypes)[1]
-    worldmod = __import__(worldtype)
+def gameloop():
+    global w, g
+    worldmod = __import__(config["worldtype"])
 
     w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
     worldmod.init(w)
     w.changed_blocks = []
-    print "hey"
     
     def i_f(player):
         w.spawn_player(player)
         player.init()
 
-    renderlimit = not multiplayer #fast loading for playing alone, hole world for multiplayer
+    renderlimit = True #True: fast loading, False: whole world at once
     settings = {"init_function": i_f,
-                "multiplayer": multiplayer,
                 "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
                 "suggested_texturepack" : "mcgcraft-standart",
                 "PlayerClass" : Player,
+                "wait" : False,
+                "name" : config["name"],
                 }
-    joined = False
+
+    stats = {}
     with Game(**settings) as g:
-        while g.get_players() or not joined:
-            #for i in range(1000):
-            #    w.get_block((20,-7,3))
-            joined = joined or g.get_players()
-            #zeitmessung()
+        while config["run"]:
+            zeitmessung()
             #print blockread_counter
             blockread_counter = 0
             #
@@ -477,5 +488,26 @@ if __name__ == "__main__":
                 player.do_random_ticks()
             for schaf in schafe:
                 schaf.update()
-            if len(schafe) < 0:
+            if len(schafe) < SCHAFLIMIT:
                 Schaf(w)
+    print "Server shutdown successful."
+
+if __name__ == "__main__":
+    import getpass
+    config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
+                "file"     : "",
+                "worldtype": "Colorland",
+                "whitelist": "localhost",
+                "parole"   : "",
+                "run"    : False}
+    try:
+        from tkgui import GUI as UI
+    except ImportError as e:
+        print "GUI not working cause of:\n",e
+    ui = UI(config)
+    while not config["run"]:
+        time.sleep(0.1)
+    if sys.flags.interactive:
+        thread.start_new_thread(gameloop,())
+    else:
+        gameloop()

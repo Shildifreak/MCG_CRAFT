@@ -1,7 +1,22 @@
+Menü:
+	Name des Spiels (default = Benutzername + "s MCGCraftServer")
+	Speicherort (browse) (standartmäßig leer)
+	Weltgenerator(*)
+	whitelist (localhost / all / custom)
+	#Parole (erstmal nicht)
+	Start/Stop          Start&Play/Play
+	Stats**
+		TPS, Spieler, Entities, ...
+
+	*  ausgegraut wenn Speicherort schon existiert
+	** leer wenn kein Spiel läuft
+
 Bugs:
 	BlockModels für Entities ermöglichen (oder ausschließen)
 	Speichern/Laden ignoriert block_codecs
 	Fehler bei Mittelclick
+	Lampen müssen alle Richtungen checken beim ausgehen nicht nur die wo update herkommt
+	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 
 Verbesserungskram:
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
