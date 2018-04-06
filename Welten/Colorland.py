@@ -61,7 +61,6 @@ def init(welt):
         z = random.randint(-o, o)  # z position des Baumes
         y = -1  # Basis des Baums
         while welt.get_block((x,y,z)) != "AIR":
-            print welt.get_block((x,y,z))
             y += 1
         for i in range(random.randint(3,4)):
             welt[(x, y, z)] = "BRAUN"

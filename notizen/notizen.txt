@@ -4,6 +4,7 @@ Menü:
 	Weltgenerator(*)
 	whitelist (localhost / all / custom)
 	#Parole (erstmal nicht)
+	Port
 	Start/Stop          Start&Play/Play
 	Stats**
 		TPS, Spieler, Entities, ...
@@ -14,7 +15,6 @@ Menü:
 Bugs:
 	BlockModels für Entities ermöglichen (oder ausschließen)
 	Speichern/Laden ignoriert block_codecs
-	Fehler bei Mittelclick
 	Lampen müssen alle Richtungen checken beim ausgehen nicht nur die wo update herkommt
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 
@@ -22,9 +22,6 @@ Verbesserungskram:
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
 	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,... -> muss auch clientseitig beachtet werden
-	start multiplayer world -> trotzdem clienten starten
-	singleplayer -> schauen ob multiprocessing + pipe was bringt
-	Name des Servers soll sagen wer ihn gestartet hat -> bei MooMoo abgucken?
 
 Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))

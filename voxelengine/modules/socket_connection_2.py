@@ -165,6 +165,7 @@ class server(template):
         self.entry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.entry_socket.bind(("",0))
         self.entry_socket.listen(5)
+        self.entry_port = self.entry_socket.getsockname()[1]
 
         # Start threads
         thread.start_new_thread(self._info_thread,())
@@ -174,7 +175,6 @@ class server(template):
 
 
     def _info_thread(self):
-        port = str(self.entry_socket.getsockname()[1])
         while not self.closed:
             try:
                 if select.select([self.info_socket],[],[],1)[0]:
@@ -182,7 +182,8 @@ class server(template):
                     if self.closed:
                         break
                     if msg == "PING "+self.key:
-                        self.info_socket.sendto("PONG %s %s %s" %(port,self.uid,self.name),addr)
+                        print "got pinged by", addr
+                        self.info_socket.sendto("PONG %i %i %s" %(self.entry_port,self.uid,self.name),addr)
             except Exception as e:
                 print e, "in _info_thread"
         self.info_socket.close()
@@ -262,6 +263,9 @@ class server(template):
 
     def get_clients(self):
         return self.clients.addrs()
+    
+    def get_entry_port(self):
+        return self.entry_port
 
     def close(self):
         self.closed = True

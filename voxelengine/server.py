@@ -757,10 +757,6 @@ class Game(object):
             import socket_connection_2 as socket_connection
             self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
                                                           on_disconnect=self._on_disconnect,name=name)
-            import subprocess
-            command = ["python",os.path.join("voxelengine","client.py")]
-            
-            p = subprocess.Popen(command)
         else:
             self.socket_server = socket_server
         if "-debug" in sys.argv:
@@ -832,6 +828,12 @@ class Game(object):
             elif "-debug" in sys.argv:
                 print "Message from unregistered Player"
         time.sleep(0.01) #wichtig damit das threading Zeug klappt
+    
+    def launch_client(self):
+        import subprocess
+        command = ["python",os.path.join("voxelengine","client.py"),"--host=localhost","--port=%i" %self.socket_server.get_entry_port()]
+        p = subprocess.Popen(command)
+
 
 if __name__ == "__main__":
     def _simple_terrain_generator(chunk):

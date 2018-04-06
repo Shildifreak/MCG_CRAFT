@@ -1,11 +1,14 @@
-import os,sys,math,thread
+import os, sys, thread, ast
+import math, random, itertools
+import getpass
 
 sys.path.append("Welten")
 sys.path.append(os.path.join("Welten","structures"))
+sys.path.append("gui")
 
 from voxelengine import *
 import resources
-import random, itertools
+import appdirs
 
 #TODO:
 # server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
@@ -435,9 +438,7 @@ class World(World):
             self[position] = block
 
 class UI(object):
-    def __init__(self, config):
-        worldtypes = os.listdir("Welten")
-        worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
+    def __init__(self, config, worldtypes):
         config["worldtype"] = select(worldtypes)[1]
         config["run"] = True
     def stats(self, name, value):
@@ -455,58 +456,86 @@ def zeitmessung(ts = [0]*200, t = [time.time()]):
 
 def gameloop():
     global w, g
-    worldmod = __import__(config["worldtype"])
+    while not config["quit"]:
+        #wait for config being ready to start
+        if not config["run"]:
+            time.sleep(0.1)
+            continue #jump back to start of loop
+        print "starting Game ..."
+        worldmod = __import__(config["worldtype"])
 
-    w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
-    worldmod.init(w)
-    w.changed_blocks = []
+        w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
+        worldmod.init(w)
+        w.changed_blocks = []
+        
+        def i_f(player):
+            w.spawn_player(player)
+            player.init()
+
+        renderlimit = True #True: fast loading, False: whole world at once
+        settings = {"init_function": i_f,
+                    "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
+                    "suggested_texturepack" : "mcgcraft-standart",
+                    "PlayerClass" : Player,
+                    "wait" : False,
+                    "name" : config["name"],
+                    }
+        stats = {}
+        with Game(**settings) as g:
+            print "Game started"
+            while config["run"]:
+                if config["play"]:
+                    config["play"] = False
+                    g.launch_client()
+                zeitmessung()
+                #print blockread_counter
+                blockread_counter = 0
+                #
+                g.update()
+                w.tick()
+                for player in g.get_players():
+                    player.update()
+                    player.do_random_ticks()
+                for schaf in schafe:
+                    schaf.update()
+                if len(schafe) < SCHAFLIMIT:
+                    Schaf(w)
+        print "Game stopped"
+    print "Server shut down"
+    rememberconfig = config.copy()
+    for key in ("run","play","quit"):
+        rememberconfig.pop(key)
+    with open(configfn,"w") as configfile:
+        configfile.write(repr(rememberconfig))
+    print "Config saved"
     
-    def i_f(player):
-        w.spawn_player(player)
-        player.init()
-
-    renderlimit = True #True: fast loading, False: whole world at once
-    settings = {"init_function": i_f,
-                "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
-                "suggested_texturepack" : "mcgcraft-standart",
-                "PlayerClass" : Player,
-                "wait" : False,
-                "name" : config["name"],
-                }
-
-    stats = {}
-    with Game(**settings) as g:
-        while config["run"]:
-            zeitmessung()
-            #print blockread_counter
-            blockread_counter = 0
-            #
-            g.update()
-            w.tick()
-            for player in g.get_players():
-                player.update()
-                player.do_random_ticks()
-            for schaf in schafe:
-                schaf.update()
-            if len(schafe) < SCHAFLIMIT:
-                Schaf(w)
-    print "Server shutdown successful."
-
 if __name__ == "__main__":
-    import getpass
     config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
                 "file"     : "",
                 "worldtype": "Colorland",
-                "whitelist": "localhost",
+                "whitelist": "127.0.0.1",
                 "parole"   : "",
-                "run"    : False}
+                "port"     : "",
+                "run"      : False,
+                "play"     : False,
+                "quit"     : False,
+             }
+    configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
+    configfn = os.path.join(configdir,"serversettings.py")
+    if os.path.exists(configfn):
+        with open(configfn,"r") as configfile:
+            rememberedconfig = ast.literal_eval(configfile.read())
+        config.update(rememberedconfig)
+    elif not os.path.exists(configdir):
+        os.makedirs(configdir)
+        
+    worldtypes = os.listdir("Welten")
+    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
     try:
         from tkgui import GUI as UI
     except ImportError as e:
         print "GUI not working cause of:\n",e
-    ui = UI(config)
-    while not config["run"]:
-        time.sleep(0.1)
+    ui = UI(config, worldtypes)
     if sys.flags.interactive:
         thread.start_new_thread(gameloop,())
     else:

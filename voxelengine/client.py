@@ -674,6 +674,8 @@ class Window(pyglet.window.Window):
             event = "right click"
         elif button == pyglet.window.mouse.LEFT:
             event = "left click"
+        else:
+            return
         if self.exclusive:
             self.client.send(event)
         else:
