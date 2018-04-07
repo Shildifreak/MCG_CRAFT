@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import os, sys, thread, ast
 import math, random, itertools
 import getpass
@@ -441,7 +442,7 @@ class UI(object):
     def __init__(self, config, worldtypes):
         config["worldtype"] = select(worldtypes)[1]
         config["run"] = True
-    def stats(self, name, value):
+    def set_stats(self, name, value):
         print name, value
 
 def zeitmessung(ts = [0]*200, t = [time.time()]):
@@ -450,9 +451,9 @@ def zeitmessung(ts = [0]*200, t = [time.time()]):
     dt = round(1/dt,2)
     ts.append(dt)
     ts.pop(0)
-    ui.stats("dt",dt)
-    ui.stats("min dt", min(ts))
-    ui.stats("max dt", max(ts))
+    ui.set_stats("dt",dt)
+    ui.set_stats("min dt", min(ts))
+    ui.set_stats("max dt", max(ts))
 
 def gameloop():
     global w, g
@@ -461,13 +462,24 @@ def gameloop():
         if not config["run"]:
             time.sleep(0.1)
             continue #jump back to start of loop
-        print "starting Game ..."
+        print "Game starting ...",
         worldmod = __import__(config["worldtype"])
 
-        w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"))
-        worldmod.init(w)
+        w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"),filename=config["file"])
+        if len(w.chunks) == 0: # only generate if not done yet
+            worldmod.init(w)
         w.changed_blocks = []
         
+
+        def save():
+            print "Game saving ...",
+            if config["file"]:
+                w.save(config["file"])
+                print "done"
+            else:
+                print "skipped"
+            config["save"] = False
+
         def i_f(player):
             w.spawn_player(player)
             player.init()
@@ -480,13 +492,21 @@ def gameloop():
                     "wait" : False,
                     "name" : config["name"],
                     }
-        stats = {}
+        t = time.time()
+        FPS = 60
         with Game(**settings) as g:
-            print "Game started"
+            print "done" # Game starting ... done
             while config["run"]:
                 if config["play"]:
                     config["play"] = False
                     g.launch_client()
+                if config["save"]:
+                    save()
+                dt = time.time() - t
+                time.sleep(max(0, 1.0/FPS-dt))
+                t = time.time()
+                ui.set_stats("bla", "%s, %s" %(1.0/FPS, dt))
+                ui.set_stats("sleep", max(0, 1.0/FPS-dt))
                 zeitmessung()
                 #print blockread_counter
                 blockread_counter = 0
@@ -500,14 +520,16 @@ def gameloop():
                     schaf.update()
                 if len(schafe) < SCHAFLIMIT:
                     Schaf(w)
+            save()
         print "Game stopped"
-    print "Server shut down"
     rememberconfig = config.copy()
-    for key in ("run","play","quit"):
+    for key in ("run","play","quit","save"):
         rememberconfig.pop(key)
     with open(configfn,"w") as configfile:
         configfile.write(repr(rememberconfig))
-    print "Config saved"
+    print
+    print "Bye!"
+    time.sleep(1)
     
 if __name__ == "__main__":
     config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
@@ -519,6 +541,7 @@ if __name__ == "__main__":
                 "run"      : False,
                 "play"     : False,
                 "quit"     : False,
+                "save"     : False,
              }
     configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
     configfn = os.path.join(configdir,"serversettings.py")

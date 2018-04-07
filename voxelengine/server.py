@@ -642,7 +642,6 @@ class World(object):
         while chunk.initlevel < minlevel:
             self.worldgenerators[chunk.initlevel](chunk)
             chunk.initlevel+=1
-        chunk.altered = False #M# make this True if generated chunks should be saved (because generation uses random...)
         chunk.lock.release()
         return True
         
@@ -688,28 +687,29 @@ class World(object):
                     if name.startswith("c"):
                         _,x,y,z = name.split("_")
                         position = Vector(map(int,(x,y,z)))
-                        initlevel,compressed_data = zf.read(name).split(" ",1)
+                        initlevel,block_codec,compressed_data = ast.literal_eval(zf.read(name))
                         initlevel = int(initlevel)
+                        block_codec = map(BlockData, block_codec)
 
                         c = ServerChunk(self.chunksize,self,position)
                         c.initlevel = initlevel
                         c.compressed_data = compressed_data
+                        c.block_codec = block_codec
                         self.chunks[position] = c
         else:
             if "-debug" in sys.argv:
                 print "File %s not found." %filename
 
     def save(self,filename):
-        """not implemented yet"""
+        """save the world into a file"""
         with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
             zf.writestr("info_chunksize",str(self.chunksize))
             for position,chunk in self.chunks.items():
-                if chunk.altered:
-                    x,y,z = map(str,chunk.position)
-                    name = "_".join(("c",x,y,z))
-                    initlevel = str(chunk.initlevel)
-                    data = " ".join((initlevel,chunk.compressed_data))
-                    zf.writestr(name,data)
+                x,y,z = map(str,chunk.position)
+                name = "_".join(("c",x,y,z))
+                initlevel = str(chunk.initlevel)
+                data = repr((initlevel,chunk.block_codec,chunk.compressed_data))
+                zf.writestr(name,data)
 
 class Game(object):
     """
@@ -827,11 +827,11 @@ class Game(object):
                 self.players[addr]._handle_input(msg)
             elif "-debug" in sys.argv:
                 print "Message from unregistered Player"
-        time.sleep(0.01) #wichtig damit das threading Zeug klappt
+        time.sleep(0.001) #wichtig damit das threading Zeug klappt
     
     def launch_client(self):
         import subprocess
-        command = ["python",os.path.join("voxelengine","client.py"),"--host=localhost","--port=%i" %self.socket_server.get_entry_port()]
+        command = ["python",os.path.join(PATH,"client.py"),"--host=localhost","--port=%i" %self.socket_server.get_entry_port()]
         p = subprocess.Popen(command)
 
 
@@ -849,7 +849,9 @@ if __name__ == "__main__":
 
     w = World([_simple_terrain_generator])
     settings = {"init_function" : w.spawn_player,
-                "multiplayer": False,
                 }
     with Game(**settings) as g:
+        g.launch_client()
+        while not g.get_players():
+            g.update()
         w.set_block((-1,2,-3),"YELLOW")

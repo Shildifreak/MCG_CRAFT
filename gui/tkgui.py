@@ -1,6 +1,6 @@
 #* encoding:utf-8 *#
 
-import sys
+import sys, time
 if sys.version < "3":
     import Tkinter
     import thread
@@ -17,12 +17,15 @@ class GUI(object):
             self.init(config,worldtypes)
 
     def init(self, config, worldtypes):
+        self.stats = {}
+        self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
         # WINDOW
         root = Tkinter.Tk()
         root.title("MCGCraft Server GUI")
         def on_closing():
             config["run"] = False
             config["quit"] = True
+            self.lock.acquire() #wait for lock to be available, lock forever because no one will be able to use window once it's destroyed
             root.destroy()
         root.protocol("WM_DELETE_WINDOW", on_closing)
         root.protocol("WM_SAVE_YOURSELF", on_closing)
@@ -40,14 +43,29 @@ class GUI(object):
         def setfile(fn, autocorrect=False):
             if fn == config["file"]:
                 return
-            if fn and not fn.endswith(".mc.zip") and autocorrect:
+            if not fn.endswith(".mc.zip") and autocorrect:
                 fn += ".mc.zip"
             fileentry.delete(0, Tkinter.END)
             fileentry.insert(0,fn)
             fileentry.xview_moveto(1)
             config["file"] = fn
+        def file_focus_out(fn):
+            if fn:
+                setfile(fn)
+            fileentry.isempty = fileentry.get() == ""
+            if fileentry.isempty:
+                fileentry.insert(0,"Welt nicht speichern")
+                fileentry.configure(fg="grey")
+        def file_focus_in(event):
+            if fileentry.isempty:
+                fileentry.delete(0, Tkinter.END)
+                fileentry.configure(fg=defaultfg)
         self.add_label("Speicherort")
-        fileentry = self.add_entry(config["file"], setfile)
+        fileentry = self.add_entry(config["file"], file_focus_out)
+        defaultfg = fileentry["fg"]
+        fileentry.xview_moveto(1)
+        fileentry.bind("<FocusIn>",file_focus_in)
+        file_focus_out(None)
         
         def openfile():
             fn = filedialog.open_dialog("")
@@ -74,6 +92,7 @@ class GUI(object):
         self.add_label("Welttyp")
         wtmenu = Tkinter.OptionMenu(root, wtvar, *worldtypes)
         wtmenu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        wtmenu.configure(takefocus=1)
         self.row += 1
         
         # Whitelist
@@ -83,12 +102,12 @@ class GUI(object):
         whitelistvar.set(config["whitelist"])
         whitelistvar.trace("w",setwhitelist)
         self.add_label("Whitelist")
+        whitelist_entry = Tkinter.Entry(root, textvariable = whitelistvar)
+        whitelist_entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         whitelist_button_local = Tkinter.Radiobutton(text = "localhost", variable = whitelistvar, value = "127.0.0.1")
         whitelist_button_local.grid(column = 2, row = self.row, sticky = Tkinter.W)
         whitelist_button_local = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16")
         whitelist_button_local.grid(column = 3, row = self.row, sticky = Tkinter.W)
-        whitelist_entry = Tkinter.Entry(root, textvariable = whitelistvar)
-        whitelist_entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         self.row += 3
         
         # Parole
@@ -110,16 +129,20 @@ class GUI(object):
         playbutton = Tkinter.Button(root, command = play)
         playbutton.grid(column = 2, columnspan = 2, row = self.row, sticky = Tkinter.W+Tkinter.E)
         
+        # SAVE?
+        
         # BUTTONS
         def update_buttontexts():
             startbutton.configure(text = "Stop" if config["run"] else "Start")
             playbutton.configure(text = "Play" if config["run"] else "Start & Play")
         update_buttontexts()
+        self.row += 1
         
+        self.statsframe = Tkinter.LabelFrame(root, text="Stats")
+        self.statsframe.grid(column = 0, columnspan = 4, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        
+        playbutton.focus()
         root.mainloop()
-
-    def stats(self,name,value):
-        pass
     
     def add_entry(self, content, callback):
         def apply_changes(event):
@@ -134,14 +157,26 @@ class GUI(object):
     def add_label(self, labeltext):
         Tkinter.Label(self.root, text=labeltext).grid(column = 0, row = self.row, sticky = Tkinter.W)
 
+    def set_stats(self,name,value):
+        if self.lock.acquire(False): # doing stuff when the window is already closed will block the application, so use lock to avoid destroying root while window get's used
+            if not name in self.stats:
+                Tkinter.Label(self.statsframe, text=name+" ").grid(column = 0, row = len(self.stats), sticky = Tkinter.W)
+                label = Tkinter.Label(self.statsframe)
+                label.grid(column = 1, row = len(self.stats), sticky = Tkinter.W)
+                self.row += 1
+                self.stats[name] = label
+            self.stats[name].configure(text = value)
+            self.lock.release()
+
 if __name__ == "__main__":
     config = {  "name"     : "MCGCraft Server",
                 "file"     : "",
                 "worldtype": "Colorland",
-                "whitelist": "localhost",
+                "whitelist": "127.0.0.1",
                 "parole"   : "",
                 "port"     : "",
                 "run"      : False,
                 "play"     : False,
-                "quit"     : False}
+                "quit"     : False,
+                "save"     : False}
     gui = GUI(config, ("one","two","three"), background = False)

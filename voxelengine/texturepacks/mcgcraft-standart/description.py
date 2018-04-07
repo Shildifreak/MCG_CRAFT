@@ -2,6 +2,8 @@
 
 {
 "TEXTURE_SIDE_LENGTH" : 16,
+#"TEXTURE_EDGE_CUTTING" : 0.1, #value between 0 and 0.5 -> how much to cut away from the sides of each texture
+
    #["Name",               transparenz,    icon, [( oben), (unten), ( vorne), ( hinten), ( links), ( rechts)]],
 "TEXTURE_INFO" : [
     ["GRASS",                    False,       2, [( 0, 2), ( 0, 0), ( 0, 1)]],

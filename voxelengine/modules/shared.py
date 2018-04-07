@@ -188,7 +188,6 @@ class Chunk(object):
         else:
             struct.pack_into(self.blockformat,self._decompressed_data,key*self.byte_per_block,value)
         self._compressed_data = None
-        self.altered = True
         return self.get_block_name_by_id(value)
 
     def __getitem__(self,index):
