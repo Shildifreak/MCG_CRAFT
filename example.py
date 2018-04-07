@@ -1,9 +1,7 @@
 #* encoding: utf-8 *#
 
 import voxelengine
-import math, os
-
-#voxelengine.load_setup(os.path.join(voxelengine.PATH,"setups","mc_setup.py"))
+import math, os, time
 
 w = voxelengine.World()
 
@@ -12,10 +10,14 @@ e.set_world(w,(-1,0,-3))
 e["texture"] = "PLAYER"
 
 settings = {"init_function" : w.spawn_player,
-                "suggested_texturepack" : "mcgcraft-standart",
-                }
+            "suggested_texturepack" : "mcgcraft-standart",
+            }
 
 with voxelengine.Game(**settings) as g:
+    g.launch_client()
+    while not g.get_players():
+            g.update()
+            time.sleep(0.5) #wait for players to connect
     w.set_block((-1,-2,-3),"GRASS")
     i = 0
     while g.get_players():

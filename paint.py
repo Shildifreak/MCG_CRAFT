@@ -15,7 +15,8 @@ def init_func(player):
     w.spawn_player(player)
     player.set_focus_distance(100)
 
-with voxelengine.Game(init_func, multiplayer=False,name="Paint") as g:
+with voxelengine.Game(init_func) as g:
+    g.launch_client()
     while not g.get_players():
             g.update()
             time.sleep(0.5) #wait for players to connect
