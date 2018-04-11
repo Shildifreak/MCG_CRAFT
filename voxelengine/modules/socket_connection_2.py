@@ -10,7 +10,7 @@ import random
 PACKAGESIZE = 1024
 
 ESCAPECHAR = "/"
-SPLITSEQUENCE = " "+ESCAPECHAR+" " #single escape char can mark end of message, cause other occurrences of it will be replaced by 2 escapechars
+SPLITSEQUENCE = " "+ESCAPECHAR+"\n" #single escape char is unique to end of message, cause other occurrences of it will be replaced by 2 escapechars
 SPLITLENGTH = len(SPLITSEQUENCE)
 
 def escape(string):
@@ -32,10 +32,12 @@ uncomplete_msgs = {} #socket:msg_head
 def send_msg(sock,msg): #M# maybe do async send?
     try:
         sock.sendall(escape(msg))
+        #sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True) #disable and reenable automatic buffering?
+        #sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, False)
     except socket.error as e:
         print e, "in send"
 
-def recv_msg(sock):
+def recv_msg(sock,timeout=0.0):
     """returns message, None or raises Disconnect"""
     msg_head, may_contain_sep = uncomplete_msgs.get(sock,("",False))
     if may_contain_sep:
@@ -44,6 +46,8 @@ def recv_msg(sock):
             splitpos += SPLITLENGTH #split after sequence
             uncomplete_msgs[sock] = (msg_head[splitpos:], True)
             return unescape(msg_head[:splitpos])
+    if not select.select([sock],[],[],timeout)[0]:
+        return None
     try:
         msg = sock.recv(PACKAGESIZE)
     except socket.error as e:
@@ -120,11 +124,10 @@ class client(template):
     def send(self,msg):
         send_msg(self.socket,msg)
 
-    def receive(self,timeout=0.001):
-        while select.select([self.socket],[],[],timeout)[0]:
-            msg = recv_msg(self.socket)
-            if msg:
-                return msg
+    def receive(self):
+        msg = recv_msg(self.socket)
+        if msg:
+            return msg
         return False
 
     def close(self):
@@ -229,26 +232,23 @@ class server(template):
     def receive(self,timeout = 0.001):
         self.update()
         msgs = []
-        while True:
-            client_sockets = self.clients.sockets()
-            if not client_sockets:
-                break
-            ready_client_sockets = select.select(client_sockets, [], [], timeout)[0] # maybe affected by crashing clients? Not happened yet.
-            if not ready_client_sockets:
-                break
-            for client_socket in ready_client_sockets:
-                addr = self.clients.get_addr(client_socket)
-                try:
+        client_sockets = set(self.clients.sockets())
+        for client_socket in client_sockets:
+            addr = self.clients.get_addr(client_socket)
+            c_msgs = []
+            try:
+                while True:
                     msg = recv_msg(client_socket)
-                except Disconnect:
-                    self.clients.pop_by_addr(addr)
-                    uncomplete_msgs.pop(client_socket,None)
-                    msgs = [(m,a) for (m,a) in msgs if a != addr]
-                    self.on_disconnect(addr)
-                    continue
-                if msg:
-                    msgs.append((msg,addr))
-            #M# do more sophisticated stuff here later for infinitely long messages
+                    if not msg:
+                        break
+                    c_msgs.append((msg,addr))
+            except Disconnect:
+                self.clients.pop_by_addr(addr)
+                uncomplete_msgs.pop(client_socket,None)
+                self.on_disconnect(addr)
+                continue
+            msgs.extend(c_msgs)
+ 
         return msgs
             
 

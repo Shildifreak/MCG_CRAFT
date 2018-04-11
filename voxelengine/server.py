@@ -792,7 +792,7 @@ class Game(object):
     def quit(self):
         """quit the game"""
         self.socket_server.close()
-        for player in self.players:
+        for player in self.players.values():
             if player:
                 player.quit()
 

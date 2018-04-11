@@ -1,4 +1,7 @@
 # -*- coding: cp1252 -*-
+# Copyright (C) 2016 - 2018 Joram Brenz
+# Copyright (C) 2013 Michael Fogleman
+
 import math
 import time
 import sys, os, inspect
@@ -523,6 +526,7 @@ class Window(pyglet.window.Window):
         # Whether or not the window exclusively captures the mouse.
         self.exclusive = False
         self.hud_open = False
+        self.debug_info_visible = False
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -538,6 +542,11 @@ class Window(pyglet.window.Window):
 
         # Instance of the model that handles the world.
         self.model = Model()
+        
+        # The label that is displayed in the top left of the canvas.
+        self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
+            x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
+            color=(0, 0, 0, 255))
 
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
@@ -558,18 +567,18 @@ class Window(pyglet.window.Window):
         super(Window,self).on_close()
 
     def set_exclusive_mouse(self, exclusive):
-        """ If `exclusive` is True, the game will capture the mouse, if False
+        """
+        If `exclusive` is True, the game will capture the mouse, if False
         the game will ignore the mouse.
-
         """
         #pyglet.window.Window.set_exclusive_mouse(self,exclusive)
         super(Window, self).set_exclusive_mouse(exclusive)
         self.exclusive = exclusive
 
     def get_sight_vector(self):
-        """ Returns the current line of sight vector indicating the direction
+        """
+        Returns the current line of sight vector indicating the direction
         the player is looking.
-
         """
         x, y = self.rotation
         # y ranges from -90 to 90, or -pi/2 to pi/2, so m ranges from 0 to 1 and
@@ -589,7 +598,7 @@ class Window(pyglet.window.Window):
             return
         self.updating = True
         while True:
-            c = self.client.receive(0.001)
+            c = self.client.receive()
             if not c:
                 break
             if c.startswith("setarea"):
@@ -652,7 +661,8 @@ class Window(pyglet.window.Window):
         self.client.send("scrolling: "+str(scroll_y))
         
     def on_mouse_press(self, x, y, button, modifiers):
-        """ Called when a mouse button is pressed. See pyglet docs for button
+        """
+        Called when a mouse button is pressed. See pyglet docs for button
         amd modifier mappings.
 
         Parameters
@@ -666,7 +676,6 @@ class Window(pyglet.window.Window):
         modifiers : int
             Number representing any modifying keys that were pressed when the
             mouse button was clicked.
-
         """
         if (button == mouse.RIGHT) or \
             ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
@@ -696,7 +705,8 @@ class Window(pyglet.window.Window):
                 self.set_exclusive_mouse(True)
                 
     def on_mouse_motion(self, x, y, dx, dy):
-        """ Called when the player moves the mouse.
+        """
+        Called when the player moves the mouse.
 
         Parameters
         ----------
@@ -705,7 +715,6 @@ class Window(pyglet.window.Window):
             the mouse is captured.
         dx, dy : float
             The movement of the mouse.
-
         """
         if self.exclusive:
             m = 0.15
@@ -716,7 +725,8 @@ class Window(pyglet.window.Window):
             self.client.send("rot %s %s" %self.rotation)
 
     def send_key_change(self, symbol, modifiers, state):
-        """ Called when the player presses a key. See pyglet docs for key
+        """
+        Called when the player presses a key. See pyglet docs for key
         mappings.
 
         Parameters
@@ -725,7 +735,6 @@ class Window(pyglet.window.Window):
             Number representing the key that was pressed.
         modifiers : int
             Number representing any modifying keys that were pressed.
-
         """
         # Mapping of keys to events
         keymap = [(key._1    ,"inv1" ),
@@ -763,15 +772,19 @@ class Window(pyglet.window.Window):
                 if self.hud_open:
                     self.hud_open = False
                     self.set_exclusive_mouse(True)
+            if symbol == key.F3:
+                self.debug_info_visible = not self.debug_info_visible
             self.send_key_change(symbol, modifiers, True)
                 
     def on_key_release(self, symbol, modifiers):
         self.send_key_change(symbol, modifiers, False)
 
     def on_resize(self, width, height):
-        """ Called when the window is resized to a new `width` and `height`.
-
         """
+        Called when the window is resized to a new `width` and `height`.
+        """
+        # label
+        self.label.y = height - 10
         # reticle
         if self.reticle:
             self.reticle.delete()
@@ -780,11 +793,12 @@ class Window(pyglet.window.Window):
         self.reticle = pyglet.graphics.vertex_list(4,
             ('v2i', (x - n, y, x + n, y, x, y - n, x, y + n))
         )
+        # hud
         self.model.hud_resize(self.get_size())
 
     def set_2d(self):
-        """ Configure OpenGL to draw in 2d.
-
+        """
+        Configure OpenGL to draw in 2d.
         """
         width, height = self.get_size()
         #glDisable(GL_DEPTH_TEST)
@@ -796,8 +810,8 @@ class Window(pyglet.window.Window):
         glLoadIdentity()
 
     def set_3d(self):
-        """ Configure OpenGL to draw in 3d.
-
+        """
+        Configure OpenGL to draw in 3d.
         """
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
@@ -820,8 +834,8 @@ class Window(pyglet.window.Window):
         glTranslatef(-x-dx, -y-dy, -z-dz)
 
     def on_draw(self):
-        """ Called by pyglet to draw the canvas.
-
+        """
+        Called by pyglet to draw the canvas.
         """
         self.clear()
         self.set_3d()
@@ -840,11 +854,23 @@ class Window(pyglet.window.Window):
         glDisable(GL_COLOR_LOGIC_OP)
         glColor3d(1, 1, 1)
         self.model.hud_batch.draw()
+        
+        if self.debug_info_visible:
+            self.draw_debug_info()
+    
+    def draw_debug_info(self):
+        """
+        draw stuff like Position, Rotation, FPS, ...
+        """
+        x, y, z = self.position
+        self.label.text = '%02d (%.2f, %.2f, %.2f)' % (pyglet.clock.get_fps(), x, y, z)
+        self.label.draw()
+        
 
     def draw_focused_block(self):
-        """ Draw black edges around the block that is currently under the
+        """
+        Draw black edges around the block that is currently under the
         crosshairs.
-
         """
         vector = self.get_sight_vector()
         if CHUNKSIZE == None:
@@ -858,14 +884,14 @@ class Window(pyglet.window.Window):
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def draw_reticle(self):
-        """ Draw the crosshairs in the center of the screen.
-
+        """
+        Draw the crosshairs in the center of the screen.
         """
         self.reticle.draw(GL_LINES)
 
 def setup_fog():
-    """ Configure the OpenGL fog properties.
-
+    """
+    Configure the OpenGL fog properties.
     """
     # Enable fog. Fog "blends a fog color with each rasterized pixel fragment's
     # post-texturing color."
