@@ -681,15 +681,22 @@ class World(object):
     def _load(self,filename):
         if os.path.exists(filename):
             with zipfile.ZipFile(filename,"r",allowZip64=True) as zf:
-                if zf.read("info_chunksize") != str(self.chunksize):
+                metadata = ast.literal_eval(zf.read("metadata.py"))
+                if metadata["chunksize"] != self.chunksize:
                     raise RuntimeError("It is currently not possible to load Worlds that were saved with another chunksize.")
+                if metadata["version"] < self.FILEFORMATVERSION:
+                    raise RuntimeError("This world was saved in an older version of the game. Please contact the developer for a way to convert it.")
+                if metadata["version"] > self.FILEFORMATVERSION:
+                    raise RuntimeError("This world was saved in a newer version of the game. Please update your game in order to be able to play it.")
                 for name in zf.namelist():
-                    if name.startswith("c"):
-                        _,x,y,z = name.split("_")
+                    if name.startswith("c") and name.endswith(".py"):
+                        basename = name.rsplit(".",1)[0]
+                        _,x,y,z = basename.split("_")
+                        chunkmeta = ast.literal_eval(zf.read(name))
+                        compressed_data = zf.read(basename+".bin")
+                        initlevel = chunkmeta[0]
+                        block_codec = map(BlockData, chunkmeta[1])
                         position = Vector(map(int,(x,y,z)))
-                        initlevel,block_codec,compressed_data = ast.literal_eval(zf.read(name))
-                        initlevel = int(initlevel)
-                        block_codec = map(BlockData, block_codec)
 
                         c = ServerChunk(self.chunksize,self,position)
                         c.initlevel = initlevel
@@ -700,16 +707,22 @@ class World(object):
             if "-debug" in sys.argv:
                 print "File %s not found." %filename
 
+    FILEFORMATVERSION = 1
+
     def save(self,filename):
         """save the world into a file"""
         with zipfile.ZipFile(filename,"w",allowZip64=True) as zf:
-            zf.writestr("info_chunksize",str(self.chunksize))
+            metadata = {"chunksize": self.chunksize,
+                        "version"  : self.FILEFORMATVERSION,
+                        "timestamp": time.time(),
+                        }
+            zf.writestr("metadata.py",repr(metadata))
             for position,chunk in self.chunks.items():
                 x,y,z = map(str,chunk.position)
                 name = "_".join(("c",x,y,z))
-                initlevel = str(chunk.initlevel)
-                data = repr((initlevel,chunk.block_codec,chunk.compressed_data))
-                zf.writestr(name,data)
+                chunkmeta = (chunk.initlevel, chunk.block_codec)
+                zf.writestr(name+".py", repr(chunkmeta))
+                zf.writestr(name+".bin", chunk.compressed_data)
 
 class Game(object):
     """

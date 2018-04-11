@@ -4,26 +4,34 @@ Menü:
 	Weltgenerator(*)
 	whitelist (localhost / all / custom)
 	#Parole (erstmal nicht)
-	Port
+	#Port
 	Start/Stop          Start&Play/Play
 	Stats**
 		TPS, Spieler, Entities, ...
 
-	*  ausgegraut wenn Speicherort schon existiert
-	** leer wenn kein Spiel läuft
+	*  ausgegraut wenn Speicherort schon existiert?
+	** leer wenn kein Spiel läuft?
 
 Bugs:
-	BlockModels für Entities ermöglichen (oder ausschließen)
-	Speichern/Laden ignoriert block_codecs
+	already done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Lampen müssen alle Richtungen checken beim ausgehen nicht nur die wo update herkommt
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
+	Nachrichten werden gebuffert
 
 Verbesserungskram:
+	Shading (Ambient Occlusion?, mehr Licht von oben)
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
 	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,... -> muss auch clientseitig beachtet werden
+	scheduling Funktion
+	better raycasting
+	Blockstate, damit Blöcke unterschiedlich aussehen und das selbe tun können
+	Server nicht mit * importieren?
 
 Plan:
+	display_as attribute für alternative textur/modell
+	Speichern sollte beinhalten: Weltgenerator?, Datum, Version, Entities
+	Block Movement
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
 		-> Block-Entity-Updates -> called to entities in same chunk as changed block
 	Aufsammeln von Blöcken ermöglichen
