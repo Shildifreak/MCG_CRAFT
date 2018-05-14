@@ -40,9 +40,9 @@ class BlockData(dict):
                 return False
         return True
     def client_version(self):
-        state = self.get("base","")+str(self.get("rotation",""))
-        if state:
-            return self["id"]+":"+state
+        orientation = self.get("base","")+str(self.get("rotation",""))
+        if orientation:
+            return self["id"]+self.get("state","")+":"+orientation
         else:
             return self["id"]
     
@@ -86,6 +86,9 @@ class Block(object):
             return False
     def __ne__(self,other):
         return not (self == other)
+    
+    def __repr__(self):
+        return "Block(%s)" % repr(self.data)
 
 class ServerChunk(Chunk):
     """The (Server)Chunk class is only relevant when writing a world generator

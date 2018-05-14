@@ -17,6 +17,7 @@ class GUI(object):
             self.init(config,worldtypes)
 
     def init(self, config, worldtypes):
+        self.queue = {}
         self.stats = {}
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
         # WINDOW
@@ -140,9 +141,17 @@ class GUI(object):
         
         self.statsframe = Tkinter.LabelFrame(root, text="Stats")
         self.statsframe.grid(column = 0, columnspan = 4, row = self.row, sticky = Tkinter.W+Tkinter.E)
-        
+
         playbutton.focus()
-        root.mainloop()
+        try:
+            while 1:
+                time.sleep(0.01)
+                root.update()
+                while self.queue:
+                    name, value = self.queue.popitem()
+                    self._set_stats(name,value)
+        except:
+            pass
     
     def add_entry(self, content, callback):
         def apply_changes(event):
@@ -158,6 +167,9 @@ class GUI(object):
         Tkinter.Label(self.root, text=labeltext).grid(column = 0, row = self.row, sticky = Tkinter.W)
 
     def set_stats(self,name,value):
+        self.queue[name] = value
+
+    def _set_stats(self,name,value):
         if self.lock.acquire(False): # doing stuff when the window is already closed will block the application, so use lock to avoid destroying root while window get's used
             if not name in self.stats:
                 Tkinter.Label(self.statsframe, text=name+" ").grid(column = 0, row = len(self.stats), sticky = Tkinter.W)
@@ -179,4 +191,7 @@ if __name__ == "__main__":
                 "play"     : False,
                 "quit"     : False,
                 "save"     : False}
-    gui = GUI(config, ("one","two","three"), background = False)
+    gui = GUI(config, ("one","two","three"), background = True)
+    import time
+    time.sleep(1)
+    gui.set_stats("fps","16")

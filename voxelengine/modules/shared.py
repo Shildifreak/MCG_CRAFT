@@ -17,7 +17,6 @@ DIMENSION = 3 # don't change this, it won't work
 
 CENTER, INNER, OUTER, TOP, BOTTOM, LEFT, RIGHT = 0,1,2,4,8,16,32
 
-
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position.
     returns (blockpos, face)

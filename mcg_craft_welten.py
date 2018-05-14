@@ -19,8 +19,10 @@ CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a
 GRAVITY = 35
 AIRRESISTANCE = 5
 SLIDING = 0.001
-SCHAFLIMIT = 0
+SCHAFLIMIT = 2
 schafe = []
+EINHORNLIMIT = 5
+einhoerner = []
 
 def floatrange(a,b):
     return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
@@ -139,7 +141,6 @@ class Player(Player):
         self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMPOFF"},{"id":"TORCH"}]
         self.entity["left_hand"] = {"id":"CHEST"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
-        self.entity["health"] = 10
         self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
         self.entity["lives"] = 9
         
@@ -379,6 +380,33 @@ class Schaf(Entity):
         if dy or dp:
             schaf["rotation"] = y+dy, p+dp
 
+class Einhorn(Entity):
+    def __init__(self,world):
+        super(Einhorn,self).__init__()
+        
+        self["texture"] = "EINHORN"
+        self["SPEED"] = 5
+        self["JUMPSPEED"] = 10
+        self["hitbox"] = get_hitbox(0,0,0)
+        self["sprint"] = 20
+        self.set_world(world,(0,0,0))
+        while True:
+            x = random.randint(-40,40)
+            z = random.randint(-10,10)
+            y = random.randint(-40,40)
+            block = world.get_block((x,y-2,z),load_on_miss = False)
+            if block and block != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
+                break
+        self["position"] = (x,y,z)
+        self["velocity"] = Vector([0,0,0])
+        self["last_update"] = time.time()
+        self["forward"] = False
+        self["turn"] = 0
+        einhoerner.append(self)
+    def update(self):
+        pass
+    
+
 class Block(Block):
     block_class = property(lambda self: resources.blocks[self["id"]])
     def __getattr__(self, name):
@@ -428,7 +456,7 @@ class World(World):
         # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
         new_blocks = [] #(position,block)
         block_updates = ((position-face, face) for position in self.changed_blocks
-                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,0,-1),(0,0,-1),(0,0,1))) #M# ,(0,0,0)
+                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1))) #M# ,(0,0,0)
         for position, group in itertools.groupby(block_updates,lambda x:x[0]):
             faces = [x[1] for x in group]
             new_block = self[position].block_update(faces)
@@ -520,6 +548,10 @@ def gameloop():
                     schaf.update()
                 if len(schafe) < SCHAFLIMIT:
                     Schaf(w)
+                for einhorn in einhoerner:
+                    einhorn.update()
+                if len(einhoerner) < EINHORNLIMIT:
+                    Einhorn(w)
             save()
         print "Game stopped"
     rememberconfig = config.copy()
@@ -559,7 +591,10 @@ if __name__ == "__main__":
     except ImportError as e:
         print "GUI not working cause of:\n",e
     ui = UI(config, worldtypes)
-    if sys.flags.interactive:
+    if sys.flags.interactive or False:
         thread.start_new_thread(gameloop,())
+        if not sys.flags.interactive:
+            import code
+            code.interact(local=locals())
     else:
         gameloop()

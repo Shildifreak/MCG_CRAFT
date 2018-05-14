@@ -10,7 +10,7 @@ from collections import deque
 import collections
 import itertools
 import ast
-from __init__ import Vector, Chunk
+#from __init__ import Vector, Chunk
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))

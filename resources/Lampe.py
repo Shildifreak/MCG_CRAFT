@@ -3,11 +3,11 @@ from base import *
 @register_block("LAMPON")
 class lampean(Block):
     def block_update(self,faces):
-        for face in faces:
+        for face in FACES:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
-            if nachbarblock["powered"]:
-                return
+            if nachbarblock["p_level"] and nachbarblock["p_ambient"]:
+                return Block.block_update.__get__(self)(faces)
         return "LAMPOFF"
 @register_block("LAMPOFF")
 class lampeaus(Block):
@@ -15,5 +15,6 @@ class lampeaus(Block):
         for face in faces:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
-            if nachbarblock["powered"]:
+            if nachbarblock["p_level"] and nachbarblock["p_ambient"]:
                 return("LAMPON")
+        return Block.block_update.__get__(self)(faces)

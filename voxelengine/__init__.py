@@ -45,5 +45,6 @@ __version__ = '0.1.0'
 __all__ = []
 
 from server import *
+import client
 
 __all__.extend(filter(lambda s:not s.startswith("_"),globals().keys()))

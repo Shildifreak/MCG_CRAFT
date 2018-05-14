@@ -25,7 +25,7 @@ Handler = MyHTTPRequestHandler
 
 httpd = SimpleHTTPServer.BaseHTTPServer.HTTPServer(("", PORT), Handler)
 
-webbrowser.open("localhost:%i" %PORT)
+webbrowser.open("http://localhost:%i" %PORT)
 
 print "serving at port", PORT
 while True:

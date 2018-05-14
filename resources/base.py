@@ -1,8 +1,16 @@
 import collections
 import random
+from shared import Vector
 
 items  = collections.defaultdict(lambda:Item)
 blocks = collections.defaultdict(lambda:Block)
+
+FACES = (Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1]), #back
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0])) #right
 
 def register_item(name):
     def _register_item(item_subclass):
@@ -43,7 +51,10 @@ class Item(object):
 
 class Block(object):
     blast_resistance = 0
-    defaults = {"powered":0, "powering":(),}#"rotation":0,"base":"b"}
+    defaults = {"p_level":0,
+                "p_stronglevel":0,
+                "p_ambient":True,
+                "p_directions":(),}#"rotation":0,"base":"b"}
     # Init function, don't care to much about this
     def __init__(self):
         raise NotImplementedError("This Class is only used as 'quasi' superclass, don't instanciate it.")
@@ -52,6 +63,21 @@ class Block(object):
     def block_update(self,directions):
         """directions indicates where update(s) came from... usefull for observer etc."""
         """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
+        # redstone Zeug
+        level = 0
+        stronglevel = 0
+        print FACES
+        for face in FACES:
+            neighbour = self.world[self.position-face]
+            print self.position-face, face, neighbour["p_directions"]
+            if (face in neighbour["p_directions"]):
+                level = max(level, neighbour["p_level"])
+                print "hey"
+                if neighbour != "Redstone":
+                    stronglevel = max(stronglevel, neighbour["p_level"])
+        self["p_level"] = level
+        self["p_stronglevel"] = stronglevel
+        #M# return instead of inplace variation
 
     def random_ticked(self):
         """spread grass etc"""
