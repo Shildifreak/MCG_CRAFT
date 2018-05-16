@@ -1,28 +1,42 @@
 #! /usr/bin/env python
-import os, sys, thread, ast
-import math, random, itertools
+
+# workaround for some strange importing behaviour, that occurs when this file is called as the main one
+if __name__ == "__main__":
+    import mcgcraft
+    mcgcraft.main()
+    raise SystemExit(0) #causes traceback, in interactive mode, when this is the __main__ module
+
+# Begin of the real content
+import os, sys, thread, ast, imp, inspect
+import math, time, random, itertools
 import getpass
 
-sys.path.append("Welten")
-sys.path.append(os.path.join("Welten","structures"))
-sys.path.append("gui")
+sys.dont_write_bytecode = True
+PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+sys.path.append("lib")
+sys.path.append(os.path.join("resources","Welten","structures"))
 
-from voxelengine import *
-import resources
+import voxelengine
 import appdirs
 
-#TODO:
-# server menu: open/new(enter name) save(select file to save to)/exit save/dontsave
-# make sliding depend on block?
+import collections
+import random
+from shared import *
 
 CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)
 GRAVITY = 35
 AIRRESISTANCE = 5
 SLIDING = 0.001
-SCHAFLIMIT = 2
 schafe = []
-EINHORNLIMIT = 5
 einhoerner = []
+
+#M# Warum ist das nicht schon in shared?
+FACES = (Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1]), #back
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0])) #right
 
 def floatrange(a,b):
     return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
@@ -31,6 +45,178 @@ def get_hitbox(width,height,eye_level):
     return [(dx,dy,dz) for dx in floatrange(-width,width)
                        for dy in floatrange(-eye_level,height-eye_level)
                        for dz in floatrange(-width,width)]
+
+
+print "hey"
+
+class Block(voxelengine.Block):
+    blast_resistance = 0
+    defaults = {"p_level":0,
+                "p_stronglevel":0,
+                "p_ambient":True,
+                "p_directions":(),}#"rotation":0,"base":"b"}
+
+    def __init__(self,*args,**kwargs):
+        super(Block,self).__init__(*args,**kwargs)
+        self.morph()
+    
+    def morph(self):
+        self.__class__ = blockClasses[self["id"]]
+
+    #block_class = property(lambda self: resources.blocks[self["id"]])
+    #def __getattr__(self, name):
+    #    #bc = resources.blocks[self["id"]]
+    #    attr = getattr(self.block_class,name)
+    #    if callable(attr):
+    #        return attr.__get__(self)
+    #    return attr
+    def __getitem__(self, key):
+        try:
+            return super(Block, self).__getitem__(key)
+        except KeyError:
+            return self.defaults[key]
+    def __setitem__(self, key, value):
+        if value == self[key]:
+            return
+        if key == "id":
+            self.morph()
+        if value == self.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
+            super(Block,self).__delitem__(key)
+        else:
+            super(Block,self).__setitem__(key,value)
+        self.world.changed_blocks.append(self.position)
+
+    # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
+    def block_update(self,directions):
+        """directions indicates where update(s) came from... usefull for observer etc."""
+        """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
+        # redstone Zeug
+        level = 0
+        stronglevel = 0
+        for face in FACES:
+            neighbour = self.world[self.position-face]
+            if (face in neighbour["p_directions"]):
+                level = max(level, neighbour["p_level"])
+                if neighbour != "Redstone":
+                    stronglevel = max(stronglevel, neighbour["p_level"])
+        self["p_level"] = level
+        self["p_stronglevel"] = stronglevel
+        #M# return instead of inplace variation
+
+    def random_ticked(self):
+        """spread grass etc"""
+
+    def activated(self,character,face):
+        """blocks like levers should implement this action. Return value signalizes whether to execute use action of hold item"""
+        return True
+
+    def mined(self,character,face):
+        """drop item or something... also remember to set it to air. Return value see activated"""
+        block = self.world[self.position]
+        character["right_hand"] = {"id":block["id"]}
+        self.world[self.position] = "AIR"
+
+    def exploded(self,entf):
+        if entf < 1:
+            if random.random() > self.blast_resistance:
+                self.world[self.position] = "AIR"
+
+    def collides_with(self,entity):
+        #print type(self), self.__class__, self["id"], blockClasses[self["id"]]
+        return True
+
+# Default Item and Block (also usefull for inheritance)
+
+class Item(object):
+    # Init function, don't care to much about this
+    def __init__(self,item):
+        self.item = item
+        self.tags = item.setdefault("tags",{})
+
+    # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
+    def use_on_block(self,character,blockpos,face):
+        """whatever this item should do when click on a block... default is to place a block with same id"""
+        new_pos = blockpos + face
+        block_id = self.item["id"]
+        character.world[new_pos] = block_id
+        #M# remove block again if it collides with placer (check for all entities here later)
+        if new_pos in character.collide(character["position"]):
+            character.world[new_pos] = "AIR"        
+
+    def use_on_entity(self,character,entity):
+        """whatever this item should do when clicked on this entity... default is to do the same like when clicking air"""
+        self.use_on_air(character)
+
+    def use_on_air(self,character):
+        """whatever this item should do when clicked into air"""
+
+class Entity(voxelengine.Entity):
+    def onground(entity):
+        return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
+
+    def collide(entity,position):
+        """blocks entity would collide with if it was at position"""
+        blocks = set()
+        for relpos in entity["hitbox"]:
+            block_pos = (position+relpos).normalize()
+            if entity.world.get_block(block_pos).collides_with(entity): #s.onground
+                blocks.add(block_pos)
+        return blocks
+
+    def potential_collide_blocks(entity,position):
+        blocks = set()
+        for relpos in entity["hitbox"]:
+            block_pos = (position+relpos).normalize()
+            blocks.add(block_pos)
+        return blocks
+
+    def collide_difference(entity,new_position,previous_position):
+        """return blocks entity would newly collide with if it moved from previous_position to new_position"""
+        return collide(entity,new_position).difference(collide(entity,previous_position))
+
+    def bool_collide_difference(entity,new_position,previous_position):
+        for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
+            if entity.world.get_block(block).collides_with(entity):
+                return True
+        return False
+    
+    def horizontal_move(entity,jump): #M# name is misleading
+        if entity.onground():
+            s = 0.5*SLIDING**entity.dt
+            entity["velocity"] *= (1,0,1) #M# stop falling
+            if jump:
+                entity["velocity"] += (0,entity["JUMPSPEED"],0)
+        else:
+            s = 0.5*AIRRESISTANCE**entity.dt
+            entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
+        sv = Vector([s,1,s]) #no slowing down in y
+        entity["velocity"] *= sv
+        return sv
+
+    def update_dt(entity):
+        entity.dt = time.time()-entity["last_update"]
+        entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
+        entity["last_update"] = time.time()
+
+    def update_position(entity):
+        steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
+        pos = entity["position"]
+        for step in range(steps):
+            for i in range(DIMENSION):
+                mask          = Vector([int(i==j) for j in range(DIMENSION)])
+                inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
+                new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
+                if entity.bool_collide_difference(new,pos):
+                    entity["velocity"] *= inverted_mask
+                else:
+                    pos = new
+        if pos != entity["position"]:
+            entity["position"] = pos
+    
+    def block_update(self):
+        """called when block "near" entity is changed"""
+        pass
+
 
 class InventoryDisplay():
     def __init__(self,player):
@@ -124,7 +310,9 @@ class InventoryDisplay():
         self.player.entity[hand], inventory[index] = y, x    
 
 
-class Player(Player):
+
+
+class Player(voxelengine.Player):
     RENDERDISTANCE = 10
     def init(self): #called in init_function after world has created entity for player
         self.set_focus_distance(8)
@@ -189,7 +377,7 @@ class Player(Player):
                     do_item_action = primary_action(pe.world[pos])(pe, face)
                 if do_item_action:
                     item_data = pe[hand_name]
-                    item = resources.items[item_data["id"]](item_data)
+                    item = itemClasses[item_data["id"]](item_data)
                     if pos:
                         item.use_on_block(pe,pos,face)
                     else:
@@ -251,186 +439,9 @@ class Player(Player):
         for suffix in ("_bgbox","","_count"):
             self.del_hud(name+suffix)
 
-class Entity(Entity):
-    def onground(entity):
-        return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
-
-    def collide(entity,position):
-        """blocks entity would collide with if it was at position"""
-        blocks = set()
-        for relpos in entity["hitbox"]:
-            block_pos = (position+relpos).normalize()
-            if entity.world.get_block(block_pos).collides_with(entity): #s.onground
-                blocks.add(block_pos)
-        return blocks
-
-    def potential_collide_blocks(entity,position):
-        blocks = set()
-        for relpos in entity["hitbox"]:
-            block_pos = (position+relpos).normalize()
-            blocks.add(block_pos)
-        return blocks
-
-    def collide_difference(entity,new_position,previous_position):
-        """return blocks entity would newly collide with if it moved from previous_position to new_position"""
-        return collide(entity,new_position).difference(collide(entity,previous_position))
-
-    def bool_collide_difference(entity,new_position,previous_position):
-        for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
-            if entity.world.get_block(block).collides_with(entity):
-                return True
-        return False
-    
-    def horizontal_move(entity,jump): #M# name is misleading
-        if entity.onground():
-            s = 0.5*SLIDING**entity.dt
-            entity["velocity"] *= (1,0,1) #M# stop falling
-            if jump:
-                entity["velocity"] += (0,entity["JUMPSPEED"],0)
-        else:
-            s = 0.5*AIRRESISTANCE**entity.dt
-            entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
-        sv = Vector([s,1,s]) #no slowing down in y
-        entity["velocity"] *= sv
-        return sv
-
-    def update_dt(entity):
-        entity.dt = time.time()-entity["last_update"]
-        entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
-        entity["last_update"] = time.time()
-
-    def update_position(entity):
-        steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
-        pos = entity["position"]
-        for step in range(steps):
-            for i in range(DIMENSION):
-                mask          = Vector([int(i==j) for j in range(DIMENSION)])
-                inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
-                new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
-                if entity.bool_collide_difference(new,pos):
-                    entity["velocity"] *= inverted_mask
-                else:
-                    pos = new
-        if pos != entity["position"]:
-            entity["position"] = pos
-    
-    def block_update(self):
-        """called when block "near" entity is changed"""
-        pass
-
-class Schaf(Entity):
-    def __init__(self, world):
-        super(Schaf,self).__init__()
-
-        self["texture"] = "SCHAF"
-        self["SPEED"] = 5
-        self["JUMPSPEED"] = 10
-        self["hitbox"] = get_hitbox(0.6,1.5,1)
-        self["sprint"] = 20
-        self.set_world(world,(0,0,0))
-        while True:
-            x = random.randint(-40,40)
-            z = random.randint(-10,10)
-            y = random.randint(-40,40)
-            block = world.get_block((x,y-2,z),load_on_miss = False)
-            if block and block != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
-                break
-        self["position"] = (x,y,z)
-        self["velocity"] = Vector([0,0,0])
-        self["last_update"] = time.time()
-        self["forward"] = False
-        self["turn"] = 0
-        self["nod"] = False
-        schafe.append(self)
-
-    def update(schaf):
-        r = random.randint(0,200)
-        if r < 1:
-            schaf["turn"] = -5
-            schaf["nod"] = False
-        elif r < 2:
-            schaf["turn"] = 5
-            schaf["nod"] = False
-        elif r < 3:
-            schaf["forward"] = True
-            schaf["turn"] = 0
-            schaf["nod"] = False
-        elif r < 5:
-            schaf["forward"] = False
-            schaf["nod"] = False
-        elif r < 7:
-            schaf["forward"] = False
-            schaf["turn"] = 0
-            schaf["nod"] = True
-        
-        schaf.update_dt()
-        nv = Vector([0,0,0])
-        sx,sy,sz = schaf.get_sight_vector()
-        if schaf["forward"]:
-            nv += Vector((sx,0,sz))*schaf["SPEED"]
-            jump = schaf.world.get_block((schaf["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
-        else:
-            jump = not random.randint(0,2000)
-        sv = schaf.horizontal_move(jump)
-        schaf["velocity"] += ((1,1,1)-sv)*nv
-        schaf.update_position()
-        y, p = schaf["rotation"]
-        dy = schaf["turn"]
-        dp = -schaf["nod"]*50 - p
-        if dy or dp:
-            schaf["rotation"] = y+dy, p+dp
-
-class Einhorn(Entity):
-    def __init__(self,world):
-        super(Einhorn,self).__init__()
-        
-        self["texture"] = "EINHORN"
-        self["SPEED"] = 5
-        self["JUMPSPEED"] = 10
-        self["hitbox"] = get_hitbox(0,0,0)
-        self["sprint"] = 20
-        self.set_world(world,(0,0,0))
-        while True:
-            x = random.randint(-40,40)
-            z = random.randint(-10,10)
-            y = random.randint(-40,40)
-            block = world.get_block((x,y-2,z),load_on_miss = False)
-            if block and block != "AIR" and len(self.collide(Vector((x,y,z)))) == 0:
-                break
-        self["position"] = (x,y,z)
-        self["velocity"] = Vector([0,0,0])
-        self["last_update"] = time.time()
-        self["forward"] = False
-        self["turn"] = 0
-        einhoerner.append(self)
-    def update(self):
-        pass
-    
-
-class Block(Block):
-    block_class = property(lambda self: resources.blocks[self["id"]])
-    def __getattr__(self, name):
-        #bc = resources.blocks[self["id"]]
-        attr = getattr(self.block_class,name)
-        if callable(attr):
-            return attr.__get__(self)
-        return attr
-    def __getitem__(self, key):
-        try:
-            return super(Block, self).__getitem__(key)
-        except KeyError:
-            return self.block_class.defaults[key]
-    def __setitem__(self, key, value):
-        if value == self[key]:
-            return
-        if value == self.block_class.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
-            super(Block,self).__delitem__(key)
-        else:
-            super(Block,self).__setitem__(key,value)
-        self.world.changed_blocks.append(self.position)
 
 blockread_counter = 0
-class World(World):
+class World(voxelengine.World):
     BlockClass = Block
     EntityClass = Entity
     def __init__(self,*args,**kwargs):
@@ -456,7 +467,7 @@ class World(World):
         # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
         new_blocks = [] #(position,block)
         block_updates = ((position-face, face) for position in self.changed_blocks
-                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1))) #M# ,(0,0,0)
+                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1),(0,0,0)))
         for position, group in itertools.groupby(block_updates,lambda x:x[0]):
             faces = [x[1] for x in group]
             new_block = self[position].block_update(faces)
@@ -491,13 +502,12 @@ def gameloop():
             time.sleep(0.1)
             continue #jump back to start of loop
         print "Game starting ...",
-        worldmod = __import__(config["worldtype"])
+        worldmod = imp.load_source(config["worldtype"],os.path.join(PATH,"resources","Welten",config["worldtype"])+".py")
 
         w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=Block("AIR"),filename=config["file"])
         if len(w.chunks) == 0: # only generate if not done yet
             worldmod.init(w)
         w.changed_blocks = []
-        
 
         def save():
             print "Game saving ...",
@@ -515,14 +525,14 @@ def gameloop():
         renderlimit = True #True: fast loading, False: whole world at once
         settings = {"init_function": i_f,
                     "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
-                    "suggested_texturepack" : "mcgcraft-standart",
+                    "suggested_texturepack" : os.path.join(PATH,"resources","texturepack"),
                     "PlayerClass" : Player,
                     "wait" : False,
                     "name" : config["name"],
                     }
         t = time.time()
         FPS = 60
-        with Game(**settings) as g:
+        with voxelengine.Game(**settings) as g:
             print "done" # Game starting ... done
             while config["run"]:
                 if config["play"]:
@@ -544,14 +554,16 @@ def gameloop():
                 for player in g.get_players():
                     player.update()
                     player.do_random_ticks()
-                for schaf in schafe:
-                    schaf.update()
-                if len(schafe) < SCHAFLIMIT:
-                    Schaf(w)
-                for einhorn in einhoerner:
-                    einhorn.update()
-                if len(einhoerner) < EINHORNLIMIT:
-                    Einhorn(w)
+                #M#
+                
+                #for schaf in schafe:
+                #    schaf.update()
+                #if len(schafe) < SCHAFLIMIT:
+                #    Schaf(w)
+                #for einhorn in einhoerner:
+                #    einhorn.update()
+                #if len(einhoerner) < EINHORNLIMIT:
+                #    Einhorn(w)
             save()
         print "Game stopped"
     rememberconfig = config.copy()
@@ -563,20 +575,53 @@ def gameloop():
     print "Bye!"
     time.sleep(1)
     
-if __name__ == "__main__":
-    config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
-                "file"     : "",
-                "worldtype": "Colorland",
-                "whitelist": "127.0.0.1",
-                "parole"   : "",
-                "port"     : "",
-                "run"      : False,
-                "play"     : False,
-                "quit"     : False,
-                "save"     : False,
-             }
-    configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-    configfn = os.path.join(configdir,"serversettings.py")
+    
+
+
+blockClasses  = collections.defaultdict(lambda:Block)
+itemClasses   = collections.defaultdict(lambda:Item)
+entityClasses = collections.defaultdict(lambda:Entity)
+
+def register_item(name):
+    def _register_item(item_subclass):
+        itemClasses[name] = item_subclass
+        return item_subclass
+    return _register_item
+
+def register_block(name):
+    def _register_block(block_subclass):
+        blockClasses[name] = block_subclass
+        return block_subclass
+    return _register_block
+
+def register_entity(name):
+    def _register_entity(entity_subclass):
+        entityClasses[name] = entity_subclass
+        return entity_subclass
+    return _register_entity
+
+for directory in ("blocks","entities"):
+    path = os.path.join(PATH,"resources",directory)
+    for fn in os.listdir(path):
+        if fn.endswith(".py") and not fn.startswith("_"):
+            imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+
+config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
+            "file"     : "",
+            "worldtype": "Colorland",
+            "whitelist": "127.0.0.1",
+            "parole"   : "",
+            "port"     : "",
+            "run"      : False,
+            "play"     : True,
+            "quit"     : False,
+            "save"     : False,
+         }
+
+configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
+configfn = os.path.join(configdir,"serversettings.py")
+def main():
+    global ui
     if os.path.exists(configfn):
         with open(configfn,"r") as configfile:
             rememberedconfig = ast.literal_eval(configfile.read())
@@ -584,13 +629,14 @@ if __name__ == "__main__":
     elif not os.path.exists(configdir):
         os.makedirs(configdir)
         
-    worldtypes = os.listdir("Welten")
-    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py")]
+    worldtypes = os.listdir(os.path.join("resources","Welten"))
+    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py") and not x.startswith("_")]
     try:
-        from tkgui import GUI as UI
+        from gui.tkgui import GUI as UI
     except ImportError as e:
         print "GUI not working cause of:\n",e
     ui = UI(config, worldtypes)
+
     if sys.flags.interactive or False:
         thread.start_new_thread(gameloop,())
         if not sys.flags.interactive:

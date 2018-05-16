@@ -1,4 +1,4 @@
-from base import *
+from mcgcraft import Block, register_block, Item, register_item
 from observableCollections import ObservableDict
 
 @register_block("CHEST")

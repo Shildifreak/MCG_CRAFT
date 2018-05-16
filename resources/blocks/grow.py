@@ -1,4 +1,4 @@
-from base import *
+from mcgcraft import Block, register_block
 import tree
 
 @register_block("DIRT")

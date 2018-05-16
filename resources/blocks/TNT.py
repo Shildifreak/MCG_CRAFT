@@ -1,4 +1,4 @@
-from base import *
+from mcgcraft import Block, register_block
 import random
 
 @register_block("TNT")
@@ -8,7 +8,7 @@ class tntblock(Block):
         for face in faces:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
-            if nachbarblock["powered"]:
+            if nachbarblock["p_level"] > 0:
                 self.activated(None,None)
                 break
 

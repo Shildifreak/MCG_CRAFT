@@ -1,4 +1,4 @@
-from base import *
+from mcgcraft import Block, register_block, Item, register_item
 
 @register_block("Redstone")
 class Redstone(Block):
