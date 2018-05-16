@@ -14,9 +14,8 @@ Menü:
 
 Bugs:
 	already done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
-	Lampen müssen alle Richtungen checken beim ausgehen nicht nur die wo update herkommt
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
-	Nachrichten werden gebuffert
+	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
 	Shading (Ambient Occlusion?, mehr Licht von oben)
@@ -25,7 +24,6 @@ Verbesserungskram:
 	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,... -> muss auch clientseitig beachtet werden
 	scheduling Funktion
 	better raycasting
-	Blockstate, damit Blöcke unterschiedlich aussehen und das selbe tun können
 	Server nicht mit * importieren?
 
 Plan:
@@ -41,6 +39,7 @@ Plan:
 
 BLOCKS
 	DATA
+		blockstate?
 		mcgcraft:name {}
 		mcgcraft:chest {content:[{},{}]}
 		mcgcraft:redstone {powered:0b}
