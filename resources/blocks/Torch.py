@@ -13,6 +13,6 @@ class Torch(Block):
         if a == 0:
             self["powered"] = 15
             self["powering"] = ((0,1,0),)
-    def collides_with(self,entity):
+    def collides_with(self,hitbox,position):
         return False
     

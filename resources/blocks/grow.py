@@ -17,5 +17,5 @@ class Setzling(Block):
     def random_ticked(self):
         for d_pos, block in tree.tree_structure("eiche"):
             self.world[self.position+d_pos-(0,1,0)] = block
-    def collides_with(self,entity):
+    def collides_with(self,hitbox,position):
         return False

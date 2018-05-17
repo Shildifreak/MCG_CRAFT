@@ -41,7 +41,7 @@ class DoorTopOpen(Block):
         self.world[pos-(0,1,0)] = "DOORBOTTOM"
     def mined(self,character,face):
         pass
-    def collides_with(self,entity):
+    def collides_with(self,hitbox,position):
         return False
 
 @register_block("DOORBOTTOMOPEN")
@@ -54,5 +54,5 @@ class DoorBottomOpen(Block):
         self.world[pos+(0,1,0)] = "DOORTOP"
     def mined(self,character,face):
         pass
-    def collides_with(self,entity):
+    def collides_with(self,hitbox,position):
         return False

@@ -3,7 +3,7 @@ from mcgcraft import Block, register_block
 
 @register_block("AIR")
 class AirBlock(Block):
-    def collides_with(self,entity):
+    def collides_with(self,hitbox,position):
         return False
 
 
