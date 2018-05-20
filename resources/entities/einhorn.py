@@ -1,4 +1,4 @@
-from mcgcraft import Entity, register_entity, get_hitbox, Vector
+from resources import *
 import time, random
 
 @register_entity("Einhorn")

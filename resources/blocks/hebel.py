@@ -1,4 +1,4 @@
-from mcgcraft import Block, register_block, FACES
+from resources import *
 
 @register_block("HEBEL")
 class HebelBlock(Block):

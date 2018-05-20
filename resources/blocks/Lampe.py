@@ -1,20 +1,23 @@
-from mcgcraft import Block, register_block, FACES
+from resources import *
 
 @register_block("LAMPON")
-class lampean(Block):
+class lampean(SolidBlock):
     def block_update(self,faces):
+        print "got blockupdated"
+        SolidBlock.block_update(self,faces)
         for face in FACES:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
             if nachbarblock["p_level"] and nachbarblock["p_ambient"]:
-                return Block.block_update(self,faces)
-        return "LAMPOFF"
+                return
+        self["id"] = "LAMPOFF"
 @register_block("LAMPOFF")
-class lampeaus(Block):
+class lampeaus(SolidBlock):
     def block_update(self,faces):
-        for face in faces:
+        print "got blockupdated"
+        SolidBlock.block_update(self,faces)
+        for face in FACES:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
             if nachbarblock["p_level"] and nachbarblock["p_ambient"]:
-                return("LAMPON")
-        return Block.block_update(self,faces)
+                self["id"] = "LAMPON"

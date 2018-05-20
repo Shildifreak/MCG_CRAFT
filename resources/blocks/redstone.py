@@ -1,9 +1,25 @@
-from mcgcraft import Block, register_block, Item, register_item
+# -*- coding: utf-8 -*-
+from resources import *
 
 @register_block("Redstone")
 class Redstone(Block):
+    defaults = Block.defaults.copy()
+    defaults["p_directions"] = (Vector((1,0,0)),Vector((-1,0,0)),Vector((0,0,1)),Vector((0,0,-1)),Vector((0,-1,0)))
     def block_update(self,faces):
-        Block.block_update(self,faces)
+        connections = FACES[:]
+        # hier weitere verbindungen einfügen (für diagonalen)
+        maxpower = 1
+        for dpos in connections:
+            block = self.world[dpos+self.position]
+            if block["p_ambient"] or -dpos in block["p_directions"]:
+                level = block["p_stronglevel"]
+                if level == None:
+                    level = block["p_level"]
+                maxpower = max(maxpower, level)
+        self["p_level"] = maxpower - 1
+        self["state"] = self["p_level"]
+                
+#        Block.block_update(self,faces)
 
 @register_item("Redstone")
 class Redstone_Item(Item):

@@ -1,4 +1,4 @@
-from mcgcraft import Block, register_block
+from resources import *
 import random
 
 @register_block("TNT")

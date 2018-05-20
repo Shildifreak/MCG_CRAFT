@@ -1,4 +1,4 @@
-from mcgcraft import Block, register_block, Item, register_item
+from resources import *
 
 @register_item("HERZ")
 @register_item("GESICHT")

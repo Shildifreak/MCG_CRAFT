@@ -17,6 +17,8 @@ DIMENSION = 3 # don't change this, it won't work
 
 CENTER, INNER, OUTER, TOP, BOTTOM, LEFT, RIGHT = 0,1,2,4,8,16,32
 
+#FACES = ... definition at EOF because it needs Vector class
+
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position.
     returns (blockpos, face)
@@ -213,22 +215,10 @@ class Chunk(object):
         self.compressed_data #calling property makes sure _compressed_data is set
         self._decompressed_data = None
 
-"""#M# wozu:?
-class TrappedSet(object):
-    def __init__(self, add_func, remove_func, *args, **kwargs):
-        self.set = set(*args, **kwargs)
-        self.add_func = add_func
-        self.remove_func = remove_func
 
-    def add(self, value):
-        self.set.add(value)
-        self.add_func(value)
-
-    def remove(self, value):
-        self.set.remove(value)
-        self.remove_func(value)
-
-    def discard(self, value):
-        self.set.discard(value)
-        self.remove_func(value)
-"""
+FACES = (Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1]), #back
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0])) #right

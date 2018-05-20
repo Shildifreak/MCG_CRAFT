@@ -964,15 +964,15 @@ def main():
             servers[:] = [server for server in servers if server[0] == options.host]
         if options.port:
             servers[:] = [server for server in servers if server[1] == options.port]
-        if len(servers) == 1:
-            addr = servers[0][0]
-        elif len(servers) > 1:
-            print "SELECT SERVER"
-            addr = servers[select([i[1] for i in servers])[0]][0]
-        else:
+        if len(servers) == 0:
             print("No Server found.")
             time.sleep(1)
             exit()
+        elif len(servers) == 1:
+            addr = servers[0][0]
+        else:
+            print "SELECT SERVER"
+            addr = servers[select([i[1] for i in servers])[0]][0]
     try:
         with socket_connection.client(addr) as socket_client:
             show_on_window(socket_client)
