@@ -41,10 +41,11 @@ class BlockData(dict):
         return True
     def client_version(self):
         orientation = self.get("base","")+str(self.get("rotation",""))
+        blockmodel = self["id"]+self.get("state","")
         if orientation:
-            return self["id"]+self.get("state","")+":"+orientation
+            return blockmodel+":"+orientation
         else:
-            return self["id"]
+            return blockmodel
     
 class Block(object):
     delvalue = object()

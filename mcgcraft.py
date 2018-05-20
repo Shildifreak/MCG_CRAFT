@@ -127,7 +127,7 @@ class Player(voxelengine.Player):
         self.entity.HITBOX = resources.get_hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMPOFF"},{"id":"TORCH"},{"id":"Redstone"}]
+        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone"}]
         self.entity["left_hand"] = {"id":"CHEST"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute

@@ -1,4 +1,6 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import sys, os
 sys.path.append("lib")
 import voxelengine.client as client

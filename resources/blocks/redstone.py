@@ -17,8 +17,8 @@ class Redstone(Block):
                     level = block["p_level"]
                 maxpower = max(maxpower, level)
         self["p_level"] = maxpower - 1
-        self["state"] = self["p_level"]
-                
+        self["state"] = str(self["p_level"])
+
 #        Block.block_update(self,faces)
 
 @register_item("Redstone")
@@ -26,7 +26,7 @@ class Redstone_Item(Item):
     def use_on_block(self,character,blockpos,face):
         new_pos = blockpos + face
         block_id = self.item["id"]
-        character.world[new_pos] = {"id":block_id,"state":0}
+        character.world[new_pos] = {"id":block_id,"state":"0"}
         #M# remove block again if it collides with placer (check for all entities here later)
         if new_pos in character.collide(character["position"]):
             character.world[new_pos] = "AIR"

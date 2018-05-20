@@ -32,7 +32,7 @@ class Block(voxelengine.Block):
         try:
             return super(Block, self).__getitem__(key)
         except KeyError:
-            return self.defaults[key]
+            return self.defaults.get(key,None)
     def __setitem__(self, key, value):
         if value == self[key]:
             return

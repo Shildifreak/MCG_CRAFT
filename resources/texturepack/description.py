@@ -90,8 +90,9 @@
     ["BARRIER",                  True,        0, [(14,15)]],
     ["WAND",                     False,       0, [( 2,11)]],
     ["TORCH",                    True,        2, [(14,15), (14,15), ( 7, 5)]],
-    ["LAMPON",                   False,       0, [( 7,10)]],
+    ["LAMP",                     False,       0, [( 6,10)]],
     ["LAMPOFF",                  False,       0, [( 6,10)]],
+    ["LAMPON",                   False,       0, [( 7,10)]],
     ],
 
 "BLOCK_MODELS": [

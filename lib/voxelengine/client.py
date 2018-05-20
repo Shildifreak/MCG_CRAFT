@@ -967,7 +967,7 @@ def main():
         if len(servers) == 0:
             print("No Server found.")
             time.sleep(1)
-            exit()
+            return
         elif len(servers) == 1:
             addr = servers[0][0]
         else:
