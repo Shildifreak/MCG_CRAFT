@@ -330,7 +330,7 @@ def gameloop():
         renderlimit = True #True: fast loading, False: whole world at once
         settings = {"init_function": i_f,
                     "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
-                    "suggested_texturepack" : os.path.join(PATH,"resources","texturepack"),
+                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepack"),
                     "PlayerClass" : Player,
                     "wait" : False,
                     "name" : config["name"],
