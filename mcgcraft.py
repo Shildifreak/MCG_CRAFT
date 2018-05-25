@@ -279,7 +279,7 @@ class World(voxelengine.World):
         resources.Block.defer = False
         while resources.Block.deferred:
             block, key, value = resources.Block.deferred.pop()
-            print "%s[%s] = %s" %(block, key, value)
+#            print "%s[%s] = %s" %(block, key, value)
             block[key] = value
 
 class UI(object):

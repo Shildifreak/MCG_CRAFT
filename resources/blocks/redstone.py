@@ -7,7 +7,7 @@ class Redstone(Block):
     defaults["p_directions"] = (Vector((1,0,0)),Vector((-1,0,0)),Vector((0,0,1)),Vector((0,0,-1)),Vector((0,-1,0)))
     def block_update(self,faces):
         connections = FACES[:]
-        # hier weitere verbindungen einfügen (für diagonalen)
+        # hier weitere verbindungen einfÃ¼gen (fÃ¼r diagonalen)
         maxpower = 1
         for dpos in connections:
             block = self.world[dpos+self.position]
@@ -18,6 +18,8 @@ class Redstone(Block):
                 maxpower = max(maxpower, level)
         self["p_level"] = maxpower - 1
         self["state"] = str(self["p_level"])
+    def collides_with(self,hitbox,position):
+        return False
 
 #        Block.block_update(self,faces)
 
