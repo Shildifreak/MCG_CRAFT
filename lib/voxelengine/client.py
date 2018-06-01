@@ -8,7 +8,8 @@ import sys, os, inspect
 import warnings
 from collections import deque
 import collections
-import itertools
+import itertools, functools
+import operator
 import ast
 #from __init__ import Vector, Chunk
 
@@ -25,9 +26,44 @@ from pyglet.window import key, mouse
 
 import socket_connection_2 as socket_connection
 from shared import *
-
+from shader import Shader
 
 TICKS_PER_SEC = 60
+
+FACES = [Vector([ 0, 1, 0]), #top
+         Vector([ 0,-1, 0]), #bottom
+         Vector([ 0, 0, 1]), #front
+         Vector([ 0, 0,-1]), #back
+         Vector([-1, 0, 0]), #left
+         Vector([ 1, 0, 0])] #right
+FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
+
+vertex_shader_code = """
+
+varying out vec3 color;
+
+void main()
+{
+    //normal = gl_NormalMatrix * gl_Normal;
+    color = gl_Color;
+    gl_Position = ftransform();
+    gl_TexCoord[0] = gl_MultiTexCoord0;
+}
+"""
+
+fragment_shader_code = """
+
+varying in vec3 color;
+uniform sampler2D color_texture;
+
+void main (void)
+{
+    vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
+    //float test = dot(normal, vec3(0.0f,1.0f,0.0f));
+    gl_FragColor = tex_color * (0.5 + 0.5 * vec4(color, 0));
+}
+"""
+
 
 class TextGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -49,14 +85,6 @@ class ColorkeyGroup(pyglet.graphics.OrderedGroup):
 textgroup = TextGroup(2)
 colorkey_group = ColorkeyGroup(1)
 normal_group = pyglet.graphics.OrderedGroup(0)
-
-FACES = [Vector([ 0, 1, 0]), #top
-         Vector([ 0,-1, 0]), #bottom
-         Vector([ 0, 0, 1]), #front
-         Vector([ 0, 0,-1]), #back
-         Vector([-1, 0, 0]), #left
-         Vector([ 1, 0, 0])] #right
-FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -283,6 +311,43 @@ class Model(object):
 
         self.queue = deque()
 
+        self.occlusion_cache = collections.OrderedDict()
+
+    #@functools.lru_cache(100) #M# do this in python3
+    def ambient_occlusion(self, vertex):
+        # see if already cached
+        light = self.occlusion_cache.get(vertex,None)
+        if light != None:
+            return light
+        # calculate
+        light = 0
+        x,y,z = vertex
+        for x2 in (int(math.floor(x)),int(math.ceil(x))):
+            for y2 in (int(math.floor(y)),int(math.ceil(y))):
+                for z2 in (int(math.floor(z)),int(math.ceil(z))):
+                    v = Vector((x2,y2,z2))
+                    w = abs(reduce(operator.mul,v-vertex))
+                    light += is_transparent(self.get_block(v)) * w
+        # add to cache
+        if len(self.occlusion_cache) > 100:
+            self.occlusion_cache.popitem(last=False)
+        self.occlusion_cache[vertex] = light
+        return light
+
+    def sunlight(self, vertex, face):
+        return face[1] #assuming sun is directly above
+        
+    def color_corrections(self, vertex_data, face):
+        """assumes the vertex data is [x,y,z, x,y,z, ...]
+        #M# compute face automatically some day
+        """
+        i = iter(vertex_data)
+        color_corrections = []
+        for vertex in zip(i,i,i):
+            cc = self.ambient_occlusion(vertex) + self.sunlight(vertex, face)
+            color_corrections.extend((cc,cc,cc))
+        return color_corrections
+
     def add_block(self, position, block_name):
         """for immediate execution use private method"""
         self.queue.append((self._add_block,(position,block_name)))
@@ -329,10 +394,8 @@ class Model(object):
     
     def show_face(self,position,face):
         if (position,face) in self.shown:
-            #M# entscheiden ob entweder sicher:
-            #self.hide_face(position,face)
-            #M# oder schnell:
-            return
+            self.hide_face(position,face)
+            #M# man könnte auch das vorhandene updaten
         x, y, z = position
         block_name = self.get_block(position)
         if block_name == "AIR":
@@ -344,9 +407,11 @@ class Model(object):
         group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
-        self.shown[(position,face)] = self.batch.add(len(vertex_data)/3, GL_QUADS, group,
+        length = len(vertex_data)/3
+        self.shown[(position,face)] = self.batch.add(length, GL_QUADS, group,
             ('v3f/static', vertex_data),
-            ('t2f/static', texture_data))
+            ('t2f/static', texture_data),
+            ('c3f/static', self.color_corrections(vertex_data,FACES_PLUS[face])))
 
     def hide(self,position):
         for face in xrange(len(FACES_PLUS)):
@@ -511,6 +576,7 @@ class Model(object):
 
     def _set_block(self,position,block_name):
         """this does not update the screen! consider using set_block (without underscore)"""
+        self.occlusion_cache.clear()
         return self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
 
 class Window(pyglet.window.Window):
@@ -840,7 +906,9 @@ class Window(pyglet.window.Window):
         self.clear()
         self.set_3d()
         glColor3d(1, 1, 1)
+        block_shader.bind()
         self.model.batch.draw()
+        block_shader.unbind()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
@@ -907,6 +975,10 @@ def setup_fog():
     glFogf(GL_FOG_START, 20.0)
     glFogf(GL_FOG_END, 60.0)
 
+def setup_shader():
+    global block_shader
+    glEnable(GL_NORMALIZE)
+    block_shader = Shader([vertex_shader_code], [fragment_shader_code])
 
 def setup():
     """ Basic OpenGL configuration.
@@ -927,6 +999,7 @@ def setup():
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 
     #setup_fog()
+    setup_shader()
 
 def show_on_window(client):
     window = None
