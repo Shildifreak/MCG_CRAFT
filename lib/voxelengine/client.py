@@ -39,7 +39,6 @@ FACES = [Vector([ 0, 1, 0]), #top
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
 vertex_shader_code = """
-
 varying out vec3 color;
 
 void main()
@@ -51,8 +50,7 @@ void main()
 }
 """
 
-fragment_shader_code = """
-
+fancy_fragment_shader_code = """
 varying in vec3 color;
 uniform sampler2D color_texture;
 
@@ -61,6 +59,16 @@ void main (void)
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
     //float test = dot(normal, vec3(0.0f,1.0f,0.0f));
     gl_FragColor = tex_color * (0.5 + 0.5 * vec4(color, 0));
+}
+"""
+
+plain_fragment_shader_code = """
+varying in vec3 color;
+uniform sampler2D color_texture;
+
+void main (void)
+{
+    gl_FragColor = texture2D(color_texture, gl_TexCoord[0].st);
 }
 """
 
@@ -280,16 +288,29 @@ def iterchunk():
 def iterframe():
     for de in (-1,1<<CHUNKSIZE):
         for d1 in xrange(1<<CHUNKSIZE):
-            for d2 in xrange(1<<CHUNKSIZE):
+            for d2 in xrange(1<<CHUNKSIZE): # faces
                 yield (de,d1,d2)
                 yield (d1,de,d2)
                 yield (d1,d2,de)
+        for df in (-1,1<<CHUNKSIZE):
+            for d1 in xrange(1<<CHUNKSIZE): # edges
+                yield (d1,de,df)
+                yield (de,d1,df)
+                yield (de,df,d1)
+            for dg in (-1,1<<CHUNKSIZE):    # corners
+                yield (de,df,dg)
 
 class Chunkdict(dict):
     def __missing__(self, chunkposition):
         chunk = SimpleChunk()
         self[chunkposition] = chunk
         return chunk
+
+class SetQueue(collections.OrderedDict):
+    def add(self, value):
+        self[value] = None
+    def popleft(self):
+        return self.popitem(last=False)[0]
 
 class Model(object):
 
@@ -310,46 +331,13 @@ class Model(object):
         self.hud_elements = {} #{hud_element_id: (vertex_list,element_data,corners)}
 
         self.queue = deque()
+        self.blockface_update_buffer = SetQueue()
 
         self.occlusion_cache = collections.OrderedDict()
 
-    #@functools.lru_cache(100) #M# do this in python3
-    def ambient_occlusion(self, vertex):
-        # see if already cached
-        light = self.occlusion_cache.get(vertex,None)
-        if light != None:
-            return light
-        # calculate
-        light = 0
-        x,y,z = vertex
-        for x2 in (int(math.floor(x)),int(math.ceil(x))):
-            for y2 in (int(math.floor(y)),int(math.ceil(y))):
-                for z2 in (int(math.floor(z)),int(math.ceil(z))):
-                    v = Vector((x2,y2,z2))
-                    w = abs(reduce(operator.mul,v-vertex))
-                    light += is_transparent(self.get_block(v)) * w
-        # add to cache
-        if len(self.occlusion_cache) > 100:
-            self.occlusion_cache.popitem(last=False)
-        self.occlusion_cache[vertex] = light
-        return light
-
-    def sunlight(self, vertex, face):
-        return face[1] #assuming sun is directly above
-        
-    def color_corrections(self, vertex_data, face):
-        """assumes the vertex data is [x,y,z, x,y,z, ...]
-        #M# compute face automatically some day
-        """
-        i = iter(vertex_data)
-        color_corrections = []
-        for vertex in zip(i,i,i):
-            cc = self.ambient_occlusion(vertex) + self.sunlight(vertex, face)
-            color_corrections.extend((cc,cc,cc))
-        return color_corrections
-
     def add_block(self, position, block_name):
         """for immediate execution use private method"""
+        self._set_block(position,block_name)
         self.queue.append((self._add_block,(position,block_name)))
 
     def remove_block(self, position):
@@ -370,27 +358,83 @@ class Model(object):
 
     def process_queue(self):
         start = time.time()
-        while self.queue and time.time() - start < 1.0 / TICKS_PER_SEC:
-            func,args = self.queue.popleft()
-            func(*args)
+        while time.time() - start < 1.0 / TICKS_PER_SEC:
+            if self.blockface_update_buffer:
+                position, face = self.blockface_update_buffer.popleft()
+                self._update_face(position,face)
+            elif self.queue:
+                func,args = self.queue.popleft()
+                func(*args)
+            else:
+                break
+
+    ########## more private stuff ############
+
+    def ambient_occlusion(self, vertex):
+        # see if already cached
+        light = self.occlusion_cache.get(vertex,None)
+        if light != None:
+            return light
+        # calculate
+        light = 0
+        x,y,z = vertex
+        for x2 in (int(math.floor(x)),int(math.ceil(x))):
+            for y2 in (int(math.floor(y)),int(math.ceil(y))):
+                for z2 in (int(math.floor(z)),int(math.ceil(z))):
+                    v = Vector((x2,y2,z2))
+                    w = abs(reduce(operator.mul,v-vertex))
+                    light += is_transparent(self.get_block(v)) * w
+        # add to cache
+        if False:#len(self.occlusion_cache) > 100:
+            self.occlusion_cache.popitem(last=False)
+        self.occlusion_cache[vertex] = light
+        return light
+
+    def sunlight(self, vertex, face):
+        return face[1] #assuming sun is directly above
+        
+    def color_corrections(self, vertex_data, face):
+        """assumes the vertex data is [x,y,z, x,y,z, ...]
+        #M# compute face automatically some day
+        """
+        i = iter(vertex_data)
+        color_corrections = []
+        for vertex in zip(i,i,i):
+            cc = self.ambient_occlusion(vertex) + self.sunlight(vertex, face)
+            color_corrections.extend((cc,cc,cc))
+        return color_corrections
 
     def update_visibility(self, position):
         if self.get_block(position):
-            for f in xrange(len(FACES)):
+            for f in xrange(len(FACES_PLUS)):
                 self.update_face(position,f)
-            self.show_face(position,6) # show "inner face" always
 
     def update_face(self,position,face):
-        fv = FACES[face]
-        b = self.get_block(position+fv)
-        if is_transparent(b):
-            self.show_face(position,face)
+        self.blockface_update_buffer.add((position,face))
+    
+    def _update_face(self,position,face):
+        if face >= len(FACES):
+            self.show_face(position,face) # always show "inner faces"
         else:
-            self.hide_face(position,face)
+            fv = FACES[face]
+            b = self.get_block(position+fv)
+            if is_transparent(b):
+                self.show_face(position,face)
+            else:
+                self.hide_face(position,face)
             
     def update_visibility_around(self,position):
-        for f,fv in enumerate(FACES):
-            self.update_face(position+fv,(f+1-(2*(f%2))))
+        #M# make better!
+        for x in (-1,0,1):
+            for y in (-1,0,1):
+                for z in (-1,0,1):
+                    v = Vector((x,y,z)) + position
+                    if v != (0,0,0):
+                        self.update_visibility(v)
+
+        #original:
+        #for f,fv in enumerate(FACES):
+        #    self.update_face(position+fv,(f+1-(2*(f%2))))
     
     def show_face(self,position,face):
         if (position,face) in self.shown:
@@ -531,9 +575,6 @@ class Model(object):
             self.set_hud(element_data,window_size)
 
     def _add_block(self, position, block_name):
-        if self.get_block(position):
-            self.hide(position)
-        self._set_block(position,block_name)
         self.update_visibility(position)
         self.update_visibility_around(position)
 
@@ -563,6 +604,7 @@ class Model(object):
         c = Chunk(CHUNKSIZE,codec)
         self.chunks[position] = c
         c.compressed_data = compressed_blocks
+        self.occlusion_cache.clear()
 
         for i,relpos in enumerate(iterchunk()):
             if c[i] != "AIR": #wird zwar in update_visibility auch noch mal geprüft, ist aber so schneller
@@ -571,11 +613,12 @@ class Model(object):
             #M# hier gilt das selbe wie in _del_chunk
             self.queue.appendleft((self.update_visibility,((position<<CHUNKSIZE)+relpos,)))
 
+    #M# test whether caching helps
     def get_block(self,position):
         return self.chunks[position>>CHUNKSIZE].get_block(position)
 
     def _set_block(self,position,block_name):
-        """this does not update the screen! consider using set_block (without underscore)"""
+        """this does not update the screen! consider using add_block"""
         self.occlusion_cache.clear()
         return self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
 
@@ -593,6 +636,8 @@ class Window(pyglet.window.Window):
         self.exclusive = False
         self.hud_open = False
         self.debug_info_visible = False
+
+        self.block_shaders = [fancy_block_shader, plain_block_shader]
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -718,9 +763,9 @@ class Window(pyglet.window.Window):
                 self.hud_open = True
             else:
                 print "unknown command", c
-        #if len(self.model.queue) <= 10:
-        self.client.send("tick")
         self.model.process_queue()
+        if len(self.model.queue) <= 10:
+            self.client.send("tick")
         self.updating = False
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
@@ -840,6 +885,8 @@ class Window(pyglet.window.Window):
                     self.set_exclusive_mouse(True)
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
+            if symbol == key.F4:
+                self.block_shaders.append(self.block_shaders.pop(0))
             self.send_key_change(symbol, modifiers, True)
                 
     def on_key_release(self, symbol, modifiers):
@@ -906,9 +953,9 @@ class Window(pyglet.window.Window):
         self.clear()
         self.set_3d()
         glColor3d(1, 1, 1)
-        block_shader.bind()
+        self.block_shaders[0].bind()
         self.model.batch.draw()
-        block_shader.unbind()
+        self.block_shaders[0].unbind()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
@@ -931,7 +978,11 @@ class Window(pyglet.window.Window):
         draw stuff like Position, Rotation, FPS, ...
         """
         x, y, z = self.position
-        self.label.text = '%02d (%.2f, %.2f, %.2f)' % (pyglet.clock.get_fps(), x, y, z)
+        fps = pyglet.clock.get_fps()
+        queue = len(self.model.queue)
+        face_buffer = len(self.model.blockface_update_buffer)
+        
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d' % (fps, x, y, z, queue, face_buffer)
         self.label.draw()
         
 
@@ -975,10 +1026,11 @@ def setup_fog():
     glFogf(GL_FOG_START, 20.0)
     glFogf(GL_FOG_END, 60.0)
 
-def setup_shader():
-    global block_shader
+def setup_shaders():
+    global fancy_block_shader, plain_block_shader
     glEnable(GL_NORMALIZE)
-    block_shader = Shader([vertex_shader_code], [fragment_shader_code])
+    fancy_block_shader = Shader([vertex_shader_code], [fancy_fragment_shader_code])
+    plain_block_shader = Shader([vertex_shader_code], [plain_fragment_shader_code])
 
 def setup():
     """ Basic OpenGL configuration.
@@ -999,7 +1051,6 @@ def setup():
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 
     #setup_fog()
-    setup_shader()
 
 def show_on_window(client):
     window = None
@@ -1011,6 +1062,7 @@ def show_on_window(client):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
                 break
+        setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.

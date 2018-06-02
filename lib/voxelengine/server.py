@@ -265,26 +265,45 @@ class EntityGroup(object):
         if self.content:
             return self.content.popitem(last=False)[1]
         #return None
+
 class BlockGroup(object):
     def __init__(self):
-        self.content = []
+        self.serialized = []
+        self.unserialized = collections.OrderedDict()
+        self.chunksize = None
     def add(self,message):
-        index = 0
-        for other_message in self.content:
-            if self.conflict(message,other_message):
-                break
-            index += 1
-        self.content.insert(index,message)
+        if message[0] == "chunksize":
+            self.chunksize = message[1]
+        # only optimize when chunksize is known
+        if self.chunksize:
+            # area
+            if message[0] in ("setarea","delarea"):
+                chunkposition = message[1]
+                self.unserialized = collections.OrderedDict((k,v) for k,v in self.unserialized.iteritems() if not self.in_chunk(message,chunkposition))
+                self.unserialized[("chunk",chunkposition)] = message
+                return
+            # block
+            if message[0] in ("set","del"):
+                blockposition = message[1]
+                self.unserialized[("block",blockposition)] = message
+                return
+        # default: serialize everything
+        self.serialized.extend(self.unserialized.values())
+        self.unserialized.clear()
+        self.serialized.append(message)
     def pop(self):
-        if self.content:
-            return self.content.pop()
-        #return None
-    def conflict(self,msg1,msg2):
-        for msg in (msg1, msg2):
-            if msg[0] in ("clear","chunksize"):
-                return True
-        return True
-        
+        if self.serialized:
+            return self.serialized.pop(0)
+        if self.unserialized:
+            return self.unserialized.popitem(last=False)[1]
+        # return None
+    @staticmethod
+    def in_chunk(message, chunkposition):
+        if message[0] in ("set","del"):
+            blockposition = message[1]
+            return (blockposition >> self.chunksize) == chunkposition
+        else:
+            return False
             
 class MessageBuffer(object):
     def __init__(self):
