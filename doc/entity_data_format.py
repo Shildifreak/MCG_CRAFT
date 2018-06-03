@@ -46,15 +46,3 @@ world = {
     "active chunks" : [(0,0,0)],
     }
 
-
-class World(object):
-    def __init__(self,path):
-        pass
-    def get_block(self,position):
-        pass
-    def set_block(self,position):
-        pass
-    def get_entity_data(name):
-        pass
-    def set_entity_data(name,value):
-        pass

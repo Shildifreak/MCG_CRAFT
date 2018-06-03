@@ -36,16 +36,27 @@ def hit_test(block_at_func, position, direction, max_distance=8):
         How many blocks away to search for a hit.
 
     """
-    m = 8
-    position = Vector(position)
-    direction = Vector(direction)
-    previous = position.normalize()
-    for _ in xrange(int(max_distance * m)):
-        key = position.normalize()
-        if key != previous and block_at_func(key):
-            return key, previous-key
-        previous = key
-        position += direction*(1.0/m)
+    block_pos = position.normalize()
+    offset = Vector(0.5 if d > 0 else -0.5 for d in direction)
+    distance = 0
+    dx,dy,dz = direction
+    dpx = Vector(((1 if dx > 0 else -1), 0, 0))
+    dpy = Vector((0, (1 if dy > 0 else -1), 0))
+    dpz = Vector((0, 0, (1 if dz > 0 else -1)))    
+    l = direction.length()
+    while True:
+        tx,ty,tz = (block_pos+offset-position)
+        kx = tx/dx if dx != 0 else float("inf")
+        ky = ty/dy if dy != 0 else float("inf")
+        kz = tz/dz if dz != 0 else float("inf")
+        dp, k = min((dpx,kx),(dpy,ky),(dpz,kz),key=lambda t:t[1])
+        distance += l*k
+        if distance > max_distance:
+            break
+        block_pos += dp
+        position += k*direction
+        if block_at_func(block_pos):
+            return block_pos, -dp
     return None, None
 
 def select(options):
@@ -93,6 +104,10 @@ class Vector(tuple):
     def __mod__(self,other):
         return Vector([i%other for i in self])
 
+    def __neg__(self):
+        return Vector(-e for e in self)
+
+
     def __radd__(self,other):
         return self+other
 
@@ -102,12 +117,14 @@ class Vector(tuple):
     def __rmul__(self,other):
         return self*other
 
+
     def normalize(self):
         return Vector(map(int,map(round,self)))
 
     def length(self):
         return sum(map(operator.mul,self,self))**0.5
     
+
     def __str__(self):
         return " ".join(map(str,self))
 

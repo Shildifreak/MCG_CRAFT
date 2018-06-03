@@ -18,13 +18,9 @@ Bugs:
 	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
-	Shading (Ambient Occlusion?, mehr Licht von oben)
 	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
 	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
-	vernünftiges Prioritätssystem für Nachrichten -> Block setzen in schon geladenen Chunks bevorzugen, Eigene Entity vor anderen, Spieler vor Schafen,... -> muss auch clientseitig beachtet werden
 	scheduling Funktion
-	better raycasting
-	Server nicht mit * importieren?
 
 Plan:
 	display_as attribute für alternative textur/modell
