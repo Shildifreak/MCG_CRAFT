@@ -19,7 +19,6 @@ from observableCollections import *
 
 DOASYNCLOAD = True
 MAX_LOAD_THREADS = 1
-MSGS_PER_TICK = 10
 
 # merke: wenn man from voxelengine import * macht werden neue globale Variablen nach dem import nicht übernommen :(
 # ergo: globale Variablen nicht mehr ändern zur Laufzeit (verändern der Objekte ist ok)
@@ -400,7 +399,7 @@ class Player(object):
 
     def is_active(self):
         """indicates whether client responds (fast enough)"""
-        return self.sentcount <= MSGS_PER_TICK
+        return self.sentcount >= 0
 
     def get_focused_pos(self,max_distance=None):
         """Line of sight search from current position. If a block is
@@ -529,8 +528,8 @@ class Player(object):
 
     def _handle_input(self,msg):
         """do something so is_pressed and was_pressed work"""
-        if msg == "tick":
-            self.sentcount = 0
+        if msg.startswith("tick"):
+            self.sentcount = int(msg.split(" ")[1])
         elif msg.startswith("rot"):
             x,y = map(float,msg.split(" ")[1:])
             self.entity["rotation"] = (x,y)
@@ -850,11 +849,11 @@ class Game(object):
         """communicate with clients
         call regularly to make sure internal updates are performed"""
         for addr,player in self.players.items():
-            player.sentcount -= 2 #make sure at least two massages are sent anyway: goto and setentity of own player
+            player.sentcount += 2 #make sure at least two massages are sent anyway: goto and setentity of own player
             for msg in player.outbox:
-                player.sentcount += 1
+                player.sentcount -= 1
                 self.socket_server.send(msg,addr)
-                if player.sentcount >= MSGS_PER_TICK:
+                if player.sentcount <= 0:
                     break
         for player in self.get_players():
             player._update() #call to player._update() has to be before call to player._handle_input()

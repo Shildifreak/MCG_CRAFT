@@ -29,6 +29,7 @@ from shared import *
 from shader import Shader
 
 TICKS_PER_SEC = 60
+MSGS_PER_TICK = 10
 
 FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 0,-1, 0]), #bottom
@@ -337,7 +338,6 @@ class Model(object):
 
     def add_block(self, position, block_name):
         """for immediate execution use private method"""
-        self._set_block(position,block_name)
         self.queue.append((self._add_block,(position,block_name)))
 
     def remove_block(self, position):
@@ -405,9 +405,8 @@ class Model(object):
         return color_corrections
 
     def update_visibility(self, position):
-        if self.get_block(position):
-            for f in xrange(len(FACES_PLUS)):
-                self.update_face(position,f)
+        for f in xrange(len(FACES_PLUS)):
+            self.update_face(position,f)
 
     def update_face(self,position,face):
         self.blockface_update_buffer.add((position,face))
@@ -562,7 +561,7 @@ class Model(object):
                                       anchor_x='center',anchor_y='center',
                                       batch=self.hud_batch,group=textgroup,
                                       font_name="Arial")
-            vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work for now
+            vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work
         self.hud_elements[element_id] = (vertex_list,element_data,corners)
         
     def del_hud(self,element_id):
@@ -575,13 +574,15 @@ class Model(object):
             self.set_hud(element_data,window_size)
 
     def _add_block(self, position, block_name):
+        prev_block_name = self.get_block(position)
+        self.occlusion_cache.clear()
+        self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
         self.update_visibility(position)
-        self.update_visibility_around(position)
+        if is_transparent(prev_block_name) != is_transparent(block_name):
+            self.update_visibility_around(position)
 
     def _remove_block(self, position):
-        self._set_block(position,"AIR")
-        self.hide(position)
-        self.update_visibility_around(position)
+        self._add_block(position, "AIR")
 
     def _clear(self):
         for position,face in self.shown.keys():
@@ -616,11 +617,6 @@ class Model(object):
     #M# test whether caching helps
     def get_block(self,position):
         return self.chunks[position>>CHUNKSIZE].get_block(position)
-
-    def _set_block(self,position,block_name):
-        """this does not update the screen! consider using add_block"""
-        self.occlusion_cache.clear()
-        return self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
 
 class Window(pyglet.window.Window):
 
@@ -764,8 +760,8 @@ class Window(pyglet.window.Window):
             else:
                 print "unknown command", c
         self.model.process_queue()
-        if len(self.model.queue) <= 10:
-            self.client.send("tick")
+        m = max(0, MSGS_PER_TICK - len(self.model.queue))
+        self.client.send("tick %s" % m)
         self.updating = False
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
