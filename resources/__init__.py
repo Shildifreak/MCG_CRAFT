@@ -46,6 +46,25 @@ class Block(voxelengine.Block):
         else:
             super(Block,self).__setitem__(key,value)
         self.world.changed_blocks.append(self.position)
+
+    # helper functions
+    def redstone_activated(self):
+        for face in FACES:
+            nachbarblockposition = self.position + face
+            nachbarblock = self.world[nachbarblockposition]
+            if nachbarblock["p_level"]:
+                if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
+                    return True
+        return False
+    
+    def get_base_vector(self):
+        return {"t":Vector(( 0, 1, 0)),
+                "b":Vector(( 0,-1, 0)),
+                "s":Vector(( 0, 0, 1)),
+                "n":Vector(( 0, 0,-1)),
+                "e":Vector(( 1, 0, 0)),
+                "w":Vector((-1, 0, 0)),
+               }[self["base"]]
         
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
@@ -91,7 +110,6 @@ class SolidBlock(Block):
                     stronglevel = max(stronglevel, neighbour["p_level"])
         self["p_level"] = level
         self["p_stronglevel"] = stronglevel
-        #M# return instead of inplace variation
 
 # Default Item and Block (also usefull for inheritance)
 

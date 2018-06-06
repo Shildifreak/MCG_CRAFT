@@ -94,6 +94,7 @@
     ["LAMPOFF",                  False,       0, [( 6,10)]],
     ["LAMPON",                   False,       0, [( 7,10)]],
     ["Redstone",                 False,       0, [( 7, 2)]],
+    ["FAN",                      False,       0, [( 8,10), ( 0,10)]],
     ],
 
 "BLOCK_MODELS": [

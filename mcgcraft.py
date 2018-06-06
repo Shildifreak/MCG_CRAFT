@@ -4,7 +4,7 @@ if __name__ != "__main__":
     raise Warning("mcgcraft.py should not be imported")
 
 import sys, os, thread, ast, imp, inspect
-import math, time, random, itertools
+import math, time, random, itertools, collections
 import getpass
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -50,7 +50,7 @@ class InventoryDisplay():
                             position = (x,y,0)
                             self.player.display_item(name,item,position,size,INNER|CENTER)
                             continue
-                    self.player.undisplay_item(name)            
+                    self.player.undisplay_item(name)
             if inventory and self.is_open:
                 self.player.set_hud("inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
                 self.player.set_hud("inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
@@ -127,8 +127,8 @@ class Player(voxelengine.Player):
         self.entity.HITBOX = resources.get_hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone"}]
-        self.entity["left_hand"] = {"id":"CHEST"}
+        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone"},{"id":"CHEST"}]
+        self.entity["left_hand"] = {"id":"FAN"}
         self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
         self.entity["lives"] = 9
@@ -240,6 +240,19 @@ class Player(voxelengine.Player):
         for suffix in ("_bgbox","","_count"):
             self.del_hud(name+suffix)
 
+class ValidTag(object):
+    __slots__ = "value"
+    def __init__(self):
+        self.value = True
+
+    def invalidate(self):
+        print "hey"
+        self.value = False
+
+    def __bool__(self):
+        return self.value
+
+Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag","callback","exclusive"])
 
 blockread_counter = 0
 class World(voxelengine.World):
@@ -248,7 +261,9 @@ class World(voxelengine.World):
     def __init__(self,*args,**kwargs):
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
-
+        self.set_requests = collections.defaultdict(list) # position: [Request,...]
+        self.move_requests = [] # (position_from, position_to)
+        
     def get_block(self,position,*args,**kwargs):
         global blockread_counter
         blockread_counter += 1
@@ -279,8 +294,43 @@ class World(voxelengine.World):
         resources.Block.defer = False
         while resources.Block.deferred:
             block, key, value = resources.Block.deferred.pop()
-#            print "%s[%s] = %s" %(block, key, value)
             block[key] = value
+
+        # translate move_requests
+        for position_from, position_to in self.move_requests:
+            valid_tag = ValidTag()
+            block = self.get_block(position_from)
+            self.set_requests[position_from].append(Request("AIR",0,valid_tag,None,True))
+            self.set_requests[position_to  ].append(Request(block,0,valid_tag,None,True))
+        self.move_requests = []
+
+        # handle set_requests
+        for requests in self.set_requests.values():
+            max_priority = max(request.priority for request in requests)
+            dominant_requests = []
+            for request in requests:
+                if request.priority == max_priority:
+                    dominant_requests.append(request)
+                else:
+                    request.valid_tag.invalidate()
+            if len(dominant_requests) > 1:
+                for request in dominant_requests:
+                    if request.exclusive:
+                        request.valid_tag.invalidate()
+        
+        for position, requests in  self.set_requests.iteritems():
+            for request in requests:
+                if request.valid_tag:
+                    self.set_block(position, request.block)
+                if request.callback:
+                    request.callback(request.valid_tag)
+        self.set_requests.clear()
+    
+    def request_move_block(self, position_from, position_to):
+        self.move_requests.append((position_from, position_to))
+
+    def request_set_block(self, position, blockname, priority, valid_tag, callback, exclusive):
+        pass
 
 class UI(object):
     def __init__(self, config, worldtypes):
