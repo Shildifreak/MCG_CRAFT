@@ -40,6 +40,8 @@ FACES = [Vector([ 0, 1, 0]), #top
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
 vertex_shader_code = """
+#version 330
+
 varying out vec3 color;
 
 void main()
@@ -52,6 +54,8 @@ void main()
 """
 
 fancy_fragment_shader_code = """
+#version 330
+
 varying in vec3 color;
 uniform sampler2D color_texture;
 
@@ -64,6 +68,8 @@ void main (void)
 """
 
 plain_fragment_shader_code = """
+#version 330
+
 varying in vec3 color;
 uniform sampler2D color_texture;
 
@@ -401,6 +407,7 @@ class Model(object):
         color_corrections = []
         for vertex in zip(i,i,i):
             cc = self.ambient_occlusion(vertex) + self.sunlight(vertex, face)
+            cc = (0.5 + 0.5 * cc)
             color_corrections.extend((cc,cc,cc))
         return color_corrections
 
@@ -633,7 +640,7 @@ class Window(pyglet.window.Window):
         self.hud_open = False
         self.debug_info_visible = False
 
-        self.block_shaders = [fancy_block_shader, plain_block_shader]
+        #self.block_shaders = [fancy_block_shader, plain_block_shader]
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -949,9 +956,9 @@ class Window(pyglet.window.Window):
         self.clear()
         self.set_3d()
         glColor3d(1, 1, 1)
-        self.block_shaders[0].bind()
+        #self.block_shaders[0].bind()
         self.model.batch.draw()
-        self.block_shaders[0].unbind()
+        #self.block_shaders[0].unbind()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
@@ -1058,7 +1065,7 @@ def show_on_window(client):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
                 break
-        setup_shaders()
+        #setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True,client=client)
         # Hide the mouse cursor and prevent the mouse from leaving the window.

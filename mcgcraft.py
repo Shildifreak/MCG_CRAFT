@@ -154,6 +154,9 @@ class Player(voxelengine.Player):
         def update_inventar(inventar):
             pass
         def update_lives(lives):
+            #todo: fix!
+            for x in range(lives,10):
+                self.del_hud("heart"+str(x))
             for x in range(lives):
                 self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
         self.entity.register_item_callback(update_left_hand_image,"left_hand")
@@ -237,7 +240,19 @@ class Player(voxelengine.Player):
         sv = pe.horizontal_move(self.is_pressed("jump"))
 
         pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
+        # wie schnell ist spieler vertikal?
+        vy_vorher = pe["velocity"][1]
+        onground_vorher = pe.onground()
         pe.update_position()
+        if (not onground_vorher) and pe.onground():
+            schaden = (-vy_vorher) -20
+            print schaden
+            if schaden >0:
+                a = pe["lives"]
+                b = pe["lives"] - 1
+
+                pe["lives"] = b
+            # HERZEN ANPASSEN
 
     def do_random_ticks(player):
         radius = 10

@@ -158,11 +158,21 @@ class Entity(voxelengine.Entity):
     
     def right_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
-        pass
+
+        r = character.get_sight_vector()
+        self["velocity"] = Vector(r)*100 + Vector((0,10,0))
 
     def left_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
-        pass
+
+        a = character["lives"]
+
+        if a<20:
+
+            b = character["lives"] + 1
+
+            character["lives"] = b
+
     
     @classmethod
     def try_to_spawn(cls, world):

@@ -21,11 +21,11 @@ class Schaf(Entity):
         self["turn"] = 0
         self["nod"] = False
 
-    def right_clicked(self, character):
-        print "Muuhhh"
+    #def right_clicked(self, character):
+    #    print "Muuhhh"
         
-    def left_clicked(self, character):
-        print "Maehhh"
+    #def left_clicked(self, character):
+    #    print "Maehhh"
 
     def update(self):
         r = random.randint(0,200)
