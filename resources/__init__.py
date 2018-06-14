@@ -81,8 +81,9 @@ class Block(voxelengine.Block):
     def mined(self,character,face):
         """drop item or something... also remember to set it to air. Return value see activated"""
         block = self.world[self.position]
-        character["right_hand"] = {"id":block["id"]}
+        character.pickup_item({"id":self["id"],"count":1})
         self.world[self.position] = "AIR"
+        
 
     def exploded(self,entf):
         if entf < 1:
@@ -118,6 +119,7 @@ class Item(object):
     def __init__(self,item):
         self.item = item
         self.tags = item.setdefault("tags",{})
+        self.item.setdefault("count",1)
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def use_on_block(self,character,blockpos,face):
@@ -127,7 +129,12 @@ class Item(object):
         character.world[new_pos] = block_id
         #M# remove block again if it collides with placer (check for all entities here later)
         if new_pos in character.collide(character["position"]):
-            character.world[new_pos] = "AIR"        
+            character.world[new_pos] = "AIR"
+        else:
+            self.item["count"] -= 1
+        if self.item["count"] <= 0:
+            self.item.parent[self.item.parent_key] = {"id": "AIR"}
+            
 
     def use_on_entity(self,character,entity):
         """
@@ -229,6 +236,20 @@ class Entity(voxelengine.Entity):
     def block_update(self):
         """called when block "near" entity is changed"""
         pass
+
+    def pickup_item(self,item):
+        a = False
+        i_air = None
+        for i,inv_item in enumerate(self["inventory"]):
+            if i_air == None and inv_item["id"] == "AIR":
+                i_air = i
+            if inv_item["id"] == item["id"]:
+                inv_item["count"] += item["count"]
+                return True
+        if i_air == None:
+            return False
+        self["inventory"][i_air] = item
+        return True
 
 blockClasses  = collections.defaultdict(lambda:SolidBlock)
 itemClasses   = collections.defaultdict(lambda:Item)

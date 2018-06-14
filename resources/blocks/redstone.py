@@ -32,3 +32,7 @@ class Redstone_Item(Item):
         #M# remove block again if it collides with placer (check for all entities here later)
         if new_pos in character.collide(character["position"]):
             character.world[new_pos] = "AIR"
+        else:
+            self.item["count"] -= 1
+        if self.item["count"] <= 0:
+            self.item.parent[self.item.parent_key] = {"id": "AIR"}
