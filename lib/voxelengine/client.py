@@ -990,7 +990,7 @@ class Window(pyglet.window.Window):
         vector = self.get_sight_vector()
         if CHUNKSIZE == None:
             return
-        block = hit_test(lambda pos:self.model.get_block(pos)!="AIR", self.position, vector, focus_distance)[0]
+        block = hit_test(lambda pos:self.model.get_block(pos)!="AIR", self.position, vector, focus_distance)[1]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)

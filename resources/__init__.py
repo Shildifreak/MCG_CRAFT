@@ -130,23 +130,18 @@ class Item(object):
             character.world[new_pos] = "AIR"        
 
     def use_on_entity(self,character,entity):
-        """whatever this item should do when clicked on this entity... default is to do the same like when clicking air"""
-        self.use_on_air(character)
+        """
+        whatever this item should do when clicked on this entity... default is to do the same like when clicking air
+        Return value signalizes whether to also execute right_/left_clicked action of entity
+        """
+        return self.use_on_air(character)
 
     def use_on_air(self,character):
         """whatever this item should do when clicked into air"""
-
-
-def floatrange(a,b):
-    return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
-
-def get_hitbox(width,height,eye_level):
-    return [(dx,dy,dz) for dx in floatrange(-width,width)
-                       for dy in floatrange(-eye_level,height-eye_level)
-                       for dz in floatrange(-width,width)]
+        return True
 
 class Entity(voxelengine.Entity):
-    HITBOX = ()
+    HITBOX = Hitbox(0,0,0)
     LIMIT = 0
     instances = []
 
@@ -154,38 +149,35 @@ class Entity(voxelengine.Entity):
         super(Entity,self).__init__(*args,**kwargs)
         self.instances.append(self)
     
+    def right_clicked(self, character):
+        """whatever this entity should do when being right clicked by entity"""
+        pass
+
+    def left_clicked(self, character):
+        """whatever this entity should do when being right clicked by entity"""
+        pass
+    
     @classmethod
     def try_to_spawn(cls, world):
         x = random.randint(-40,40)
         z = random.randint(-10,10)
         y = random.randint(-40,40)
         block = world.get_block((x,y-2,z),load_on_miss = False)
-        if block and block != "AIR" and len(cls.class_collide(world,Vector((x,y,z)))) == 0:
+        if block and block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
             entity = cls(world)
             entity.set_world(world,(x,y,z))
-
-    @classmethod
-    def class_collide(cls, world, position):
-        blocks = set()
-        for relpos in cls.HITBOX:
-            block_pos = (position+relpos).normalize()
-            if world.get_block(block_pos).collides_with(cls.HITBOX,position):
-                blocks.add(block_pos)
-        return blocks
+            return entity
     
     def onground(entity):
         return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
 
     def collide(entity,position):
-        """blocks entity would collide with if it was at position"""
-        return entity.class_collide(entity.world,position)
+        """blocks entity would collides with"""
+        return entity.potential_collide_blocks(entity["position"])
 
     def potential_collide_blocks(entity,position):
-        blocks = set()
-        for relpos in entity.HITBOX:
-            block_pos = (position+relpos).normalize()
-            blocks.add(block_pos)
-        return blocks
+        """blocks entity would collide with if it was at position"""
+        return entity.HITBOX.collide_blocks(entity.world,position)
 
     def collide_difference(entity,new_position,previous_position):
         """return blocks entity would newly collide with if it moved from previous_position to new_position"""
@@ -193,8 +185,8 @@ class Entity(voxelengine.Entity):
 
     def bool_collide_difference(entity,new_position,previous_position):
         for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
-            if entity.world.get_block(block).collides_with(entity.HITBOX,entity["position"]):
-                return True
+            #M# probably not needed # if entity.world.get_block(block).collides_with(entity.HITBOX,entity["position"]):
+            return True
         return False
     
     def horizontal_move(entity,jump): #M# name is misleading
@@ -219,6 +211,7 @@ class Entity(voxelengine.Entity):
         entity["last_update"] = time.time()
 
     def update_position(entity):
+        #M# todo: cast ray from each point to detect collision and so on !!!
         steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
         pos = entity["position"]
         for step in range(steps):

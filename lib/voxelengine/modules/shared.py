@@ -8,6 +8,7 @@ if sys.version >= "3":
 import zlib
 import struct
 import operator
+import math
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
@@ -19,18 +20,21 @@ CENTER, INNER, OUTER, TOP, BOTTOM, LEFT, RIGHT = 0,1,2,4,8,16,32
 
 #FACES = ... definition at EOF because it needs Vector class
 
+def floatrange(a,b):
+    return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
+
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position.
-    returns (blockpos, face)
-    If no block is found, return (None, None).
+    returns (distance, blockpos, face)
+    If no block is found, return (None, None, None).
 
     Parameters
     ----------
     block_at_func : function used to test wether there is
         a block at a given position
-    position : tuple of len 3
+    position : Vector of len 3
         The (x, y, z) position to check visibility from.
-    direction : tuple of len 3
+    direction : Vector of len 3
         The line of sight vector.
     max_distance : float
         How many blocks away to search for a hit.
@@ -56,8 +60,50 @@ def hit_test(block_at_func, position, direction, max_distance=8):
         block_pos += dp
         position += k*direction
         if block_at_func(block_pos):
-            return block_pos, -dp
-    return None, None
+            return distance, block_pos, -dp
+    return None, None, None
+
+class Ray(object):
+    __slots__ = ("origin", "direction","dirfrac")
+    def __init__(self, origin, direction):
+        self.origin = origin
+        self.direction = direction
+        self.dirfrac = Vector((1.0/d if d!=0 else float("inf")) for d in direction)
+
+class Hitbox(object):
+    def __init__(self, width, height, eye_level):
+        self.hitpoints = [Vector((dx,dy,dz)) for dx in floatrange(-width,width)
+                                             for dy in floatrange(-eye_level,height-eye_level)
+                                             for dz in floatrange(-width,width)]
+        self.lb = Vector((-width, -width,       -eye_level))
+        self.rt = Vector(( width,  width, height-eye_level))
+
+    def raytest(self, position, ray):
+        """ returns False if no collision else distance"""
+        # https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
+        # lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
+        # r.org is origin of ray
+        t135 = (self.lb + position - ray.origin)*ray.dirfrac
+        t246 = (self.rt + position - ray.origin)*ray.dirfrac
+
+        tmin = max(map(min,t135,t246))
+        tmax = min(map(max,t135,t246))
+
+        # if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+        # if tmin > tmax, ray doesn't intersect AABB
+        if (tmax < 0) or (tmin > tmax):
+            return False
+
+        return tmin
+    
+    def collide_blocks(self, world, position):
+        blocks = set()
+        for relpos in self.hitpoints:
+            block_pos = (position+relpos).normalize()
+            if world.get_block(block_pos).collides_with(self,position):
+                blocks.add(block_pos)
+        return blocks
+
 
 def select(options):
     """

@@ -4,7 +4,7 @@ import time, random
 @register_entity("Schaf")
 
 class Schaf(Entity):
-    HITBOX = get_hitbox(0.6,1.5,1)
+    HITBOX = Hitbox(0.6,1.5,1)
     LIMIT = 2
     instances = []
     
@@ -20,6 +20,12 @@ class Schaf(Entity):
         self["forward"] = False
         self["turn"] = 0
         self["nod"] = False
+
+    def right_clicked(self, character):
+        print "Muuhhh"
+        
+    def left_clicked(self, character):
+        print "Maehhh"
 
     def update(self):
         r = random.randint(0,200)

@@ -124,7 +124,7 @@ class Player(voxelengine.Player):
         self.entity["FLYSPEED"] = 0.2
         self.entity["JUMPSPEED"] = 10
         self.entity["texture"] = "PLAYER"
-        self.entity.HITBOX = resources.get_hitbox(0.4, 1.8, 1.6)
+        self.entity.HITBOX = Hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
         self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone"},{"id":"CHEST"}]
@@ -168,21 +168,39 @@ class Player(voxelengine.Player):
         #           left click      right click
         # no shift  mine block      activate block
         # shift     use l item      use r. item
-        handstuff = (("right click","right_hand",lambda block:block.activated),
-                     ("left click", "left_hand", lambda block:block.mined))
-        for event_name, hand_name, primary_action in handstuff:
+                
+        get_block = lambda: pe.world[pos]
+        def get_item():
+            hand_name = {"left click": "left_hand", "right click":"right_hand"}[event_name]
+            item_data = pe[hand_name]
+            return resources.itemClasses[item_data["id"]](item_data)
+
+        for event_name in ("left click", "right click"):
             if self.was_pressed(event_name):
-                pos, face = self.get_focused_pos()
-                do_item_action = True
-                if pos and not self.is_pressed("shift"):
-                    do_item_action = primary_action(pe.world[pos])(pe, face)
-                if do_item_action:
-                    item_data = pe[hand_name]
-                    item = resources.itemClasses[item_data["id"]](item_data)
-                    if pos:
-                        item.use_on_block(pe,pos,face)
-                    else:
-                        item.use_on_air(pe)            
+                d_block, pos, face = self.get_focused_pos()
+                d_entity, entity = self.get_focused_entity()
+
+                # nothing to click on
+                if (d_block == None) and (d_entity == None):
+                    get_item().use_on_air(pe)
+                    continue
+
+                # click on block
+                if (d_block != None) and ((d_entity == None) or (d_block < d_entity)):
+                    actions = {"right click": (lambda:get_block().activated(pe, face),
+                                               lambda:get_item().use_on_block(pe, pos, face)),
+                               "left click" : (lambda:get_block().mined(pe, face),
+                                               lambda:get_item().use_on_block(pe, pos, face))}[event_name]
+                # click on entity
+                else:
+                    actions = {"right click": (lambda:get_item().use_on_entity(pe, entity),
+                                               lambda:entity.right_clicked(pe)),
+                               "left click" : (lambda:get_item().use_on_entity(pe, entity),
+                                               lambda:entity.left_clicked(pe))}[event_name]
+                action1, action2 = actions
+                do_next = True if self.is_pressed("shift") else action1()
+                if do_next:
+                    action2()
 
         if self.was_pressed("fly"):
             self.flying = not self.flying

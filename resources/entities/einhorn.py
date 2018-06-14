@@ -4,7 +4,7 @@ import time, random
 @register_entity("Einhorn")
 
 class Einhorn(Entity):
-    HITBOX = get_hitbox(0,0,0)
+    HITBOX = Hitbox(0,0,0)
     LIMIT = 5
     instances = []
     

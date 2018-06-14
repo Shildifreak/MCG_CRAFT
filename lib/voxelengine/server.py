@@ -403,8 +403,9 @@ class Player(object):
 
     def get_focused_pos(self,max_distance=None):
         """Line of sight search from current position. If a block is
-        intersected it is returned, along with the block previously in the line
-        of sight. If no block is found, return (None, None).
+        intersected it's position is returned, along with the face and distance:
+            (distance, position, face)
+        If no block is found, return (None, None, None).
 
         max_distance : How many blocks away to search for a hit.
         """ 
@@ -412,6 +413,28 @@ class Player(object):
             max_distance = self.focus_distance
         return hit_test(lambda v:self.entity.world.get_block(v)["id"]!="AIR",self.entity["position"],
                         self.entity.get_sight_vector(),max_distance)
+    
+    def get_focused_entity(self,max_distance=None):
+        #M# to be moved to entity!
+        """Line of sight search from current position. If an entity is
+        intersected it is returned, along with the distance.
+        If no block is found, return (None, None).
+
+        max_distance : How many blocks away to search for a hit."""
+        if max_distance == None:
+            max_distance = self.focus_distance
+        nearest_entity = None
+        ray = Ray(self.entity["position"],self.entity.get_sight_vector())
+        for entity in self.entity.world.get_entities(): #M# limit considered entities
+            if entity is self.entity:
+                continue
+            d = entity.HITBOX.raytest(entity["position"],ray)
+            if (d != False) and (d < max_distance):
+                nearest_entity = entity
+                max_distance = d
+        if nearest_entity:
+            return max_distance, nearest_entity
+        return (None, None)
 
     def set_focus_distance(self,distance):
         """Set maximum distance for focusing block"""
