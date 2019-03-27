@@ -1,5 +1,5 @@
 from resources import *
-import time, random
+import random
 
 @register_entity("Schaf")
 
@@ -8,15 +8,12 @@ class Schaf(Entity):
     LIMIT = 2
     instances = []
     
-    def __init__(self, world):
+    def __init__(self):
         super(Schaf,self).__init__()
 
         self["texture"] = "SCHAF"
         self["SPEED"] = 5
         self["JUMPSPEED"] = 10
-        self["sprint"] = 20
-        self["velocity"] = Vector([0,0,0])
-        self["last_update"] = time.time()
         self["forward"] = False
         self["turn"] = 0
         self["nod"] = False
