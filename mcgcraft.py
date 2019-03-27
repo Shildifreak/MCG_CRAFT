@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+#* encoding: utf-8 *#
 from __future__ import print_function
 
 if __name__ != "__main__":
@@ -255,7 +256,7 @@ class Player(voxelengine.Player):
         if (not onground_vorher) and pe.onground():
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             schaden = (-vy_vorher) -20
-            print schaden
+            print(schaden)
             # HERZEN ANPASSEN
             if schaden >0:
                 a = pe["lives"]

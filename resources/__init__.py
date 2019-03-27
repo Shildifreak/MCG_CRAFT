@@ -72,19 +72,19 @@ class Block(voxelengine.Block):
         #  e
         #n   s
         #  w
-        state = self["state"]
-        if state == "t":
+        if base == "t":
             return r_x(r_x(vector))
-        if state == "n":
+        if base == "n":
             c = 0
-        elif state == "e":
+        elif base == "e":
             c = 3
-        elif state == "s":
+        elif base == "s":
             c = 2
-        elif state == "w":
+        elif base == "w":
             c = 1
         else:
             return vector
+        print c
         vector = r_x(vector)
         for _ in range(c):
             vector = r_y(vector)
@@ -93,13 +93,13 @@ class Block(voxelengine.Block):
     
     def get_base_vector(self):
         return self.block_to_world_vector(Vector((0,-1,0)))
-        return {"t":Vector(( 0, 1, 0)),
-                "b":Vector(( 0,-1, 0)),
-                "s":Vector(( 0, 0, 1)),
-                "n":Vector(( 0, 0,-1)),
-                "e":Vector(( 1, 0, 0)),
-                "w":Vector((-1, 0, 0)),
-               }[self["base"]]
+        #return {"t":Vector(( 0, 1, 0)),
+        #        "b":Vector(( 0,-1, 0)),
+        #        "s":Vector(( 0, 0, 1)),
+        #        "n":Vector(( 0, 0,-1)),
+        #        "e":Vector(( 1, 0, 0)),
+        #        "w":Vector((-1, 0, 0)),
+        #       }[self["base"]]
 
     def get_front_facing_vector(self):
         return self.block_to_world_vector(Vector((0,0,-1)))
