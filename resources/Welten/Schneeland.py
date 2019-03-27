@@ -1,5 +1,9 @@
 import random 
-def Schneeland(self):
+
+terrain_generator = []
+spawnpoint = (0,20,0)
+
+def init(welt):
         """ Initialize the world by placing all the blocks.
 
         """
@@ -10,22 +14,22 @@ def Schneeland(self):
         for x in xrange(-n, n + 1, s):
             for z in xrange(-n, n + 1, s):
                 # create a layer stone an grass everywhere.
-                self.add_block((x, y - 2, z), "Schneeerde", immediate=False)
-                self.add_block((x, y - 3, z), "Dirt", immediate=False)
-                self.add_block((x, y - 4, z), "Dirt", immediate=False)
-                self.add_block((x, y - 5, z), "Dirt", immediate=False)
-                self.add_block((x, y - 6, z), "Stein", immediate=False)
-                self.add_block((x, y - 7, z), "Stein", immediate=False)
-                self.add_block((x, y - 8, z), "Stein", immediate=False)
-                self.add_block((x, y - 9, z), "Stein", immediate=False)
-                self.add_block((x, y - 10, z), "Stein", immediate=False)
-                self.add_block((x, y - 11, z), "Stein", immediate=False)
-                self.add_block((x, y - 12, z), "Stein", immediate=False)
-                self.add_block((x, y - 13, z), "Grundgestein", immediate=False)
+                welt[x, y - 2, z]= "SCHNEEERDE"
+                welt[x, y - 3, z]= "DIRT"
+                welt[x, y - 4, z]= "DIRT"
+                welt[x, y - 5, z]= "DIRT"
+                welt[x, y - 6, z]= "STONE"
+                welt[x, y - 7, z]= "STONE"
+                welt[x, y - 8, z]= "STONE"
+                welt[x, y - 9, z]= "STONE"
+                welt[x, y - 10, z]= "STONE"
+                welt[x, y - 11, z]= "STONE"
+                welt[x, y - 12, z]= "STONE"
+                welt[x, y - 13, z]= "BEDROCK"
                 if x in (-n, n) or z in (-n, n):
                     # create outer walls.
                     for dy in xrange(-11, 3):
-                        self.add_block((x, y + dy, z), "Grundgestein", immediate=False)
+                        welt[x, y + dy, z]= "BEDROCK"
 
         # generate the hills randomly
         o = n - 10
@@ -36,7 +40,7 @@ def Schneeland(self):
             h = random.randint(3, 6)  # height of the hill
             s = random.randint(4, 8)  # 2 * s is the side length of the hill
             d = 1  # how quickly to taper off the hills
-            t = random.choice(["Schneeerde","Schnee","Sand"])
+            t = random.choice(["SCHNEEERDE","SCHNEE","WOLLE"])
             for y in xrange(c, c + h):
                 for x in xrange(a - s, a + s + 1):
                     for z in xrange(b - s, b + s + 1):
@@ -44,5 +48,5 @@ def Schneeland(self):
                             continue
                         if (x - 0) ** 2 + (z - 0) ** 2 < 5 ** 2:
                             continue
-                        self.add_block((x, y, z), t, immediate=False)
+                        welt[x, y, z]=t
                 s -= d  # decrement side lenth so hills taper off

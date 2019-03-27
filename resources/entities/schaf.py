@@ -5,7 +5,7 @@ import time, random
 
 class Schaf(Entity):
     HITBOX = Hitbox(0.6,1.5,1)
-    LIMIT = 2
+    LIMIT = 1
     instances = []
     
     def __init__(self, world):
@@ -28,6 +28,9 @@ class Schaf(Entity):
     #    print "Maehhh"
 
     def update(self):
+        if self["position"][1] < -100:
+            self.kill()
+            return
         r = random.randint(0,200)
         if r < 1:
             self["turn"] = -5
@@ -55,6 +58,11 @@ class Schaf(Entity):
             jump = self.world.get_block((self["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
         else:
             jump = not random.randint(0,2000)
+        if self["nod"]:
+            p = (self["position"]+Vector((0,-2,0))).normalize()
+            #print p, self.world.get_block(p)
+            if self.world.get_block(p) == "GRASS":
+                self.world[p] = "DIRT"
         sv = self.horizontal_move(jump)
         self["velocity"] += ((1,1,1)-sv)*nv
         self.update_position()

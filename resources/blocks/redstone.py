@@ -36,3 +36,13 @@ class Redstone_Item(Item):
             self.item["count"] -= 1
         if self.item["count"] <= 0:
             self.item.parent[self.item.parent_key] = {"id": "AIR"}
+
+
+@register_block("Repeater")
+class Repeater(Block):
+    def block_update(self,faces):
+        pass
+
+    def activated(self,character,face):
+        d = self.get_front_facing_vector()
+        self.world[self.position+d] = "Repeater"

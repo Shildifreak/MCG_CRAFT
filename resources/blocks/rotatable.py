@@ -4,6 +4,9 @@ from resources import *
 @register_item("GESICHT")
 @register_item("HEBEL")
 @register_item("FAN")
+@register_item("TORCH")
+@register_item("HOLZ")
+@register_item("Repeater")
 class RotatableBlockItem(Item):
     def use_on_block(self,character,blockpos,face):
         new_pos = blockpos + face

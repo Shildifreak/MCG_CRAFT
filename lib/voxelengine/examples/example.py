@@ -1,16 +1,19 @@
 #* encoding: utf-8 *#
-
+import sys, os, math, time
+libpath = os.path.abspath(os.path.join("..", ".."))
+tppath = os.path.abspath(os.path.join("..", "..", "..", "resources", "texturepack"))
+print libpath, tppath
+sys.path.append(libpath)
 import voxelengine
-import math, os, time
 
 w = voxelengine.World()
 
 e = voxelengine.Entity()
 e.set_world(w,(-1,0,-3))
-e["texture"] = "PLAYER"
+e["texture"] = "DAME"
 
 settings = {"init_function" : w.spawn_player,
-            "suggested_texturepack" : "mcgcraft-standart",
+            "suggested_texturepack" : tppath,
             }
 
 with voxelengine.Game(**settings) as g:
@@ -23,6 +26,6 @@ with voxelengine.Game(**settings) as g:
     while g.get_players():
         i+=1
         g.update()
-        e["rotation"] = (2*i,i)
+        #e["rotation"] = (2*i,i)
         #e.set_position((-1,math.sin(i)+1,-3),w)
-    print w.entities
+    print(w.entities)

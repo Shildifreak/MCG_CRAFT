@@ -22,10 +22,10 @@ def init(welt):
                     # create outer walls.
                     for dy in xrange(-11, 3):
                         welt[(x, y + dy, z)] = "BEDROCK"
-        for n in range(5):
-            x = random.randint(-11,20)
+        for _ in range(35):
+            x = random.randint(-n+5,n-5)
             y = -2
-            z = random.randint(-11,20)
+            z = random.randint(-n+5,n-5)
             for d_pos, block in tree.tree_structure("eiche"):
                 dx, dy, dz = d_pos
                 welt[(x+dx,y+dy,z+dz)] = block

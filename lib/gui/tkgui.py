@@ -95,6 +95,17 @@ class GUI(object):
         wtmenu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         wtmenu.configure(takefocus=1)
         self.row += 1
+
+        # Mob Spawning
+        def setmobspawning(*args):
+            config["mobspawning"] = bool(mobspawningvar.get())
+        mobspawningvar = Tkinter.IntVar(root)
+        mobspawningvar.set(config["mobspawning"])
+        mobspawningvar.trace("w",setmobspawning)
+        self.add_label("Mob Spawning")
+        mobspawning_checkbutton = Tkinter.Checkbutton(root, variable = mobspawningvar)
+        mobspawning_checkbutton.grid(column = 1, row = self.row, sticky = Tkinter.W)
+        self.row += 1
         
         # Whitelist
         def setwhitelist(*args):
@@ -184,6 +195,7 @@ if __name__ == "__main__":
     config = {  "name"     : "MCGCraft Server",
                 "file"     : "",
                 "worldtype": "Colorland",
+                "mobspawning": False,
                 "whitelist": "127.0.0.1",
                 "parole"   : "",
                 "port"     : "",

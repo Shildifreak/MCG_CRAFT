@@ -132,4 +132,4 @@ relief_stein = terrain_generator_from_heightfunc(steinhoehe,"STONE")
 
 terrain_generator = [relief_gras,relief_dirt,relief_stein,baum_function]
 
-spawnpoint = (0,int(heightfunction(0,0)+2),0)
+spawnpoint = (0,int(heightfunction(0,0)+10),0)

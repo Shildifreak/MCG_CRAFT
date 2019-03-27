@@ -19,7 +19,7 @@ class Block(voxelengine.Block):
     defaults = {"p_level":0,
                 "p_stronglevel":None,
                 "p_ambient":True,
-                "p_directions":(),}#"rotation":0,"base":"b"}
+                "p_directions":(),"rotation":0,"base":"b"}
 
     def __init__(self,*args,**kwargs):
         super(Block,self).__init__(*args,**kwargs)
@@ -56,8 +56,43 @@ class Block(voxelengine.Block):
                 if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
                     return True
         return False
+
+    def block_to_world_vector(self, vector):
+        def r_x(v):
+            x, y, z = v
+            return Vector((  x, -z,  y)) #maybe need to swap sign on z,y
+            
+        def r_y(v):
+            x, y, z = v
+            return Vector((  z,  y, -x))
+
+        c = {1:3,2:2,3:1,0:0}[self["rotation"]]
+        for _ in range(c):
+            vector = r_y(vector)
+        #  e
+        #n   s
+        #  w
+        state = self["state"]
+        if state == "t":
+            return r_x(r_x(vector))
+        if state == "n":
+            c = 0
+        elif state == "e":
+            c = 3
+        elif state == "s":
+            c = 2
+        elif state == "w":
+            c = 1
+        else:
+            return vector
+        vector = r_x(vector)
+        for _ in range(c):
+            vector = r_y(vector)
+        return vector
+            
     
     def get_base_vector(self):
+        return self.block_to_world_vector(Vector((0,-1,0)))
         return {"t":Vector(( 0, 1, 0)),
                 "b":Vector(( 0,-1, 0)),
                 "s":Vector(( 0, 0, 1)),
@@ -65,6 +100,12 @@ class Block(voxelengine.Block):
                 "e":Vector(( 1, 0, 0)),
                 "w":Vector((-1, 0, 0)),
                }[self["base"]]
+
+    def get_front_facing_vector(self):
+        return self.block_to_world_vector(Vector((0,0,-1)))
+
+    def get_right_facing_vector(self):
+        return self.block_to_world_vector(Vector((1,0,0)))
         
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
@@ -155,6 +196,10 @@ class Entity(voxelengine.Entity):
     def __init__(self,*args,**kwargs):
         super(Entity,self).__init__(*args,**kwargs)
         self.instances.append(self)
+
+    def kill(self):
+        self.instances.remove(self)
+        self.set_world(None, Vector((0,0,0)))
     
     def right_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
@@ -177,9 +222,9 @@ class Entity(voxelengine.Entity):
     @classmethod
     def try_to_spawn(cls, world):
         x = random.randint(-40,40)
-        z = random.randint(-10,10)
-        y = random.randint(-40,40)
-        block = world.get_block((x,y-2,z),load_on_miss = False)
+        y = random.randint(-10,20)
+        z = random.randint(-40,40)
+        block = world.get_block((x,y-3,z),load_on_miss = False)
         if block and block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
             entity = cls(world)
             entity.set_world(world,(x,y,z))
@@ -254,7 +299,7 @@ class Entity(voxelengine.Entity):
             if i_air == None and inv_item["id"] == "AIR":
                 i_air = i
             if inv_item["id"] == item["id"]:
-                inv_item["count"] += item["count"]
+                inv_item["count"] = inv_item.get("count", 1) + item["count"]
                 return True
         if i_air == None:
             return False

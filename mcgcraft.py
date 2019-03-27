@@ -1,8 +1,16 @@
 #! /usr/bin/env python
+from __future__ import print_function
 
 if __name__ != "__main__":
     raise Warning("mcgcraft.py should not be imported")
 
+# hack der nur bei uns in der Schule funktioniert, damit mcgcraft mit python2 ausgeführt wird
+import os, sys
+if sys.version >= "3":
+    os.system("C:\\Python27\\python.exe mcgcraft.py") 
+    sys.exit(0)
+
+# Imports
 import sys, os, thread, ast, imp, inspect
 import math, time, random, itertools, collections
 import getpass
@@ -127,9 +135,9 @@ class Player(voxelengine.Player):
         self.entity.HITBOX = Hitbox(0.4, 1.8, 1.6)
         self.entity["velocity"] = Vector([0,0,0])
         self.entity["last_update"] = time.time()
-        self.entity["inventory"] = [{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone"},{"id":"CHEST"}]
-        self.entity["left_hand"] = {"id":"FAN"}
-        self.entity["right_hand"] = {"id":"DOORSTEP","count":1}
+        self.entity["inventory"] = [{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
+        self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
+        self.entity["right_hand"] = {"id":"Repeater"}
         self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
         self.entity["lives"] = 9
         
@@ -246,7 +254,7 @@ class Player(voxelengine.Player):
         pe.update_position()
         if (not onground_vorher) and pe.onground():
             schaden = (-vy_vorher) -20
-            print schaden
+            print(schaden)
             if schaden >0:
                 a = pe["lives"]
                 b = pe["lives"] - 1
@@ -279,7 +287,7 @@ class ValidTag(object):
         self.value = True
 
     def invalidate(self):
-        print "hey"
+        print("hey")
         self.value = False
 
     def __bool__(self):
@@ -370,7 +378,7 @@ class UI(object):
         config["worldtype"] = select(worldtypes)[1]
         config["run"] = True
     def set_stats(self, name, value):
-        print name, value
+        print(name, value)
 
 def zeitmessung(ts = [0]*200, t = [time.time()]):
     dt = time.time() - t[0]
@@ -389,7 +397,7 @@ def gameloop():
         if not config["run"]:
             time.sleep(0.1)
             continue #jump back to start of loop
-        print "Game starting ...",
+        print("Game starting ...", end="")
         worldmod = imp.load_source(config["worldtype"],os.path.join(PATH,"resources","Welten",config["worldtype"])+".py")
 
         w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=resources.Block("AIR"),filename=config["file"])
@@ -398,12 +406,12 @@ def gameloop():
         w.changed_blocks = []
 
         def save():
-            print "Game saving ...",
+            print("Game saving ...", end="")
             if config["file"]:
                 w.save(config["file"])
-                print "done"
+                print("done")
             else:
-                print "skipped"
+                print("skipped")
             config["save"] = False
 
         def i_f(player):
@@ -421,7 +429,7 @@ def gameloop():
         t = time.time()
         FPS = 60
         with voxelengine.Game(**settings) as g:
-            print "done" # Game starting ... done
+            print("done") # Game starting ... done
             while config["run"]:
                 if config["play"]:
                     config["play"] = False
@@ -443,32 +451,34 @@ def gameloop():
                     player.update()
                     player.do_random_ticks()
                 #M#
-                for entity_class in resources.entityClasses.values():
-                    if len(entity_class.instances) < entity_class.LIMIT:
-                        entity_class.try_to_spawn(w)
-                for entity in w.entities:
+                if config["mobspawning"]:
+                    for entity_class in resources.entityClasses.values():
+                        if len(entity_class.instances) < entity_class.LIMIT:
+                            entity_class.try_to_spawn(w)
+                for entity in w.entities.copy():
                     entity.update()
             save()
-        print "Game stopped"
+        print("Game stopped")
     rememberconfig = config.copy()
     for key in ("run","play","quit","save"):
         rememberconfig.pop(key)
     with open(configfn,"w") as configfile:
         configfile.write(repr(rememberconfig))
-    print
-    print "Bye!"
+    print()
+    print("Bye!")
     time.sleep(1)
     
-config = {  "name"     : "%ss MCGCraft Server" %getpass.getuser(),
-            "file"     : "",
-            "worldtype": "Colorland",
-            "whitelist": "127.0.0.1",
-            "parole"   : "",
-            "port"     : "",
-            "run"      : False,
-            "play"     : False,
-            "quit"     : False,
-            "save"     : False,
+config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
+            "file"       : "",
+            "worldtype"  : "Colorland",
+            "mobspawning": True,
+            "whitelist"  : "127.0.0.1",
+            "parole"     : "",
+            "port"       : "",
+            "run"        : False,
+            "play"       : False,
+            "quit"       : False,
+            "save"       : False,
          }
 
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -487,7 +497,7 @@ def main():
     try:
         from gui.tkgui import GUI as UI
     except ImportError as e:
-        print "GUI not working cause of:\n",e
+        print("GUI not working cause of:\n",e)
     ui = UI(config, worldtypes)
 
     if sys.flags.interactive or False:
