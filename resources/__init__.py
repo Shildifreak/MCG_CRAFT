@@ -72,6 +72,7 @@ class Block(voxelengine.Block):
         #  e
         #n   s
         #  w
+        base = self["base"]
         if base == "t":
             return r_x(r_x(vector))
         if base == "n":
@@ -84,7 +85,6 @@ class Block(voxelengine.Block):
             c = 1
         else:
             return vector
-        print c
         vector = r_x(vector)
         for _ in range(c):
             vector = r_y(vector)
