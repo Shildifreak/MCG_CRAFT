@@ -1,9 +1,9 @@
 dist/
 build/
 saves/
-voxelengine_old/
 *.pyc
 .fuse_hidden*
 *.zip
 *.html
 Thumbs.db
+test/

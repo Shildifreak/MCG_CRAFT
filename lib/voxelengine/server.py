@@ -372,7 +372,8 @@ class Player(object):
 
     def quit(self):
         self.quit_flag = True
-        self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
+        if self.entity:
+            self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
 
     def observe(self,entity):
         self.lock.acquire()
@@ -607,7 +608,7 @@ class Player(object):
 
 class World(object):
     BlockClass = Block
-    EntityClass = Entity
+    PlayerEntityClass = Entity
     def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4, defaultblock = "AIR"):
         """create new World instance"""
         self.chunksize = chunksize
@@ -719,7 +720,7 @@ class World(object):
         return self.entities
     
     def spawn_player(self,player):
-        spielfigur = self.EntityClass()
+        spielfigur = self.PlayerEntityClass()
         spielfigur.set_world(self,self.spawnpoint)
         player.observe(spielfigur)
 

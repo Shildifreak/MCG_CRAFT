@@ -7,8 +7,8 @@ import voxelengine
 from shared import *
 
 GRAVITY = 35
-AIRRESISTANCE = 5
-SLIDING = 0.001
+AIRSLIDING = 1
+SLIDING = 0.000001
 
 
 class Block(voxelengine.Block):
@@ -195,6 +195,12 @@ class Entity(voxelengine.Entity):
 
     def __init__(self,*args,**kwargs):
         super(Entity,self).__init__(*args,**kwargs)
+
+        self["velocity"] = Vector([0,0,0])
+        self["last_update"] = time.time()
+        self["ACCELERATION"] = 20
+        self["SPEED"] = 10
+
         self.instances.append(self)
 
     def kill(self):
@@ -205,7 +211,7 @@ class Entity(voxelengine.Entity):
         """whatever this entity should do when being right clicked by entity"""
 
         r = character.get_sight_vector()
-        self["velocity"] = Vector(r)*100 + Vector((0,10,0))
+        self["velocity"] = Vector(r)*(20,0,20) + Vector((0,15,0))
 
     def left_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
@@ -226,7 +232,7 @@ class Entity(voxelengine.Entity):
         z = random.randint(-40,40)
         block = world.get_block((x,y-3,z),load_on_miss = False)
         if block and block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
-            entity = cls(world)
+            entity = cls()
             entity.set_world(world,(x,y,z))
             return entity
     
@@ -253,12 +259,15 @@ class Entity(voxelengine.Entity):
     
     def horizontal_move(entity,jump): #M# name is misleading
         if entity.onground():
-            s = 0.5*SLIDING**entity.dt
-            entity["velocity"] *= (1,0,1) #M# stop falling
+            s = SLIDING**entity.dt
+            ev = entity["velocity"]
+            if ev[1] < 0:
+                ev *= (1,0,1)
             if jump:
-                entity["velocity"] += (0,entity["JUMPSPEED"],0)
+                ev = (ev[0], max(ev[1],entity["JUMPSPEED"]),ev[2])
+            entity["velocity"] = ev
         else:
-            s = 0.5*AIRRESISTANCE**entity.dt
+            s = AIRSLIDING**entity.dt
             entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
         sv = Vector([s,1,s]) #no slowing down in y
         entity["velocity"] *= sv

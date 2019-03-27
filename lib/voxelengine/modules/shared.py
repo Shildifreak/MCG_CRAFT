@@ -256,7 +256,7 @@ class Chunk(object):
 
     def __getitem__(self,index):
         self._load_decompressed()
-        block_id = struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0]
+        block_id = struct.unpack_from(self.blockformat,buffer(self._decompressed_data),index*self.byte_per_block)[0] #M# is buffer the right solution?
         return self.get_block_name_by_id(block_id)
 
     def get_block(self,position):

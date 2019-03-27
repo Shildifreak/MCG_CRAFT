@@ -128,19 +128,11 @@ class Player(voxelengine.Player):
 
         self.flying = False
 
-        self.entity["SPEED"] = 10
-        self.entity["FLYSPEED"] = 0.2
-        self.entity["JUMPSPEED"] = 10
-        self.entity["texture"] = "PLAYER"
-        self.entity.HITBOX = Hitbox(0.4, 1.8, 1.6)
-        self.entity["velocity"] = Vector([0,0,0])
-        self.entity["last_update"] = time.time()
+        # just for testing:
         self.entity["inventory"] = [{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
         self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["right_hand"] = {"id":"Repeater"}
-        self.entity["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
-        self.entity["lives"] = 9
-        
+
         # inventory stuff
         for i in range(60):
             self.entity["inventory"].append({"id":"AIR","count":i})
@@ -242,25 +234,34 @@ class Player(voxelengine.Player):
             if self.is_pressed("shift"):
                 nv -= (0, 1, 0)
             pe["position"] += nv*pe["FLYSPEED"]
+            pe["velocity"] = [0,0,0]
             return
 
         # Walking
         sv = pe.horizontal_move(self.is_pressed("jump"))
 
-        pe["velocity"] += ((1,1,1)-sv)*nv*pe["SPEED"]
-        # wie schnell ist spieler vertikal?
+        pe["velocity"] += nv*pe["ACCELERATION"]
+        l = pe["velocity"].length()
+        if l > pe["SPEED"]:
+            f = pe["SPEED"] / l
+            pe["velocity"] *= (f,1,f)
+
+        # save previous velocity and onground
         vy_vorher = pe["velocity"][1]
         onground_vorher = pe.onground()
+        # update position
         pe.update_position()
+        # see if player hit the ground and calculate damage
         if (not onground_vorher) and pe.onground():
+            # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             schaden = (-vy_vorher) -20
-            print(schaden)
+            print schaden
+            # HERZEN ANPASSEN
             if schaden >0:
                 a = pe["lives"]
                 b = pe["lives"] - 1
 
                 pe["lives"] = b
-            # HERZEN ANPASSEN
 
     def do_random_ticks(player):
         radius = 10
@@ -298,7 +299,7 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 blockread_counter = 0
 class World(voxelengine.World):
     BlockClass = resources.Block
-    EntityClass = resources.Entity
+    PlayerEntityClass = resources.entityClasses["Character"]
     def __init__(self,*args,**kwargs):
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
@@ -482,6 +483,7 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
          }
 
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
+print(configdir)
 configfn = os.path.join(configdir,"serversettings.py")
 def main():
     global ui

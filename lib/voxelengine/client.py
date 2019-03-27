@@ -1067,7 +1067,7 @@ def show_on_window(client):
                 break
         #setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
-                        resizable=True,client=client)
+                        resizable=True, client=client, fullscreen=False)
         # Hide the mouse cursor and prevent the mouse from leaving the window.
         window.set_exclusive_mouse(True)
         setup()
