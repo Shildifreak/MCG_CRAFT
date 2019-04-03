@@ -4,6 +4,8 @@ terrain_generator = []
 spawnpoint = (0,5,0)
 
 
+
+# Das ist eine Funktion die Bäume erzeugt
 def baum(position, size, direction):
     pass
 
