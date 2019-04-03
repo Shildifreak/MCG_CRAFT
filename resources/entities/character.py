@@ -13,7 +13,7 @@ class Character(Entity):
 
         self["texture"] = "PLAYER"
         self["SPEED"] = 11
-        self["FLYSPEED"] = 0.2
+        self["FLYSPEED"] = 0.4
         self["JUMPSPEED"] = 10
         self["inventory"] = []
         self["left_hand"] = {"id":"AIR"}
