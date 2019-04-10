@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 if __name__ != "__main__":
-    raise Warning("mcgcraft.py should not be imported")
+    raise Warning("mcgcrafft.py should not be imported")
 
 # hack der nur bei uns in der Schule funktioniert, damit mcgcraft mit python2 ausgeführt wird
 import os, sys
@@ -130,9 +130,9 @@ class Player(voxelengine.Player):
         self.flying = False
 
         # just for testing:
-        self.entity["inventory"] = [{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
+        self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
         self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
-        self.entity["right_hand"] = {"id":"Repeater"}
+        self.entity["right_hand"] = {"id":"ROCKET"}
 
         # inventory stuff
         for i in range(60):
@@ -240,6 +240,12 @@ class Player(voxelengine.Player):
 
         # Walking
         sv = pe.horizontal_move(self.is_pressed("jump"))
+
+        if self.was_released("for") or \
+           self.was_released("back") or \
+           self.was_released("right") or \
+           self.was_released("left"):
+            pe["velocity"] *= (0,1,0)
 
         pe["velocity"] += nv*pe["ACCELERATION"]
         l = pe["velocity"].length()

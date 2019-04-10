@@ -1,5 +1,15 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
+if __name__ != "__main__":
+    raise Warning("clientmitgui.py should not be imported")
+
+# hack der nur bei uns in der Schule funktioniert, damit mcgcraft mit python2 ausgeführt wird
+import os, sys
+if sys.version >= "3":
+    os.system("C:\\Python27\\python.exe clientmitgui.py") 
+    sys.exit(0)
 
 import sys, os
 sys.path.append("lib")

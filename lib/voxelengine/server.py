@@ -359,6 +359,7 @@ class Player(object):
         self.sentcount = 0 # number of msgs sent to player since he last sent something
         self.action_states = {}
         self.was_pressed_set = set()
+        self.was_released_set = set()
         self.observed_chunks = set()
         self._lc = set() #load chunks
         self._uc = set() #unload chunks
@@ -397,6 +398,10 @@ class Player(object):
     def was_pressed(self,key):
         """return whether key was pressed since last update"""
         return key in self.was_pressed_set
+
+    def was_released(self,key):
+        """return whether key was released since last update"""
+        return key in self.was_released_set
 
     def is_active(self):
         """indicates whether client responds (fast enough)"""
@@ -549,6 +554,7 @@ class Player(object):
         """internal update method, automatically called by game loop"""
         self._update_chunks()
         self.was_pressed_set.clear()
+        self.was_released_set.clear()
 
     def _handle_input(self,msg):
         """do something so is_pressed and was_pressed work"""
@@ -563,6 +569,8 @@ class Player(object):
                 new_state = bool(action_states & (1<<(i+1)))
                 if new_state and not self.is_pressed(a):
                     self.was_pressed_set.add(a)
+                if not new_state and self.is_pressed(a):
+                    self.was_released_set.add(a)
                 self.action_states[a] = new_state
         else:
             self.was_pressed_set.add(msg)

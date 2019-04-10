@@ -41,8 +41,23 @@ class Redstone_Item(Item):
 @register_block("Repeater")
 class Repeater(Block):
     def block_update(self,faces):
-        pass
+        d = self.get_front_facing_vector()
+        self["p_directions"] = (d,)
+        
+        source = self.world[self.position - d]
+        if "strong powered" or ("weak powered" and "correct direction"):
+            "do stuff"
+        # tbc.
 
     def activated(self,character,face):
         d = self.get_front_facing_vector()
-        self.world[self.position+d] = "Repeater"
+        self.world[self.position+d] = {
+            "id":"Repeater",
+            "rotation":self["rotation"]}
+
+
+
+
+
+
+        

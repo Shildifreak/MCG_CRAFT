@@ -32,7 +32,7 @@ def init(welt):
     for n in range(50):
         x = random.randint(-n-1,n)
         z = random.randint(-n-1,n)
-        t = random.choice(["A-TNT","TNT","Setzling","B-TNT",])
+        t = random.choice(["A-TNT","TNT","Setzling","B-TNT","ROCKET"])
 
         welt[(x,y-1,z)]= t
 spawnpoint = (0,7,0)

@@ -15,7 +15,7 @@ def baum(position, size, direction):
 def init(welt):
     for x in range(-50,50):
         for z in range(-50,50):
-            y = int(5*math.sin((0.3+random.random()/5)*x) + 5*math.sin((0.3+random.random()/5)*z))
+            y = int(5*math.sin(0.4*x) + 5*math.sin(0.4*z)) + random.randint(-10,11)/10
             welt[(x,y,z)] = "GRASS"
             for dy in range(y-5,y):
                 welt[(x,dy,z)] = "DIRT"
