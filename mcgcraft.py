@@ -235,7 +235,7 @@ class Player(voxelengine.Player):
             if self.is_pressed("shift"):
                 nv -= (0, 1, 0)
             pe["position"] += nv*pe["FLYSPEED"]
-            pe["velocity"] = [0,0,0]
+            pe["velocity"] = (0,0,0)
             return
 
         # Walking

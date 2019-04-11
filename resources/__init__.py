@@ -200,6 +200,8 @@ class Entity(voxelengine.Entity):
         self["last_update"] = time.time()
         self["ACCELERATION"] = 20
         self["SPEED"] = 10
+        
+        self.register_item_sanitizer(lambda v: Vector(v),"velocity")
 
         self.instances.append(self)
 

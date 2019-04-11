@@ -42,9 +42,11 @@ class Observable(object):
         value = self.sanitizers.get(static_key,lambda x:x)(value)
         value = observable_from(value)
         if isinstance(value,Observable):
-            assert value.parent == None
-            value.parent = self
-            value.parent_key = static_key
+            if value.parent == None:
+                value.parent = self
+                value.parent_key = static_key
+            else:
+                assert (value.parent == self) and (value.parent_key == static_key)
         return value
 
     def __setitem__(self,key,value):
