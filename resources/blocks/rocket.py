@@ -20,3 +20,13 @@ class Rocket(Block):
                         dp = type(self.position)((dx,dy,dz))
                         self.world[tp].exploded(dp.length()/tntrange)
     
+
+@register_block("RACKETENWERFER")
+class Rocketlauncher(Block):
+    blast_resistance = 0
+    
+
+    def activated(self,*args):
+        v = self.get_front_facing_vector()
+        if self.world[self.position+v] == "AIR":
+            self.world[self.position+v] = {"id":"ROCKET","rotation":self["rotation"],"base":self["base"]}

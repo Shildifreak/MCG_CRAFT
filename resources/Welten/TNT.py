@@ -29,11 +29,12 @@ def init(welt):
                 # create outer walls.
                 for dy in xrange(-11, 3):
                     welt[(x, y + dy, z)] = "BEDROCK"
-    for n in range(50):
-        x = random.randint(-n-1,n)
-        z = random.randint(-n-1,n)
-        t = random.choice(["A-TNT","TNT","Setzling","B-TNT","ROCKET"])
+    #for n in range(50):
+        #x = random.randint(-n-1,n)
+        #z = random.randint(-n-1,n)
+        #t = random.choice(["A-TNT","TNT","Setzling","B-TNT"])
 
-        welt[(x,y-1,z)]= t
+        #welt[(x,y-1,z)]= t
+    welt[(0,-1,0)] = "A-TNT"
 spawnpoint = (0,7,0)
 terrain_generator = []

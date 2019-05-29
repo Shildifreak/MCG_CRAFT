@@ -132,7 +132,7 @@ class Player(voxelengine.Player):
         # just for testing:
         self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
         self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
-        self.entity["right_hand"] = {"id":"ROCKET"}
+        self.entity["right_hand"] = {"id":"RACKETENWERFER"}
 
         # inventory stuff
         for i in range(60):
@@ -262,7 +262,6 @@ class Player(voxelengine.Player):
         if (not onground_vorher) and pe.onground():
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             schaden = (-vy_vorher) -20
-            print(schaden)
             # HERZEN ANPASSEN
             if schaden >0:
                 a = pe["lives"]
@@ -271,7 +270,7 @@ class Player(voxelengine.Player):
                 pe["lives"] = b
 
     def do_random_ticks(player):
-        radius = 10
+        radius = 30
         ticks = 5
         for a in range(ticks):
             dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))

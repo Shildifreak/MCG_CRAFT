@@ -5,7 +5,7 @@ import time, random
 
 class Dame(Entity):
     HITBOX = Hitbox(0.6,3,1.5)
-    LIMIT = 1
+    LIMIT = 0
     instances = []
     
     def __init__(self):
