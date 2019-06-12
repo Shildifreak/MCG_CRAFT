@@ -7,3 +7,4 @@ saves/
 *.html
 Thumbs.db
 test/
+config/

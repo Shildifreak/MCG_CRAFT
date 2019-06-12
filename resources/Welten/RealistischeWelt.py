@@ -1,7 +1,7 @@
 import random
 import tree
 terrain_generator = []
-spawnpoint = (50,50,50)
+spawnpoint = (50,70,50)
 
 def init(welt):
     n = 100

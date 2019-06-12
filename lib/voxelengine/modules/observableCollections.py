@@ -146,6 +146,7 @@ class ObservableList(Observable):
 
 if __name__ == "__main__":
     root = observable_from({"a":7,"b":[1,2,3]})
+    print "a" in root
     root.setdefault("c",[4])
     root["c"].append(2)
     root["c"].remove(4)

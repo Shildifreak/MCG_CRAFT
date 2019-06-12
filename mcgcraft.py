@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #* encoding: utf-8 *#
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 if __name__ != "__main__":
     raise Warning("mcgcrafft.py should not be imported")
@@ -19,6 +19,7 @@ import getpass
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append("lib")
 sys.path.append(os.path.join("resources","Welten","structures"))
+sys.path.append(os.path.join("lib","voxelengine","modules"))
 
 import voxelengine
 import appdirs
@@ -130,7 +131,7 @@ class Player(voxelengine.Player):
         self.flying = False
 
         # just for testing:
-        self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
+        self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
         self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
         self.entity["right_hand"] = {"id":"RACKETENWERFER"}
 
@@ -489,8 +490,8 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
          }
 
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-print(configdir)
 configfn = os.path.join(configdir,"serversettings.py")
+print(configfn)
 def main():
     global ui
     if os.path.exists(configfn):

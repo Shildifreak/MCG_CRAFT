@@ -15,6 +15,6 @@ class StoneBlock(Block):
 
     def mined(self,character,face):
         """can't mine bedrock, so this function does nothing instead of default something"""
-        print("hey, you can't mine bedrock")
+        #print("hey, you can't mine bedrock")
     def exploded(self,entf):
         pass
