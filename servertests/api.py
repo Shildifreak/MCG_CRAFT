@@ -82,11 +82,12 @@ WORLD_DATA = {
 	"block_world":{
 		"generator":{
 			"name":"colorland",
+			"seed":0,
 			"path":"...",
 			"code":"..."
 		},
 		"blocks":{},
-		"block_codec":{},
+		"codec":{},
 	},
 	"entities":{
 	},
@@ -103,7 +104,6 @@ class World(object):
 		self.blocks = BlockWorld(data["blocks"], metadata["timestamp"])
 		self.event_system = EventSystem()
 		self.metadata = None
-		self.terrain_generator = None
 		self.seed = None
 		pass
 
