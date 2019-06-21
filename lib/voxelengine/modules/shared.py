@@ -111,16 +111,16 @@ def select(options):
     """
     if not options:
         raise ValueError("no options given")
-    print "\n".join([" ".join(map(str,option)) for option in enumerate(options)])
-    print "Please enter one of the above numbers to select:",
+    print("\n".join([" ".join(map(str,option)) for option in enumerate(options)]))
+    print("Please enter one of the above numbers to select:", end=" ")
     while True:
         i = raw_input("")
         try:
             return int(i), options[int(i)]
         except ValueError:
-            print "Please enter one of the above NUMBERS to select:",
+            print("Please enter one of the above NUMBERS to select:", end=" ")
         except IndexError:
-            print "Please enter ONE OF THE ABOVE numbers to select:",
+            print("Please enter ONE OF THE ABOVE numbers to select:", end=" ")
 
 class Vector(tuple):
     def _assert_same_length(self,other):
@@ -129,26 +129,29 @@ class Vector(tuple):
         
     def __add__(self,other):
         self._assert_same_length(other)
-        return Vector(map(lambda (s,o):s+o,zip(self,other)))
+        #return Vector(s+o for s,o in zip(self, other))
+        return Vector(map(operator.add, self, other))
 
     def __sub__(self,other):
         self._assert_same_length(other)
-        return Vector(map(lambda (s,o):s-o,zip(self,other)))
+        #return Vector(s-o for s,o in zip(self, other))
+        return Vector(map(operator.sub, self, other))        
 
     def __mul__(self,other):
         if isinstance(other,(float,int)):
             return Vector(map(lambda x: x*other,self))
         else:
-            return Vector(map(lambda (s,o):s*o,zip(self,other)))
+            #return Vector(s*o for s,o in zip(self, other))
+            return Vector(map(operator.mul, self, other))
 
     def __rshift__(self,other):
-        return Vector([i>>other for i in self])
+        return Vector(i>>other for i in self)
 
     def __lshift__(self,other):
-        return Vector([i<<other for i in self])
+        return Vector(i<<other for i in self)
 
     def __mod__(self,other):
-        return Vector([i%other for i in self])
+        return Vector(i%other for i in self)
 
     def __neg__(self):
         return Vector(-e for e in self)
@@ -165,11 +168,14 @@ class Vector(tuple):
 
 
     def normalize(self):
-        return Vector(map(int,map(round,self)))
+        return Vector(int(round(i)) for i in self)
 
     def length(self):
-        return sum(map(operator.mul,self,self))**0.5
+        return self.sqr_length()**0.5
     
+    def sqr_length(self):
+        #return sum(map(operator.mul,self,self))
+        return sum(i**2 for i in self)
 
     def __str__(self):
         return " ".join(map(str,self))
@@ -222,7 +228,7 @@ class Chunk(object):
             try:
                 self._decompressed_data = bytearray(zlib.decompress(self._compressed_data))
             except:
-                print self._compressed_data
+                print(self._compressed_data)
                 raise
 
     def get_block_name_by_id(self,block_id):

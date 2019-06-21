@@ -1082,30 +1082,36 @@ def show_on_window(client):
         if window:
             window.on_close()
 
-def main():
+def get_servers():
     if options.host and options.port:
-        addr = (options.host, options.port)
-    else:
-        servers = socket_connection.search_servers(key="voxelgame")
-        print servers
-        if options.host:
-            servers[:] = [server for server in servers if server[0] == options.host]
-        if options.port:
-            servers[:] = [server for server in servers if server[1] == options.port]
-        if len(servers) == 0:
-            print("No Server found.")
-            time.sleep(1)
-            return
-        elif len(servers) == 1:
-            addr = servers[0][0]
-        else:
-            print "SELECT SERVER"
-            addr = servers[select([i[1] for i in servers])[0]][0]
+        return [(options.host, options.port)]
+    servers = socket_connection.search_servers(key="voxelgame")
+    print(servers)
+    if options.host:
+        servers[:] = [server for server in servers if server[0] == options.host]
+    if options.port:
+        servers[:] = [server for server in servers if server[1] == options.port]
+    return servers
+    
+def run(addr):
     try:
         with socket_connection.client(addr) as socket_client:
             show_on_window(socket_client)
     except socket_connection.Disconnect:
         print "Client closed due to disconnect."
+
+def main():
+    servers = get_servers()
+    if len(servers) == 0:
+        print("No Server found.")
+        time.sleep(1)
+        return
+    elif len(servers) == 1:
+        addr = servers[0][0]
+    else:
+        print "SELECT SERVER"
+        addr = servers[select([i[1] for i in servers])[0]][0]
+    run(addr)
 
 from optparse import OptionParser
 parser = OptionParser()
