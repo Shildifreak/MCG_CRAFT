@@ -24,7 +24,7 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
-import socket_connection_2 as socket_connection
+import socket_connection_3 as socket_connection
 from shared import *
 from shader import Shader
 
@@ -290,17 +290,17 @@ class SimpleChunk(object):
             self.blocks[position] = value
 
 def iterchunk():
-    return itertools.product(*(xrange(1<<CHUNKSIZE),)*DIMENSION)
+    return itertools.product(*(range(1<<CHUNKSIZE),)*DIMENSION)
 
 def iterframe():
     for de in (-1,1<<CHUNKSIZE):
-        for d1 in xrange(1<<CHUNKSIZE):
-            for d2 in xrange(1<<CHUNKSIZE): # faces
+        for d1 in range(1<<CHUNKSIZE):
+            for d2 in range(1<<CHUNKSIZE): # faces
                 yield (de,d1,d2)
                 yield (d1,de,d2)
                 yield (d1,d2,de)
         for df in (-1,1<<CHUNKSIZE):
-            for d1 in xrange(1<<CHUNKSIZE): # edges
+            for d1 in range(1<<CHUNKSIZE): # edges
                 yield (d1,de,df)
                 yield (de,d1,df)
                 yield (de,df,d1)
@@ -412,7 +412,7 @@ class Model(object):
         return color_corrections
 
     def update_visibility(self, position):
-        for f in xrange(len(FACES_PLUS)):
+        for f in range(len(FACES_PLUS)):
             self.update_face(position,f)
 
     def update_face(self,position,face):
@@ -453,18 +453,18 @@ class Model(object):
         vertex_data, texture_data = BLOCKMODELS[block_name][face]
         if not (vertex_data and texture_data):
             return
-        vertex_data = map(sum,zip(vertex_data,itertools.cycle(position)))
+        vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
         group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
-        length = len(vertex_data)/3
+        length = len(vertex_data)//3
         self.shown[(position,face)] = self.batch.add(length, GL_QUADS, group,
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data),
             ('c3f/static', self.color_corrections(vertex_data,FACES_PLUS[face])))
 
     def hide(self,position):
-        for face in xrange(len(FACES_PLUS)):
+        for face in range(len(FACES_PLUS)):
             self.hide_face(position,face)
 
     def hide_face(self,position,face):
@@ -727,7 +727,7 @@ class Window(pyglet.window.Window):
                 if name == c[0]:
                     if len(c) == argc:
                         return True
-                    print "Falsche Anzahl von Argumenten bei %s" %name
+                    print("Falsche Anzahl von Argumenten bei %s" %name)
                 return False
             if test("clear",1):
                 self.model.clear()
@@ -765,7 +765,7 @@ class Window(pyglet.window.Window):
                 self.set_exclusive_mouse(False)
                 self.hud_open = True
             else:
-                print "unknown command", c
+                print("unknown command", c)
         self.model.process_queue()
         m = max(0, MSGS_PER_TICK - len(self.model.queue))
         self.client.send("tick %s" % m)
@@ -1077,31 +1077,33 @@ def show_on_window(client):
         if e.message != "Disconnect" and e.message != "Server went down.":
             raise
         else:
-            print e.message
+            print(e.message)
     finally:
         if window:
             window.on_close()
 
 def get_servers():
     if options.host and options.port:
-        return [(options.host, options.port)]
+        return [((options.host, options.port),"Direct Connection")]
     servers = socket_connection.search_servers(key="voxelgame")
     print(servers)
     if options.host:
-        servers[:] = [server for server in servers if server[0] == options.host]
+        servers[:] = [server for server in servers if server[0][0] == options.host]
     if options.port:
-        servers[:] = [server for server in servers if server[1] == options.port]
+        servers[:] = [server for server in servers if server[0][1] == options.port]
     return servers
     
 def run(addr):
+    print(addr)
     try:
         with socket_connection.client(addr) as socket_client:
             show_on_window(socket_client)
     except socket_connection.Disconnect:
-        print "Client closed due to disconnect."
+        print("Client closed due to disconnect.")
 
 def main():
     servers = get_servers()
+    print(servers)
     if len(servers) == 0:
         print("No Server found.")
         time.sleep(1)
@@ -1109,7 +1111,7 @@ def main():
     elif len(servers) == 1:
         addr = servers[0][0]
     else:
-        print "SELECT SERVER"
+        print("SELECT SERVER")
         addr = servers[select([i[1] for i in servers])[0]][0]
     run(addr)
 

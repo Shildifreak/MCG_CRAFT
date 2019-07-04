@@ -149,6 +149,6 @@ if __name__ == "__main__":
     root.setdefault("c",[4])
     root["c"].append(2)
     root["c"].remove(4)
-    print type(root["c"]), root["c"]
+    print(type(root["c"]), root["c"])
     a = observable_from({1:2})
     b = observable_from({1:2})

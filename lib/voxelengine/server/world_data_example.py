@@ -1,0 +1,21 @@
+{
+	"metadata":{
+		"timestep":0,
+	},
+	"block_world":{
+		"generator":{
+			"name":"colorland",
+			"seed":0,
+			"path":"...",
+			"code":"..."
+		},
+		"blocks":[],
+		"codec":[],
+	},
+	"entities":{
+		"next_id":0,
+		"entities":[],
+	},
+	"events":{
+	}
+}

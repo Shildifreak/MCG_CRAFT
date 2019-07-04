@@ -9,6 +9,7 @@ import zlib
 import struct
 import operator
 import math
+from functools import reduce
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8",
@@ -207,7 +208,7 @@ class Chunk(object):
     def compressed_data(self):
         """Compressed version of the blocks in the chunk. Use this for load/store and sending to client."""
         if not self._compressed_data:
-            self._compressed_data = zlib.compress(buffer(self._decompressed_data))
+            self._compressed_data = zlib.compress(self._decompressed_data) #buffer was used here for some reason
         return self._compressed_data
     @compressed_data.setter
     def compressed_data(self,data):
@@ -262,7 +263,7 @@ class Chunk(object):
 
     def __getitem__(self,index):
         self._load_decompressed()
-        block_id = struct.unpack_from(self.blockformat,buffer(self._decompressed_data),index*self.byte_per_block)[0] #M# is buffer the right solution?
+        block_id = struct.unpack_from(self.blockformat,self._decompressed_data,index*self.byte_per_block)[0] #M# there was buffer around self._compressed_data in python2
         return self.get_block_name_by_id(block_id)
 
     def get_block(self,position):

@@ -43,22 +43,30 @@ def send_msg(sock,msg): #M# maybe do async send?
     except socket.error as e:
         print (e, "in send")
 
-def recv_msg(sock):
+def recv_msg(sock,timeout=0.0):
     """returns message, None or raises Disconnect"""
+    msg_head, may_contain_sep = uncomplete_msgs.get(sock,(b"",False))
+    if may_contain_sep:
+        splitpos = msg_head.find(SPLITSEQUENCE)
+        if splitpos != -1:
+            splitpos += SPLITLENGTH #split after sequence
+            uncomplete_msgs[sock] = (msg_head[splitpos:], True)
+            return unescape(msg_head[:splitpos]).decode()
+    if not select.select([sock],[],[],timeout)[0]:
+        return None
     try:
         msg = sock.recv(PACKAGESIZE)
     except socket.error as e:
-        print (e)
+        print(e)
         raise Disconnect()
     if msg == b"":
         raise Disconnect()
-    msg_head = uncomplete_msgs.get(sock,b"")
     splitpos = (msg_head[-SPLITLENGTH:].rjust(SPLITLENGTH,ESCAPECHAR)+msg).find(SPLITSEQUENCE)
     if splitpos != -1:
         completed_msg = msg_head + msg[:splitpos]
-        uncomplete_msgs[sock] = msg[splitpos:]
+        uncomplete_msgs[sock] = (msg[splitpos:], True)
         return unescape(completed_msg).decode()
-    uncomplete_msgs[sock] = msg_head + msg
+    uncomplete_msgs[sock] = (msg_head + msg, False)
     return None
 
 class symmetric_addr_socket_mapping(object):
@@ -122,11 +130,10 @@ class client(template):
     def send(self,msg):
         send_msg(self.socket,msg)
 
-    def receive(self,timeout=0.001):
-        while select.select([self.socket],[],[],timeout)[0]:
-            msg = recv_msg(self.socket)
-            if msg:
-                return msg
+    def receive(self):
+        msg = recv_msg(self.socket)
+        if msg:
+            return msg
         return False
 
     def close(self):
@@ -167,6 +174,7 @@ class server(template):
         self.entry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.entry_socket.bind(("",0))
         self.entry_socket.listen(5)
+        self.entry_port = self.entry_socket.getsockname()[1]
 
         # Start threads
         thread.start_new_thread(self._info_thread,())
@@ -267,6 +275,9 @@ class server(template):
 
     def get_clients(self):
         return self.clients.addrs()
+
+    def get_entry_port(self):
+        return self.entry_port
 
     def close(self):
         self.closed = True
@@ -410,7 +421,7 @@ class server_searcher(template):
                     self.servers.append((addr,port,uid,name,time.time()))
                     self.uids.add(uid)
             except Exception as e:
-                print ("hey",e)
+                print ("Receive thread of server_searcher stopped ungracefully",e)
 
     def get_servers(self):
         return [((addr[0],port),name) for addr,port,uid,name,timestamp in self.servers]
