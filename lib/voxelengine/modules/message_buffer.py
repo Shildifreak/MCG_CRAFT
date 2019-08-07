@@ -1,4 +1,4 @@
-import collections
+import collections, itertools
 
 class GotoGroup(object):
     def __init__(self):
@@ -8,16 +8,19 @@ class GotoGroup(object):
     def pop(self):
         m, self.message = self.message, None
         return m
+
 class FifoGroup(collections.deque):
     add = collections.deque.append
     def pop(self):
         if self:
             return self.popleft()
         #return None
+
 #class TellFifoGroup(FifoGroup):
 #    def pop(self):
 #        print len(self)
 #        return FifoGroup.pop(self)
+
 class EntityGroup(object):
     def __init__(self):
         self.content = collections.OrderedDict()
@@ -100,7 +103,7 @@ class MessageBuffer(object):
 
     def __iter__(self):
         # round robin
-        for group in groupcycler:
+        for group in self.groupcycler:
             msg = group.pop()
             if msg != None:
                 yield " ".join(str(part) for part in msg)

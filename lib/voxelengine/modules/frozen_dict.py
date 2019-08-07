@@ -1,6 +1,6 @@
 
 class FrozenDict(dict):
-	pass
+	__slots__ = ()
 
 	def __hash__(self):
 		""" similar to tuple, frozendicts can have a hash if all their elements are hashable"""

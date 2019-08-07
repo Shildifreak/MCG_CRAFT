@@ -1,9 +1,9 @@
 from resources import *
 import time, random
 
-@register_entity("Character")
+@register_entity("Mensch")
 
-class Character(Entity):
+class Human(Entity):
     HITBOX = Hitbox(0.4, 1.8, 1.6)
     LIMIT = 0 # no natural Spawning of Player Characters ;)
     instances = []

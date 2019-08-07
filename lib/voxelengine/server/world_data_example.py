@@ -1,6 +1,8 @@
-{
+data = {
 	"metadata":{
-		"timestep":0,
+		"clock":{
+			"gametick":0,
+		},
 	},
 	"block_world":{
 		"generator":{
@@ -16,6 +18,6 @@
 		"next_id":0,
 		"entities":[],
 	},
-	"events":{
-	}
+	"events":[],
+	"players":[],
 }

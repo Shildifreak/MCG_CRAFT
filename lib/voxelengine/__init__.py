@@ -22,7 +22,7 @@ Beispiel/Example:
 __version__ = '0.1.0'
 __all__ = []
 
-from server import *
-import client
+#from server import *
+#import voxelengine.client as client
 
 __all__.extend(filter(lambda s:not s.startswith("_"),globals().keys()))

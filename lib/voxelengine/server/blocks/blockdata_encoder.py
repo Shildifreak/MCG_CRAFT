@@ -2,7 +2,6 @@ import bisect
 
 import sys
 sys.path.append("..")
-from modules.frozen_dict import *
 
 class BlockDataEncoder(object):
 	"""doesn't care about mutability of blockdata, copy et simile has to be done somewhere else"""
@@ -58,7 +57,8 @@ class BlockDataEncoder(object):
 		"""
 
 if __name__ == "__main__":
-	pass
+	from modules.frozen_dict import *
+	
 	bde = BlockDataEncoder([("a",1),("b",2)])
 
 	print(bde.increment_count_and_get_id(freeze({"id":"STONE","state":2})))

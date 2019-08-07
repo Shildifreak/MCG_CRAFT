@@ -1,25 +1,27 @@
 import sys
-import collections
-
 if __name__ == "__main__":
 	sys.path.append("../../..")
-	__package__ = "tests.server.blocks"
+	__package__ = "voxelengine.server.blocks"
 
-from ..modules import collision_forms as collision_forms
-
+import collections
+from voxelengine.modules import collision_forms as collision_forms
 
 class BlockWorldIndex(object):
 	def __init__(self, get_tags_for_position):
 		self._block_tag_cache = dict() #{BinaryBox: {tag:number_of_affected_blocks}}
 		self.get_tags_for_position = get_tags_for_position
 	
-	def notice_change(self, position):
+	def notice_change(self, position, new_tags=None):
+		"""new_tags can be provided to avoid overhead of calling get_tags_for_position, but it has to be the same tags"""
+		if new_tags == None:
+			new_tags = get_tags_for_position(position)
+		#assert new_tags == get_tags_for_position(position)
 		bb = collision_forms.BinaryBox(position, 0)
 		if bb not in self._block_tag_cache:
 			return
 		# get tags that this block previously had by looking up 1x1x1 BinaryBox, calculate difference for each tag (+1,0,-1) <=> added, kept, removed
 		previous_tags = self._block_tag_cache[bb]
-		tag_difference = Counter(get_tags_for_position)
+		tag_difference = Counter(new_tags)
 		tag_difference.subtract(previous_tags)
 		# apply that change to BinaryBox and all parents
 		while bb in self._block_tag_cache:
@@ -48,6 +50,8 @@ class BlockWorldIndex(object):
 		"""
 		find blocks in a certain area that match all given tags
 		return positions of those blocks (+ content?)
+		area: Area object
+		tags: string or set of strings
 		count: how many blocks to find at most
 		order: ascending, descending, random, don't care
 		point: used to define a distance for ordering
@@ -59,12 +63,14 @@ class BlockWorldIndex(object):
 			raise NotImplementedError()
 		if point != None:
 			raise NotImplementedError()
+		if isinstance(tags, str):
+			tags = {tags}
 		assert isinstance(tags, set)
 
 		# get binary box cover of area
 		# get tags for those boxes, if necessary generate the tags
 		# if box is more than one block in size, repeat recursively with subboxes
-		bbs = area.get_binary_box_cover()
+		bbs = list(area.binary_box_cover()) #M# could try to find a way to stream this generator and join it with queue of children, (or just do depth first)
 		while bbs:
 			bb = bbs.pop(0)
 			bb_tags = self._get_tags(bb)

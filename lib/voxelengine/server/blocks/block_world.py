@@ -1,98 +1,62 @@
-import blockdata_encoder
-import block_storage
-import block_world_index
-import world_generation
+import functools
+
+import voxelengine.server.blocks.world_generation as world_generation
+from voxelengine.server.blocks.blockdata_encoder import BlockDataEncoder
+from voxelengine.server.blocks.block_storage import BlockStorage
+from voxelengine.server.blocks.block_world_index import BlockWorldIndex
+from voxelengine.server.blocks.block import Block
+from voxelengine.server.event_system import Event
+from voxelengine.modules.frozen_dict import freeze
+from voxelengine.modules.collision_forms import BinaryBox
+from voxelengine.modules.shared import Vector
 
 class BlockWorld(object):
 	BlockClass = Block
 	def __init__(self, block_world_data, event_system, clock):
 		self.event_system = event_system
 		
-		self.blockdata_encoder = blockdata_encoder.BlockDataEncoder(block_world_data["codec"])
-		self.block_storage     = block_storage.BlockStorage(blocks = block_world_data["blocks"],
-															clock = clock,
-															#retention_period,
-															reference_delete_callback = self.blockdata_encoder.decrement_count)
-		self.block_world_index = block_world_index.BlockWorldIndex(self.get_tags)
+		self.blockdata_encoder = BlockDataEncoder(block_world_data["codec"])
+		self.block_storage     = BlockStorage(	blocks = block_world_data["blocks"],
+												clock = clock,
+												#retention_period,
+												reference_delete_callback = self.blockdata_encoder.decrement_count)
+		self.block_world_index = BlockWorldIndex(self.get_tags)
 		self.world_generator   = world_generation.load_generator(block_world_data["generator"])
 	
 	def __getitem__(self, position, timestep = -1, relative_timestep = True):
+		position = Vector(position)
+		#
 		block_id = self.block_storage.get_block_id(position, timestep, relative_timestep)
 		if block_id == self.block_storage.NO_BLOCK_ID:
-			blockdata = self.world_generator[position]
+			blockdata = self.world_generator.terrain(position)
 		else:
 			blockdata = self.blockdata_encoder.get_blockdata_by_id(block_id)
-		block = BlockClass(blockdata)
+		block = self.BlockClass(blockdata, position=position, blockworld=self)
 		return block
 	
 	def __setitem__(self, position, value):
-		blockdata = freeze(value)
+		position = Vector(position)
+		# create a block object, or if already given one, make sure position and world match
+		block = self.BlockClass(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
 		# check with terrain_generator to see if to delete
-		natural_blockdata = self.world_generator[position]
+		natural_blockdata = self.world_generator.terrain(position)
 		# translate to block_id (delete or set)
-		if blockdata == natural_blockdata:
+		if block == natural_blockdata:
 			block_id = self.block_storage.NO_BLOCK_ID
 		else:
-			block_id = self.blockdata_encoder.get_id_by_blockdata(blockdata)
+			blockdata = freeze(block)
+			block_id = self.blockdata_encoder.increment_count_and_get_id(blockdata)
 		# apply
-		block_storage.set_block_id(position, block_id)
+		self.block_storage.set_block_id(position, block_id)
 		# update BlockWorldIndex
-		self.block_world_index.notice_change(position)
+		self.block_world_index.notice_change(position, block.get_tags())
+		# issue event for others to notice change
+		self.event_system.add_event(0,Event("block_update",BinaryBox(0,position),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
 	def get_tags(self, position):
 		return self[position].get_tags()
 
-
-
-class Block(object):
-	def __new__(cls,data):
-		if isinstance(data,basestring):
-			data = {"id":data}
-		else:
-			assert "id" in data
-		data = BlockData(data)
-	def __init__(self, position, world):
-		self.position = position
-		self.world = world
-	"""
-	def __getitem__(self,key):
-		return self.data[key]
-	def __setitem__(self,key,value=delvalue):
-		if self.data.immutable() and (self.chunk != None): # <=> data may be used by multiple Blocks
-			self.data = BlockData(self.data.copy())
-			self.data[key] = value
-			self.chunk.set_block(self.position, self)
-		else:
-			self.data[key] = value
-	def __delitem__(self,key): # make that stuff prettier
-		if self.data.immutable() and (self.chunk != None):
-			self.data = BlockData(self.data.copy())
-			del self.data[key]
-			self.chunk.set_block(self.position, self)
-		else:
-			del self.data[key]
-	"""
-	def __eq__(self,other):
-		if isinstance(other,dict):
-			return dict.__eq(self,other)
-		elif isinstance(other,basestring):
-			return self["id"] == other
-		else:
-			return False
-	def __ne__(self,other):
-		return not (self == other)
-	
-	def client_version(self):
-		orientation = self.get("base","")+str(self.get("rotation",""))
-		blockmodel = self["id"]+self.get("state","")
-		if orientation:
-			return blockmodel+":"+orientation
-		else:
-			return blockmodel
-
-	def tags(self):
-		return set()
-	
-	def save(self):
-		"""make changes that were applied to this Block persistent in the world"""
-		self.world[self.position] = self
+	@functools.wraps(BlockWorldIndex.find_blocks)
+	def find_blocks(self, *args, **kwargs):
+		for position in self.block_world_index.find_blocks(*args, **kwargs):
+			yield self[position]

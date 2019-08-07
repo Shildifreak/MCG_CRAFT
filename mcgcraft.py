@@ -306,7 +306,7 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 blockread_counter = 0
 class World(voxelengine.World):
     BlockClass = resources.Block
-    PlayerEntityClass = resources.entityClasses["Character"]
+    PlayerEntityClass = resources.entityClasses["Mensch"]
     def __init__(self,*args,**kwargs):
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []

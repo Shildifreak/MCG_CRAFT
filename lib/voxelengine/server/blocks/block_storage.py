@@ -27,7 +27,7 @@ class BlockStorage(object):
 		except KeyError:
 			return self.NO_BLOCK_ID
 		if relative_timestep:
-			timestep += self.clock.current_timestep
+			timestep += self.clock.current_gametick
 		threshold = (timestep,float("inf"))
 		i = bisect.bisect_right(block_history, threshold) - 1
 		if i < 0:
@@ -47,7 +47,7 @@ class BlockStorage(object):
 			block_history = []
 			self.structures[position] = block_history
 		# append, not replace even if same timestep. otherwise reference_delete_callback would have to be called
-		block_history.append((self.clock.current_timestep, block_id))
+		block_history.append((self.clock.current_gametick, block_id))
 		self._cleanup_history(block_history)
 
 	def __repr__(self):
@@ -57,17 +57,17 @@ class BlockStorage(object):
 if __name__ == "__main__":
 	# TEST CASES
 	class Clock(object):
-		current_timestep = 0
+		current_gametick = 0
 	clock = Clock()
 
 	bs = BlockStorage(blocks = {}, clock = clock)
 
 	bs.set_block_id((0,0,0), 5)
-	clock.current_timestep = 1
+	clock.current_gametick = 1
 	print(bs.get_block_id((0,0,0)))
 
 	bs.set_block_id((0,0,0), 4)
-	clock.current_timestep = 2
+	clock.current_gametick = 2
 	print(bs.get_block_id((0,0,0)))
 
 	if (bs.get_block_id((0,0,0), -10)) is BlockStorage.NO_BLOCK_ID:
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 		print("unknown history failed")
 
 	bs.set_block_id((0,0,0))
-	clock.current_timestep = 3
+	clock.current_gametick = 3
 	if (bs.get_block_id((0,0,0))) is BlockStorage.NO_BLOCK_ID:
 		print("deleting worked")
 	else:

@@ -124,6 +124,12 @@ def select(options):
             print("Please enter ONE OF THE ABOVE numbers to select:", end=" ")
 
 class Vector(tuple):
+    def __new__(cls, *args):
+        if len(args) == 1:
+            return super().__new__(cls, args[0])
+        else:
+            return super().__new__(cls, args)
+    
     def _assert_same_length(self,other):
         if len(self) != len(other):
             raise ValueError("incompatible length adding vectors")

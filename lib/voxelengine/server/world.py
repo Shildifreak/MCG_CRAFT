@@ -1,17 +1,30 @@
-from blocks.block_world import BlockWorld
+import sys, os
+if __name__ == "__main__":
+	sys.path.append(os.path.abspath("../.."))
+	__package__ = "voxelengine.server"
+
+from collections import defaultdict
+
+from voxelengine.server.blocks.block_world import BlockWorld
+from voxelengine.server.event_system import EventSystem
+from voxelengine.server.entities.entity_world import EntityWorld
+from voxelengine.server.players.player_world import PlayerWorld
+
+class Clock(dict):
+	def __init__(self, *args, **kwargs):
+		super(Clock, self).__init__(*args, **kwargs)
+	current_gametick = property(lambda self:self["gametick"], lambda self, value:self.__setitem__("gametick",value))
+	def tick(self):
+		self.current_gametick += 1
 
 class World(object):
-	def __init__(self, savefile):
-		
-		data = WORLD_DATA #M#
+	def __init__(self, data):
 		metadata = data["metadata"]
-		self.clock = Clock(metadata["timestamp"])
-		self.event_system = EventSystem()
+		self.clock = Clock(metadata["clock"])
+		self.event_system = EventSystem(self, data["events"])
 		self.entities = EntityWorld()
 		self.blocks = BlockWorld(data["block_world"], self.event_system, self.clock)
-		self.metadata = None
-		self.seed = None
-		pass
+		self.players = PlayerWorld(data["players"])
 	
 	def __getitem__(self, *args, **kwargs):
 		#M# raise DeprecationWarning("use world.blocks[...] instead of world[...]")
@@ -20,80 +33,75 @@ class World(object):
 	def __setitem__(self, *args, **kwargs):
 		#M# raise DeprecationWarning("use world.blocks[...] instead of world[...]")
 		self.blocks.__setitem__(*args,**kwargs)
-	
-	def save(self):
-		pass
+
 	def tick(self):
-		pass
+		# process pending events
+		self.event_system.process_events()
+		# tick
+		self.event_system.tick()
+		self.clock.tick()
+
+
+
+
+
+
+if __name__ == "__main__":
+	from voxelengine.server.world import World
+	from voxelengine.server.world_data_example import data    
+	data["block_world"]["generator"] = {
+		"name":"Simple Terrain Generator",
+		"seed":0,
+		"path":"...",
+		"code":\
+"""
+def terrain(position):
+	\"""a very simple terrain generator -> flat map with checkerboard pattern\"""
+	if position[1] == -2:
+		return "GREEN" if (position[0]+position[2]) % 2 else "CYAN"
+	return "AIR"
+def init(welt):
+	pass
+spawnpoint = (0,0,0)
+"""
+	}
+
+	w = World(data)
+
+	print(w.blocks[(0,-2,0)])
+	w.blocks[(0,-2,0)] = "AIR"
+	w.clock.current_gametick += 1
+	print(w.blocks[(0,-2,0)])
+	print("THIS SECOND ONE SHOULD BE AIR IF AT LEAST ONE GAMETICK HAS PASSED")
+
+	from voxelengine.server.entities.entity import Entity
+	e = Entity()
+
+
+
+
+
+
+
+
+
 
 ###############################################################################################################################################################################
 ###############################################################################################################################################################################
 ###############################################################################################################################################################################
 
 if False:
-
-	#* encoding: utf-8 *#
-
-	import math
-	import time
-	import threading #used by client and has to be imported before thread, cause otherwise some internal monkey patching causes error on termination
-	import thread
-	import ast
-	import itertools
 	import zipfile
 
-	import sys,os,inspect
-	# Adding directory modules to path
-	PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-	sys.path.append(os.path.join(PATH,"modules"))
-
-	from shared import *
-	from observableCollections import *
-	from message_buffer import MessageBuffer
-	#import textures
-
-	DOASYNCLOAD = True
-	MAX_LOAD_THREADS = 1
-
-	# merke: wenn man from voxelengine import * macht werden neue globale Variablen nach dem import nicht übernommen :(
-	# ergo: globale Variablen nicht mehr ändern zur Laufzeit (verändern der Objekte ist ok)
-		
 	class World(object):
 		BlockClass = Block
 		PlayerEntityClass = Entity
 		def __init__(self, worldgenerators = [], filename = None, spawnpoint=(0,0,0), chunksize = 4, defaultblock = "AIR"):
 			"""create new World instance"""
-			self.worldgenerators = worldgenerators
-			self.spawnpoint = Vector(spawnpoint)
-			if not isinstance(defaultblock,Block):
-				defaultblock = self.BlockClass(defaultblock)
-			self.defaultblock = defaultblock
-			self.loading_queue = []
-			self.load_thread_count = 0
-			self.chunks = {}
 			self.entities = set()
 			self.players = set()
 			if filename != None:
 				self._load(filename)
-			assert issubclass(self.BlockClass, Block)
-	   
-		def spawn_player(self,player):
-			spielfigur = self.PlayerEntityClass()
-			spielfigur.set_world(self,self.spawnpoint)
-			player.observe(spielfigur)
-
-		DATA = {
-			"metadata":{
-				"timestep":0,
-				"generator":"colorland",
-			},
-			"blocks":{
-			},
-			"entities":{
-			},
-			"events":{
-			}
-		}
 
 		def _load(self,filename):
 			if os.path.exists(filename):

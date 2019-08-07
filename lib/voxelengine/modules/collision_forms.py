@@ -102,6 +102,9 @@ class Box(Area):
 	def __init__(self, lower_bounds, upper_bounds):
 		self.lower_bounds = lower_bounds
 		self.upper_bounds = upper_bounds
+
+	def __add__(self, offset):
+		return Box(self.lower_bounds+offset, self.upper_bounds+offset)
 	
 	def old_binary_box_cover(self):
 		# get size of binary boxes
@@ -173,6 +176,9 @@ class Sphere(Area):
 		self.center = center
 		self.radius = radius
 	
+	def __add__(self, offset):
+		return Sphere(self.center+offset, self.radius)
+
 	def binary_box_cover(self):
 		return Box(Vector(x - self.radius for x in self.center),
 				   Vector(x + self.radius for x in self.center)).binary_box_cover()
@@ -191,6 +197,8 @@ class Point(Sphere):
 		super(Point, self).__init__(position, 0)
 
 class Ray(Area):
+	def __add__(self, offset):
+		raise NotImplementedError()
 	def _distance_to_BinaryBox(self, other):
 		raise NotImplementedError()
 	def _distance_to_Box(self, other):

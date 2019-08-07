@@ -15,7 +15,7 @@ import ast
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-sys.path.append(os.path.join(PATH,"modules"))
+sys.path.append(os.path.join(PATH,"..","modules"))
 
 import pyglet
 from pyglet import image
@@ -186,7 +186,7 @@ def block_model(vertices, textures):
     return result
 
 focus_distance = 0
-CHUNKSIZE = None
+CHUNKSIZE = 16 #M# remove everything chunk based later on
 
 class BlockModelDict(dict):
     def __missing__(self, key):
@@ -250,7 +250,7 @@ class BlockModelDict(dict):
 def load_setup(path):
     global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
     if not os.path.isabs(path): #M# do something to support urls
-        path = os.path.join(PATH,"texturepacks",path)
+        path = os.path.join(PATH,"..","texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
         description = ast.literal_eval(descriptionfile.read())
     TEXTURE_SIDE_LENGTH = description["TEXTURE_SIDE_LENGTH"]
@@ -644,7 +644,7 @@ class Window(pyglet.window.Window):
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
-        self.position = (0, 0, 0)
+        self.position = Vector((0, 0, 0))
 
         # First element is rotation of the player in the x-z plane (ground
         # plane) measured from the z-axis down. The second is the rotation
@@ -1061,6 +1061,8 @@ def show_on_window(client):
         # receive texturedata from game
         while True:
             c = client.receive()
+            if c:
+                print(c)
             if c and c.startswith("setup"):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
