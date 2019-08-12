@@ -104,7 +104,6 @@ class GameServer(object):
         call regularly to make sure internal updates are performed"""
         for addr,player in self.players.items():
             for msg in player.outbox:
-                print("sending",msg)
                 self.socket_server.send(msg,addr)
                 if player.outbox.sentcount >= 0: #test after send, so at least one massage is sent anyway
                     break
@@ -165,6 +164,7 @@ spawnpoint = (0,0,0)
 
     settings = {"init_function" : spawn_player,
                 }
+    w[(-1,1,-3)] = "GREEN"
     with GameServer(**settings) as g:
         g.launch_client()
         #g.launch_web_client()
@@ -172,5 +172,6 @@ spawnpoint = (0,0,0)
             g.update()
         w[(-1,2,-3)] = "YELLOW"
         while g.get_players():
+            #w[(-1,3,-3)] = "RED"
             w.tick()
             g.update()

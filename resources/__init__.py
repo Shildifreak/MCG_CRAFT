@@ -3,8 +3,11 @@ import math, random, time, collections
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
+print("PATH", PATH)
+
 import voxelengine
-from shared import *
+from voxelengine.modules.shared import *
+from voxelengine.modules.collision_forms import Hitbox
 
 GRAVITY = 35
 AIRSLIDING = 1
@@ -169,7 +172,7 @@ class Item(object):
         block_id = self.item["id"]
         character.world[new_pos] = block_id
         #M# remove block again if it collides with placer (check for all entities here later)
-        if new_pos in character.collide(character["position"]):
+        if new_pos in character.collide_blocks():
             character.world[new_pos] = "AIR"
         else:
             self.item["count"] -= 1
@@ -241,23 +244,31 @@ class Entity(voxelengine.Entity):
     def onground(entity):
         return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
 
-    def collide(entity,position):
-        """blocks entity would collides with"""
+    def collide_blocks(entity):
+        """blocks entity collides with"""
         return entity.potential_collide_blocks(entity["position"])
 
     def potential_collide_blocks(entity,position):
         """blocks entity would collide with if it was at position"""
-        return entity.HITBOX.collide_blocks(entity.world,position)
+        area = entity.HITBOX+position
+        blocks = entity.world.blocks.find_blocks(area, "solid")
+        return (block for block in blocks if block.collides_with(area))
 
     def collide_difference(entity,new_position,previous_position):
         """return blocks entity would newly collide with if it moved from previous_position to new_position"""
-        return collide(entity,new_position).difference(collide(entity,previous_position))
+        #M# maybe create area that is difference of previous hitbox and new hitbox and use that for finding blocks in world, but that has to be supported by collision forms first
+        if False:
+            diff_area = DiffArea(entity.HITBOX+new_position, entity.HITBOX+previous_position)
+            blocks = entity.world.blocks.find_blocks(diff_area, "solid")
+            return (block for block in blocks if block.collides_with(diff_area))
+        blocks = entity.potential_collide_blocks(new_position)
+        prev_area = entity.HITBOX+previous_position
+        return (block for block in blocks if not (block.bounding_box.collides_with(prev_area) and
+                                                  block.collides_with(prev_area)))
 
     def bool_collide_difference(entity,new_position,previous_position):
-        for block in entity.potential_collide_blocks(new_position).difference(entity.potential_collide_blocks(previous_position)):
-            #M# probably not needed # if entity.world.get_block(block).collides_with(entity.HITBOX,entity["position"]):
-            return True
-        return False
+        #M# can be optimized because only one hit is needed, but it still has to pass the blocks colides_with test, so make sure find_blocks is a generator
+        return any(True for _ in entity.collide_difference(new_position, previous_position))
     
     def horizontal_move(entity,jump): #M# name is misleading
         if entity.onground():
@@ -287,6 +298,7 @@ class Entity(voxelengine.Entity):
         #M# todo: cast ray from each point to detect collision and so on !!!
         steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
         pos = entity["position"]
+        print("Entity.update_position steps %s pos %s" % (steps, pos))
         for step in range(steps):
             for i in range(DIMENSION):
                 mask          = Vector([int(i==j) for j in range(DIMENSION)])

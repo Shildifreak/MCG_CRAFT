@@ -4,6 +4,7 @@ if __name__ == "__main__":
     print(sys.path)
     __package__ = "voxelengine.server.entities"
 
+import math
 from voxelengine.modules.observableCollections import ObservableDict
 from voxelengine.modules.shared import Vector
 import voxelengine.modules.collision_forms as collision_forms
@@ -28,7 +29,7 @@ class Entity(ObservableDict):
         self.register_item_callback(self._notify_chunk_observers,"texture")
         self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
-        self.hitbox = collision_forms.Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
+        self.HITBOX = collision_forms.Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
 
     def _on_position_change(self, new_position):
         """set position of entity"""
@@ -37,11 +38,11 @@ class Entity(ObservableDict):
 
         if self.world:
             # tell entity system that entity has moved
-            self.world.entities.notice_move(self,_old_position,new_position)
+            self.world.entities.notice_move(self,old_position,new_position)
             
             # tell everyone listening that entity has moved
-            self.world.event_system.add_event(0,Event("entity_leave",self.hitbox+old_position,self.uid))
-            self.world.event_system.add_event(0,Event("entity_enter",self.hitbox+new_position,self.uid))
+            self.world.event_system.add_event(0,Event("entity_leave",self.HITBOX+old_position,self.uid))
+            self.world.event_system.add_event(0,Event("entity_enter",self.HITBOX+new_position,self.uid))
 
     def _on_tags_change(self, new_tags):
         if self.world:
@@ -52,7 +53,7 @@ class Entity(ObservableDict):
         # leave old world
         if self.world:
             self.world.entities.remove(self)
-            self.world.event_system.add_event(0,Event("entity_leave",self.hitbox+self["position"],self.uid))
+            self.world.event_system.add_event(0,Event("entity_leave",self.HITBOX+self["position"],self.uid))
         self.world = None
 
         # change position
@@ -62,7 +63,7 @@ class Entity(ObservableDict):
         self.world = new_world
         if self.world:
             self.world.entities.add(self)
-            self.world.event_system.add_event(0,Event("entity_enter",self.hitbox+self["position"],self.uid))
+            self.world.event_system.add_event(0,Event("entity_enter",self.HITBOX+self["position"],self.uid))
         
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -86,7 +87,7 @@ class Entity(ObservableDict):
 
     def _notify_chunk_observers(self,*_):
         if self.world:
-            self.world.event_system.add_event(0,Event("entity_move",self.hitbox+self["position"],self.uid))
+            self.world.event_system.add_event(0,Event("entity_move",self.HITBOX+self["position"],self.uid))
 
 if __name__ == "__main__":
     e = Entity()

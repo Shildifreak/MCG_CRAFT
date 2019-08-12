@@ -1,5 +1,6 @@
 from resources import *
-from shared import *
+from voxelengine.modules.shared import Vector
+from voxelengine.modules.collision_forms import Hitbox
 
 @register_entity("Geist")
 

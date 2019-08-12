@@ -3,16 +3,11 @@
 from __future__ import print_function
 
 if __name__ != "__main__":
-    raise Warning("mcgcrafft.py should not be imported")
-
-# hack der nur bei uns in der Schule funktioniert, damit mcgcraft mit python2 ausgeführt wird
-import os, sys
-if sys.version >= "3":
-    os.system("C:\\Python27\\python.exe mcgcraft.py") 
-    sys.exit(0)
+    raise Warning("mcgcraft.py should not be imported")
 
 # Imports
-import sys, os, thread, ast, imp, inspect
+import sys, os, ast, imp, inspect
+import _thread as thread
 import math, time, random, itertools, collections
 import getpass
 
@@ -24,7 +19,9 @@ import voxelengine
 import appdirs
 import resources
 
-from shared import *
+from voxelengine.modules.shared import *
+from voxelengine.modules.collision_forms import EVERYWHERE
+import voxelengine.server.world_data_example
 
 CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)
 
@@ -127,7 +124,7 @@ class Player(voxelengine.Player):
     def init(self): #called in init_function after world has created entity for player
         self.set_focus_distance(8)
 
-        self.flying = False
+        self.flying = True
 
         # just for testing:
         self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
@@ -306,7 +303,6 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 blockread_counter = 0
 class World(voxelengine.World):
     BlockClass = resources.Block
-    PlayerEntityClass = resources.entityClasses["Mensch"]
     def __init__(self,*args,**kwargs):
         super(World,self).__init__(*args,**kwargs)
         self.changed_blocks = []
@@ -367,7 +363,7 @@ class World(voxelengine.World):
                     if request.exclusive:
                         request.valid_tag.invalidate()
         
-        for position, requests in  self.set_requests.iteritems():
+        for position, requests in  self.set_requests.items():
             for request in requests:
                 if request.valid_tag:
                     self.set_block(position, request.block)
@@ -388,15 +384,30 @@ class UI(object):
     def set_stats(self, name, value):
         print(name, value)
 
-def zeitmessung(ts = [0]*200, t = [time.time()]):
-    dt = time.time() - t[0]
-    t[0] += dt
-    dt = round(1/dt,2)
-    ts.append(dt)
-    ts.pop(0)
-    ui.set_stats("dt",dt)
-    ui.set_stats("min dt", min(ts))
-    ui.set_stats("max dt", max(ts))
+class Timer(object):
+    def __init__(self, TPS):
+        self.TPS = TPS # desired TPS
+        self.t = time.time() # timestamp of last tick
+        self.dt = None # length of last tick
+        self.dt_work = None
+        self.dt_idle = None
+    def tick(self):
+        self.dt_work = time.time() - self.t #time since last tick
+        self.dt_idle = max(0, 1.0/self.TPS - self.dt_work)
+        time.sleep(self.dt_idle)
+        self.dt = time.time() - self.t
+        self.t += self.dt
+
+def zeitstats(timer, tps_history = [0]*200):
+    tps = round(1/timer.dt,2)
+    tps_history.append(tps)
+    tps_history.pop(0)
+    ui.set_stats("TPS",tps)
+    ui.set_stats("min TPS", min(tps_history))
+    ui.set_stats("max TPS", max(tps_history))
+    
+    ui.set_stats("mspt", "%s / %s" %(int(1000*timer.dt_work), int(1000/timer.TPS)))
+    ui.set_stats("sleep", int(1000*timer.dt_idle))
 
 def gameloop():
     global w, g
@@ -405,16 +416,38 @@ def gameloop():
         if not config["run"]:
             time.sleep(0.1)
             continue #jump back to start of loop
-        print("Game starting ...", end="")
-        worldmod = imp.load_source(config["worldtype"],os.path.join(PATH,"resources","Welten",config["worldtype"])+".py")
 
-        w = World(worldmod.terrain_generator,spawnpoint=worldmod.spawnpoint,chunksize=CHUNKSIZE,defaultblock=resources.Block("AIR"),filename=config["file"])
-        if len(w.chunks) == 0: # only generate if not done yet
-            worldmod.init(w)
-        w.changed_blocks = []
+        print("Game starting ...", end="")
+        savegamepath = config["file"]
+        if os.path.exists(savegamepath):
+            with open(savegamepath) as savegamefile:
+                data = ast.literal_eval(savegamefile.read())
+            w = World(data)
+        else:
+            print("Preparing World ...", end="")
+            data = voxelengine.server.world_data_example.data
+            generator_path = os.path.join(PATH,"resources","Welten",config["worldtype"]+".py")
+            with open(generator_path) as generator_file:
+                data["block_world"]["generator"] = {
+                    "name":config["worldtype"],
+                    "seed":random.random(),
+                    "path":generator_path,
+                    "code":generator_file.read(),
+                    }
+            print("done")
+            print("Creating World ... ", end="", flush=True)
+            w = World(data)
+            print("done")
+            print("Initialising world ... ", end="", flush=True)
+            t = time.time()
+            w.blocks.world_generator.init(w)
+            dt = time.time() - t
+            print("done")
+            print("blocks:", len(w.blocks.block_storage.structures), "in", dt, "s")
+            print("sleeping 1s"); time.sleep(1)
 
         def save():
-            print("Game saving ...", end="")
+            print("Game saving ...", end="", flush=True)
             if config["file"]:
                 w.save(config["file"])
                 print("done")
@@ -422,48 +455,52 @@ def gameloop():
                 print("skipped")
             config["save"] = False
 
-        def i_f(player):
-            w.spawn_player(player)
+        def init_function(player):
+            spielfigur = resources.entityClasses["Mensch"]()
+            spielfigur.set_world(w,w.blocks.world_generator.spawnpoint)
+            player.control(spielfigur)
             player.init()
 
         renderlimit = True #True: fast loading, False: whole world at once
-        settings = {"init_function": i_f,
-                    "renderlimit": True,#renderlimit, # whether to show just the chunks in renderdistance (True) or all loaded chunks (False)
-                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepack"),
-                    "PlayerClass" : Player,
+        settings = {"init_function": init_function,
                     "wait" : False,
                     "name" : config["name"],
+                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepack"), #relative path from client
+                    "PlayerClass" : Player,
                     }
-        t = time.time()
-        FPS = 60
-        with voxelengine.Game(**settings) as g:
+        timer = Timer(TPS = 60)
+        with voxelengine.GameServer(**settings) as g:
             print("done") # Game starting ... done
             while config["run"]:
+                print("other stuff")
                 if config["play"]:
                     config["play"] = False
                     g.launch_client()
                 if config["save"]:
                     save()
-                dt = time.time() - t
-                time.sleep(max(0, 1.0/FPS-dt))
-                t = time.time()
-                ui.set_stats("bla", "%s, %s" %(1.0/FPS, dt))
-                ui.set_stats("sleep", max(0, 1.0/FPS-dt))
-                zeitmessung()
+                timer.tick()
+                zeitstats(timer)
                 #print blockread_counter
                 blockread_counter = 0
                 #
+                print("game update")
                 g.update()
+                print("world tick")
                 w.tick()
+                print("player update")
                 for player in g.get_players():
                     player.update()
-                    player.do_random_ticks()
+                print("random ticks")
+                for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
+                    w.random_ticks_at(random_tick_source["position"])
                 #M#
+                print("mob spawning")
                 if config["mobspawning"]:
                     for entity_class in resources.entityClasses.values():
                         if len(entity_class.instances) < entity_class.LIMIT:
                             entity_class.try_to_spawn(w)
-                for entity in w.entities.copy():
+                print("entity update")
+                for entity in w.entities.find_entities(EVERYWHERE, "update"): #replace with near player sometime
                     entity.update()
             save()
         print("Game stopped")
@@ -509,7 +546,7 @@ def main():
         print("GUI not working cause of:\n",e)
     ui = UI(config, worldtypes)
 
-    if sys.flags.interactive or False:
+    if False: #M# sys.flags.interactive or False:
         thread.start_new_thread(gameloop,())
         if not sys.flags.interactive:
             import code

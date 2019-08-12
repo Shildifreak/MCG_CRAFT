@@ -1,8 +1,11 @@
+import sys, os
+if __name__ == "__main__":
+	sys.path.append(os.path.abspath("../.."))
+	__package__ = "voxelengine.modules"
+
 import collections, math, itertools
 
-import sys
-sys.path.append("../../../lib/voxelengine/modules")
-from shared import Vector
+from voxelengine.modules.shared import Vector, floatrange
 
 class Area(object):
 	def binary_box_cover():
@@ -17,8 +20,6 @@ class Area(object):
 	
 	def distance(self, other):
 		"""some number that is negative if the areas collide, 0 if they touch and positive if there's space inbetween"""
-		if isinstance(other, BinaryBox):
-			return self._distance_to_BinaryBox(other)
 		if isinstance(other, Box):
 			return self._distance_to_Box(other)
 		#if isinstance(other, Point):
@@ -27,9 +28,10 @@ class Area(object):
 			return self._distance_to_Sphere(other)
 		if isinstance(other, Ray):
 			return self._distance_to_Ray(other)
+		if isinstance(other, Everywhere):
+			return -1
+		raise ValueError("Can't calculate distance to object of type %s" % type(other))
 
-	def _distance_to_BinaryBox(self, other):
-		raise NotImplementedError()
 	def _distance_to_Box(self, other):
 		raise NotImplementedError()
 	#def _distance_to_Point(self, other):
@@ -39,43 +41,19 @@ class Area(object):
 	def _distance_to_Ray(self, other):
 		raise NotImplementedError()
 	
+	def __contains__(self, position):
+		return self._distance_to_Sphere(Point(Vector(position))) <= 0
 
-class BinaryBox(collections.namedtuple("BinaryBox",["scale","position"]), Area):
+class BinaryBox(collections.namedtuple("BinaryBox",["scale","position"])):
 	def bounding_box(self):
 		return Box(Vector(self.position)<<self.scale, Vector(p+1 for p in self.position)<<self.scale)
 
-	def get_parent_box(self):
-		pass
-	def get_child_boxes(self):
-		pass
-	
-	def binary_box_cover(self):
-		yield self
+	def get_parent(self):
+		BinaryBox(self.scale+1, Vector(self.position)>>1)
 
-	def _distance_to_BinaryBox(self, other):
-		"""collision is trivial, touching not"""
-		d_scale = other.scale - self.scale
-		p_self = self.position >> max(d_scale, 0)
-		p_other = other.position >> max(-d_scale, 0)
-		if p_self == p_other:
-			return -1
-		#if not count_touch_without_intersection:
-		#	return 1
-		direction = sign(p_other - p_self)
-		if d_scale > 0:
-			p_self = (self.position + direction) >> max(d_scale, 0)
-		else:
-			p_other = (other.position - direction) >> max(-d_scale, 0)
-		if p_self == p_other:
-			return 0
-		return 1
-		
-	def _distance_to_Box(self, other):
-		raise NotImplementedError()
-	def _distance_to_Sphere(self, other):
-		raise NotImplementedError()
-	def _distance_to_Ray(self, other):
-		raise NotImplementedError()
+	def get_children(self):
+		for offset in itertools.product((0,1),repeat=len(self.position)):
+			yield BinaryBox(self.scale-1, (Vector(self.position)<<1)+offset)
 
 def log2(x):
 	"""return smallest n where abs(x) <= 2**n """
@@ -149,10 +127,10 @@ class Box(Area):
 		bb_upper_bounds = Vector(ceilshift (x, size) for x in self.upper_bounds)
 		#assert min(bb_upper_bounds - bb_lower_bounds) > 0 #M# THINK ABOUT BOXES WITH LENGTH 0 ON ONE OR MORE SIDES!!
 		for bb_position in itertools.product(*map(range, bb_lower_bounds, bb_upper_bounds)):
-			yield BinaryBox(size, bb_position)
+			yield BinaryBox(size, Vector(bb_position))
 	
 	def _distance_to_BinaryBox(self, other):
-		raise NotImplementedError()
+		return self._distance_to_Box(other)
 	def _distance_to_Box(self, other):
 		return max(map(max,
 			other.lower_bounds - self.upper_bounds,
@@ -170,6 +148,12 @@ class Box(Area):
 		
 	def _distance_to_Ray(self, other):
 		raise NotImplementedError()
+	
+	def __repr__(self):
+		return "Box(%s, %s)" % (self.lower_bounds, self.upper_bounds)
+		
+	def __str__(self):
+		return "%s %s %s %s %s %s" % (*self.lower_bounds, *self.upper_bounds)
 
 class Sphere(Area):
 	def __init__(self, center, radius):
@@ -192,21 +176,64 @@ class Sphere(Area):
 	def _distance_to_Ray(self, other):
 		raise NotImplementedError()
 
-class Point(Sphere):
-	def __init__(self, position):
-		super(Point, self).__init__(position, 0)
-
 class Ray(Area):
+	__slots__ = ("origin", "direction", "dirfrac")
+	def __init__(self, origin, direction):
+		self.origin = origin
+		self.direction = direction
+		self.dirfrac = Vector((1.0/d if d!=0 else float("inf")) for d in direction)
+
+	def distance_from_origin_to_Box(self, box):
+		"""returns False if no collision else distance from origin of ray to front of box,
+		this can be negative if origin is inside box"""
+		# based on https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
+		t135 = (box.lower_bound - self.origin)*self.dirfrac
+		t246 = (box.upper_bound - self.origin)*self.dirfrac
+
+		tmin = max(map(min,t135,t246))
+		tmax = min(map(max,t135,t246))
+
+		# if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+		# if tmin > tmax, ray doesn't intersect AABB
+		if (tmax < 0) or (tmin > tmax):
+			return False
+		return tmin
+
 	def __add__(self, offset):
 		raise NotImplementedError()
 	def _distance_to_BinaryBox(self, other):
 		raise NotImplementedError()
-	def _distance_to_Box(self, other):
-		raise NotImplementedError()
+	def _distance_to_Box(self, box):
+		"""this method has to return negative distance when intersecting,
+		so it wraps the more intuitive distance_from_origin_to_Box function"""
+		d = self.distance_from_origin_to_Box(box)
+		if d == False:
+			return 1
+		else: # d can still be positive or negative depending on whether origin of ray is in front of Box or inside
+			return -1
 	def _distance_to_Sphere(self, other):
 		raise NotImplementedError()
 	def _distance_to_Ray(self, other):
 		raise NotImplementedError()
+
+class Everywhere(Area):
+	__slots__ = ()
+	def distance(self, other):
+		return -1
+EVERYWHERE = Everywhere()
+
+class Point(Sphere):
+	def __init__(self, position):
+		super(Point, self).__init__(position, 0)
+
+
+class Hitbox(Box):
+	def __init__(self, width, height, eye_level):
+		super(Hitbox, self).__init__(Vector(-width, -width,       -eye_level),
+									 Vector( width,  width, height-eye_level))
+		self.hitpoints = [Vector((dx,dy,dz)) for dx in floatrange(-width,width)
+											 for dy in floatrange(-eye_level,height-eye_level)
+											 for dz in floatrange(-width,width)]
 
 
 if __name__ == "__main__":
@@ -261,17 +288,17 @@ if __name__ == "__main__":
 		assert d1 == d2
 		assert expected_sign == sign(d1)
 
-	test(BinaryBox(0, 0),BinaryBox(0, 0),-1)
-	test(BinaryBox(1, 0),BinaryBox(1, 0),-1)
-	test(BinaryBox(0, 1),BinaryBox(0, 1),-1)
-	test(BinaryBox(1, 3),BinaryBox(5, 0),-1)
-	test(BinaryBox(0,-1),BinaryBox(0, 0), 0)
-	test(BinaryBox(0, 1),BinaryBox(0, 2), 0)
-	test(BinaryBox(1, 1),BinaryBox(2, 1), 0)
-	test(BinaryBox(2, 0),BinaryBox(1, 2), 0)
-	test(BinaryBox(0,-1),BinaryBox(0, 1), 1)
-	test(BinaryBox(0, 0),BinaryBox(1, 1), 1)
-	test(BinaryBox(0,-1),BinaryBox(1,-2), 1)
+	test(BinaryBox(0,( 0,)).bounding_box(),BinaryBox(0,( 0,)).bounding_box(),-1)
+	test(BinaryBox(1,( 0,)).bounding_box(),BinaryBox(1,( 0,)).bounding_box(),-1)
+	test(BinaryBox(0,( 1,)).bounding_box(),BinaryBox(0,( 1,)).bounding_box(),-1)
+	test(BinaryBox(1,( 3,)).bounding_box(),BinaryBox(5,( 0,)).bounding_box(),-1)
+	test(BinaryBox(0,(-1,)).bounding_box(),BinaryBox(0,( 0,)).bounding_box(), 0)
+	test(BinaryBox(0,( 1,)).bounding_box(),BinaryBox(0,( 2,)).bounding_box(), 0)
+	test(BinaryBox(1,( 1,)).bounding_box(),BinaryBox(2,( 1,)).bounding_box(), 0)
+	test(BinaryBox(2,( 0,)).bounding_box(),BinaryBox(1,( 2,)).bounding_box(), 0)
+	test(BinaryBox(0,(-1,)).bounding_box(),BinaryBox(0,( 1,)).bounding_box(), 1)
+	test(BinaryBox(0,( 0,)).bounding_box(),BinaryBox(1,( 1,)).bounding_box(), 1)
+	test(BinaryBox(0,(-1,)).bounding_box(),BinaryBox(1,(-2,)).bounding_box(), 1)
 	
 	test(Box(Vector((0,0,0)), Vector((0,0,0))), Box(Vector((0,0,0)), Vector((0,0,0))), 0)
 	print(tuple(Box(Vector((0,0,1)), Vector((1,1,1))).binary_box_cover()))
@@ -288,5 +315,7 @@ if __name__ == "__main__":
 	test(Box(Vector((0,0,0)), Vector((1,1,1))), Sphere(Vector((  4,  5,0.5)),   4), 1)
 	test(Box(Vector((0,0,0)), Vector((1,1,1))), Sphere(Vector((  4,  5,0.5)),   5), 0)
 	test(Box(Vector((0,0,0)), Vector((1,1,1))), Sphere(Vector((  4,  5,0.5)),   6),-1)
+
+	assert Vector(0,0,0) in Box(Vector(-1,-1,-1), Vector(1,1,1))
 	
 	print("all tests passed")

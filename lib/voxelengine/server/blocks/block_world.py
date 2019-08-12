@@ -23,16 +23,18 @@ class BlockWorld(object):
 		self.block_world_index = BlockWorldIndex(self.get_tags)
 		self.world_generator   = world_generation.load_generator(block_world_data["generator"])
 	
-	def __getitem__(self, position, timestep = -1, relative_timestep = True):
-		position = Vector(position)
-		#
-		block_id = self.block_storage.get_block_id(position, timestep, relative_timestep)
+	def _block_by_id(self, block_id, position):
 		if block_id == self.block_storage.NO_BLOCK_ID:
 			blockdata = self.world_generator.terrain(position)
 		else:
 			blockdata = self.blockdata_encoder.get_blockdata_by_id(block_id)
 		block = self.BlockClass(blockdata, position=position, blockworld=self)
 		return block
+	
+	def __getitem__(self, position, timestep = -1, relative_timestep = True):
+		position = Vector(position)
+		block_id = self.block_storage.get_block_id(position, timestep, relative_timestep)
+		return self._block_by_id(block_id, position)
 	
 	def __setitem__(self, position, value):
 		position = Vector(position)
@@ -51,7 +53,7 @@ class BlockWorld(object):
 		# update BlockWorldIndex
 		self.block_world_index.notice_change(position, block.get_tags())
 		# issue event for others to notice change
-		self.event_system.add_event(0,Event("block_update",BinaryBox(0,position),block)) #since it's 0 delay there is no problem with passing unfrozen object
+		self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
 	def get_tags(self, position):
 		return self[position].get_tags()
@@ -60,3 +62,8 @@ class BlockWorld(object):
 	def find_blocks(self, *args, **kwargs):
 		for position in self.block_world_index.find_blocks(*args, **kwargs):
 			yield self[position]
+
+	@functools.wraps(BlockStorage.list_changes)
+	def list_changes(self, area, since_tick):
+		for position, block_id in self.block_storage.list_changes(area, since_tick):
+			yield position, self._block_by_id(block_id, position)

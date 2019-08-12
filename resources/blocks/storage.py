@@ -1,5 +1,5 @@
 from resources import *
-from observableCollections import ObservableDict
+from voxelengine.modules.observableCollections import ObservableDict
 
 @register_block("CHEST")
 class ChestBlock(Block):

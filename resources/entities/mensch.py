@@ -3,15 +3,15 @@ import time, random
 
 @register_entity("Mensch")
 
-class Human(Entity):
+class Mensch(Entity):
     HITBOX = Hitbox(0.4, 1.8, 1.6)
     LIMIT = 0 # no natural Spawning of Player Characters ;)
     instances = []
     
     def __init__(self, *args, **kwargs):
-        super(Character,self).__init__()
+        super(Mensch,self).__init__()
 
-        self["texture"] = "PLAYER"
+        self["texture"] = "MENSCH"
         self["SPEED"] = 11
         self["FLYSPEED"] = 11
         self["JUMPSPEED"] = 10
@@ -22,10 +22,10 @@ class Human(Entity):
         self["lives"] = 9
 
     def right_clicked(self, character):
-        print "Oh no, that hurts!"
+        print("Oh no, that hurts!")
         
     def left_clicked(self, character):
-        print "Just stop it already!"
+        print("Just stop it already!")
 
     def update(self):
         pass

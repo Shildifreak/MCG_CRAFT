@@ -1,4 +1,10 @@
+import sys, os
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath("../../.."))
+    __package__ = "voxelengine.server.blocks"
+
 import bisect
+from voxelengine.modules.binary_dict import BinaryDict
 
 class BlockStorage(object):
 	NO_BLOCK_ID = -1 #use to delete blocks
@@ -8,7 +14,8 @@ class BlockStorage(object):
 		clock: has to have attribute current_timestep that may only ever increase
 		"""
 		self.clock = clock
-		self.structures = dict(blocks) #{(x,y,z):[(t1,block_id),(t2,block_id)]} | where t1 <= t2
+		self.structures = BinaryDict(blocks)
+		#self.structures = dict(blocks) #{(x,y,z):[(t1,block_id),(t2,block_id)]} | where t1 <= t2
 		self.retention_period = retention_period
 
 	def _cleanup_history(self, block_history):
@@ -20,6 +27,16 @@ class BlockStorage(object):
 			# don't forget reference_delete_callback to inform Block Encoder
 			# also don't forget special handling for NOT_A_BLOCK_ID
 	
+	def valid_history(self, timestep):
+		"""tell if timestamp is older than retention period but not 0 and thereby invalid"""
+		if timestep == 0:
+			return True
+		if self.retention_period < 0:
+			return True
+		if 0 <= self.clock.current_gametick - timestep <= self.retention_period:
+			return True
+		return False
+	
 	def get_block_id(self, position, timestep=-1, relative_timestep=True):
 		""" if block is not found returns self.NO_BLOCK_ID"""
 		try:
@@ -28,6 +45,7 @@ class BlockStorage(object):
 			return self.NO_BLOCK_ID
 		if relative_timestep:
 			timestep += self.clock.current_gametick
+		assert self.valid_history(timestep)
 		threshold = (timestep,float("inf"))
 		i = bisect.bisect_right(block_history, threshold) - 1
 		if i < 0:
@@ -50,6 +68,17 @@ class BlockStorage(object):
 		block_history.append((self.clock.current_gametick, block_id))
 		self._cleanup_history(block_history)
 
+	def list_changes(self, area, since_tick):
+		assert self.valid_history(since_tick)
+		print("BlockStorage.list_changes")
+		for binary_box in area.binary_box_cover():
+			for position, history in self.structures.list_blocks_in_binary_box(binary_box):
+				if position in area:
+					if history:
+						t, block_id = history[-1]
+						if t >= since_tick:
+							yield position, block_id
+
 	def __repr__(self):
 		return repr(self.structures)
 	
@@ -60,7 +89,7 @@ if __name__ == "__main__":
 		current_gametick = 0
 	clock = Clock()
 
-	bs = BlockStorage(blocks = {}, clock = clock)
+	bs = BlockStorage(blocks = (), clock = clock)
 
 	bs.set_block_id((0,0,0), 5)
 	clock.current_gametick = 1

@@ -1,11 +1,15 @@
 from voxelengine.modules.message_buffer import MessageBuffer
-from voxelengine.modules.shared import ACTIONS
+from voxelengine.modules.shared import ACTIONS, Vector
+from voxelengine.modules.collision_forms import Box
 
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""
 	RENDERDISTANCE = 16
 	def __init__(self,initmessages=()):
 		self.entity = None
+		self.world = None
+		self.monitored_area = None #Box(Vector(-10,-10,-10),Vector(10,10,10))
+		self.monitor_ticks = {} # {m_id:gametick,...} gameticks when monitored area was changed 
 		self.outbox = MessageBuffer()
 		for msg in initmessages:
 			self.outbox.add(*msg)
@@ -23,13 +27,8 @@ class Player(object):
 			self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
 
 	def control(self,entity):
-		if self.entity:
-			old_world = self.entity.world
-		else:
-			old_world = None
 		self.entity = entity
-
-		self._notice_world(old_world,entity.world)
+		self._set_world(entity.world)
 		self._notice_position()
 
 	def is_pressed(self,key):
@@ -112,10 +111,15 @@ class Player(object):
 
 	### it follows a long list of private methods that make sure a player acts like one ###
 
-	def _update_monitored_area(self, area, since_tick):
+	def _update_area(self, area, since_tick):
 		"""when entering new world or walking around make sure to send list of modified blocks when compared to world at since_tick (use 0 for initial terrain generation)"""
-		raise NotImplementedError()
+		if since_tick != 0 and not self.world.blocks.block_storage.valid_history(since_tick):
+			since_tick = 0
+			self.outbox.add("delarea", area)
+		for position, block in self.world.blocks.list_changes(area, since_tick):
+			self.outbox.add("set", position, block.client_version())
 		# chunksize, all blocks in radius, etc
+		# if since tick is not available send clear_area first
 
 	def _update(self):
 		"""internal update method, automatically called by game loop"""
@@ -139,8 +143,15 @@ class Player(object):
 					self.was_released_set.add(a)
 				self.action_states[a] = new_state
 		elif msg.startswith("monitor"):
-			x1,y1,z1, x2,y2,z2, since_tick = map(int, msg.split(" ")[1:])
-			self._update_monitored_area(Box(Vector((x1,y1,z1)), Vector((x2,y2,z2))), since_tick)
+			print("Player",msg)
+			x1,y1,z1, x2,y2,z2, m_id = map(int, msg.split(" ")[1:])
+			self.monitored_area = Box(Vector(x1,y1,z1), Vector(x2,y2,z2))
+			self.monitor_ticks[m_id] = self.world.clock.current_gametick # needed for partial update when resuming monitoring of some area
+		elif msg.startswith("update"):
+			print("Player", msg)
+			x1,y1,z1, x2,y2,z2, m_id = map(int, msg.split(" ")[1:])
+			since_tick = self.monitor_ticks.get(m_id,0)
+			self._update_area(Box(Vector((x1,y1,z1)), Vector((x2,y2,z2))), since_tick)
 		else:
 			self.was_pressed_set.add(msg)
 
@@ -149,12 +160,14 @@ class Player(object):
 		if self.entity["position"]:
 			self.outbox.add("goto",*self.entity["position"])
 
-	def _notice_world(self, old_world, new_world):
+	def _set_world(self, new_world):
 		"""to be called when self.entity.world has changed """
-		if old_world:
-			old_world.players.discard(self)
+		if self.world:
+			self.world.players.remove(self)
 		if new_world:
 			new_world.players.add(self)
+		self.world = new_world
+		self.monitored_area = None
 		self.outbox.add("clear")
 
 	def _set_entity(self,entity):

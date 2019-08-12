@@ -28,8 +28,13 @@ import socket_connection_3 as socket_connection
 from shared import *
 from shader import Shader
 
+RENDERDISTANCE = 2 # chunks in each direction - e.g. RENDERDISTANCE = 2 means 5*5*5 = 125 chunks
+CHUNKBASE = 4
+CHUNKSIZE = 2**CHUNKBASE
 TICKS_PER_SEC = 60
-MSGS_PER_TICK = 10
+MSGS_PER_TICK = 20
+
+focus_distance = 0
 
 FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 0,-1, 0]), #bottom
@@ -185,9 +190,6 @@ def block_model(vertices, textures):
         result.append((side_vertices,side_textures))
     return result
 
-focus_distance = 0
-CHUNKSIZE = 16 #M# remove everything chunk based later on
-
 class BlockModelDict(dict):
     def __missing__(self, key):
         parts = key.rsplit(":",1)
@@ -279,6 +281,7 @@ def is_transparent(block_name):
 class SimpleChunk(object):
     def __init__(self):
         self.blocks = {}
+        self.unmonitored_since_id = 0 #monitor update id
 
     def get_block(self,position):
         return self.blocks.get(position,"AIR")
@@ -308,6 +311,39 @@ def iterframe():
                 yield (de,df,dg)
 
 class Chunkdict(dict):
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.monitored_chunks = set()
+        self.current_monitor_id = 0
+        self._last_center_chunk_position = None
+    
+    def monitor_around(self, position):
+        """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
+        center_chunk_position = position.normalize() >> CHUNKBASE
+        if center_chunk_position != self._last_center_chunk_position:
+            self._last_center_chunk_position = center_chunk_position
+
+            offsets_1D = range(-RENDERDISTANCE, RENDERDISTANCE + 1)
+            offsets = itertools.product(offsets_1D,repeat=DIMENSION)
+            new = set(center_chunk_position + offset for offset in offsets)
+            removed = self.monitored_chunks - new
+            added = new - self.monitored_chunks        
+            self.monitored_chunks = new
+            
+            self.current_monitor_id += 1
+            for chunkpos in removed:
+                self[chunkpos].unmonitored_since_id = self.current_monitor_id
+            for chunkpos in added:
+                x1, y1, z1 = chunkpos << CHUNKBASE
+                x2, y2, z2 = x1+CHUNKSIZE-1, y1+CHUNKSIZE-1, z1+CHUNKSIZE-1
+                m_id = self[chunkpos].unmonitored_since_id
+                yield "update %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, m_id)
+            lowest_corner_chunk = center_chunk_position - (RENDERDISTANCE,)*DIMENSION
+            highest_corner_chunk = center_chunk_position + (RENDERDISTANCE,)*DIMENSION
+            x1, y1, z1 = lowest_corner_chunk << CHUNKBASE
+            x2, y2, z2 = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
+            yield "monitor %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, self.current_monitor_id)
+    
     def __missing__(self, chunkposition):
         chunk = SimpleChunk()
         self[chunkposition] = chunk
@@ -707,7 +743,7 @@ class Window(pyglet.window.Window):
         return Vector((dx, dy, dz))
 
     def update(self, dt):
-        global focus_distance, CHUNKSIZE
+        global focus_distance
         if self.updating:
             return
         self.updating = True
@@ -715,12 +751,6 @@ class Window(pyglet.window.Window):
             c = self.client.receive()
             if not c:
                 break
-            if c.startswith("setarea"):
-                c = c.split(" ",4)
-                position = Vector(map(int,c[1:4]))
-                codec, compressed_blocks = ast.literal_eval(c[4])
-                self.model.set_area(position,codec,compressed_blocks)
-                continue
             c = c.split(" ")
             #M# maybe define this function somewhere else
             def test(name,argc):
@@ -734,19 +764,22 @@ class Window(pyglet.window.Window):
             elif test("del",4):
                 position = Vector(map(int,c[1:4]))
                 self.model.remove_block(position)
-            elif test("delarea",4):
+            elif test("delarea",7):
+                x_min, y_min, z_min, x_max, y_max, z_max = map(int, c[1:7])
+                area = Box(Vector(x_min, y_min, z_min), Vector(x_max, y_max, z_max))
+                raise NotImplementedError()
                 position = Vector(map(int,c[1:4]))
                 self.model.del_area(position)
-            elif test("set",5):
+            elif test("set", 5):
                 position = Vector(map(int,c[1:4]))
                 self.model.add_block(position,c[4])
             elif test("goto",4):
                 position = Vector(map(float,c[1:4]))
                 self.position = position
+                for msg in self.model.chunks.monitor_around(position):
+                    self.client.send(msg)
             elif test("focusdist",2):
                 focus_distance = float(c[1])
-            elif test("chunksize",2):
-                CHUNKSIZE = int(c[1])
             elif test("setentity",8):
                 position = Vector(map(float,c[3:6]))
                 rotation = map(float,c[6:8])

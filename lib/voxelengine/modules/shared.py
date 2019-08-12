@@ -1,14 +1,20 @@
 # The shared.py file contains information that is relevant to client and server but does not depend on the game
-# Some Funktions have been moved to __init__ but i try to get them back
 
-import sys
-if sys.version >= "3":
-    raw_input = input
+import sys, os, inspect
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath("../.."))
+    __package__ = "voxelengine.modules"
+# PATH to this file
+# PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) dont do this!
+# DONT DEFINE PATH SINCE SHARED IS OFTEN IMPORTED FROM WITH *
+
+assert sys.version >= "3"
 
 import zlib
 import struct
 import operator
 import math
+import itertools
 from functools import reduce
 
 # list of possible events, order of bytes to transmit
@@ -22,7 +28,7 @@ CENTER, INNER, OUTER, TOP, BOTTOM, LEFT, RIGHT = 0,1,2,4,8,16,32
 #FACES = ... definition at EOF because it needs Vector class
 
 def floatrange(a,b):
-    return [i+a for i in range(0, int(math.ceil(b-a))) + [b-a]]
+    return (i+a for i in itertools.chain(range(0, int(math.ceil(b-a))),(b-a,)))
 
 def hit_test(block_at_func, position, direction, max_distance=8):
     """ Line of sight search from current position.
@@ -63,47 +69,6 @@ def hit_test(block_at_func, position, direction, max_distance=8):
         if block_at_func(block_pos):
             return distance, block_pos, -dp
     return None, None, None
-
-class Ray(object):
-    __slots__ = ("origin", "direction","dirfrac")
-    def __init__(self, origin, direction):
-        self.origin = origin
-        self.direction = direction
-        self.dirfrac = Vector((1.0/d if d!=0 else float("inf")) for d in direction)
-
-class Hitbox(object):
-    def __init__(self, width, height, eye_level):
-        self.hitpoints = [Vector((dx,dy,dz)) for dx in floatrange(-width,width)
-                                             for dy in floatrange(-eye_level,height-eye_level)
-                                             for dz in floatrange(-width,width)]
-        self.lb = Vector((-width, -width,       -eye_level))
-        self.rt = Vector(( width,  width, height-eye_level))
-
-    def raytest(self, position, ray):
-        """ returns False if no collision else distance"""
-        # https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
-        # lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
-        # r.org is origin of ray
-        t135 = (self.lb + position - ray.origin)*ray.dirfrac
-        t246 = (self.rt + position - ray.origin)*ray.dirfrac
-
-        tmin = max(map(min,t135,t246))
-        tmax = min(map(max,t135,t246))
-
-        # if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
-        # if tmin > tmax, ray doesn't intersect AABB
-        if (tmax < 0) or (tmin > tmax):
-            return False
-
-        return tmin
-    
-    def collide_blocks(self, world, position):
-        blocks = set()
-        for relpos in self.hitpoints:
-            block_pos = (position+relpos).normalize()
-            if world.get_block(block_pos).collides_with(self,position):
-                blocks.add(block_pos)
-        return blocks
 
 
 def select(options):
@@ -173,6 +138,8 @@ class Vector(tuple):
     def __rmul__(self,other):
         return self*other
 
+    def add_scalar(self, other):
+        return Vector(i+other for other in self)
 
     def normalize(self):
         return Vector(int(round(i)) for i in self)

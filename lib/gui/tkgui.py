@@ -1,5 +1,10 @@
 #* encoding:utf-8 *#
 
+import sys, os
+if __name__ == "__main__":
+	sys.path.append(os.path.abspath(".."))
+	__package__ = "gui"
+
 import sys, time
 if sys.version < "3":
     import Tkinter
@@ -7,7 +12,8 @@ if sys.version < "3":
 else:
     import tkinter as Tkinter
     import _thread as thread
-import filedialog
+
+from . import filedialog
 
 class GUI(object):
     def __init__(self, config, worldtypes = (), background = True):

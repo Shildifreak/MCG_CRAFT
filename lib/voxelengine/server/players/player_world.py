@@ -9,7 +9,10 @@ class PlayerWorld(object):
 	def find_players(self, area, tag):
 		"""players may be different in size in regards to different tags"""
 		
-		return self.players
+		for player in self.players:
+			if player.monitored_area:
+				if player.monitored_area.collides_with(area):
+					yield player
 		#if tag.startswith("entity"):
 		#	return self.players
 		#else:

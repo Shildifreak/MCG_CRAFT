@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 import math
 import random
 
@@ -8,14 +8,15 @@ spawnpoint = (0,10,0)
 
 
 
-# Das ist eine Funktion die Bäume erzeugt
+# Das ist eine Funktion die BÃ¤ume erzeugt
 def baum(position, size, direction):
     pass
 
 def init(welt):
-    for x in range(-50,50):
-        for z in range(-50,50):
-            y = int(5*math.sin(0.4*x) + 5*math.sin(0.4*z)) + random.randint(-10,11)/10
+    n = 10
+    for x in range(-n,n):
+        for z in range(-n,n):
+            y = int(5*math.sin(0.4*x) + 5*math.sin(0.4*z)) + random.randint(-10,11)//10
             welt[(x,y,z)] = "GRASS"
             for dy in range(y-5,y):
                 welt[(x,dy,z)] = "DIRT"

@@ -25,4 +25,10 @@ __all__ = []
 #from server import *
 #import voxelengine.client as client
 
+from voxelengine.server.blocks.block import Block
+from voxelengine.server.entities.entity import Entity
+from voxelengine.server.players.player import Player
+from voxelengine.server.world import World
+from voxelengine.server.server import GameServer
+
 __all__.extend(filter(lambda s:not s.startswith("_"),globals().keys()))

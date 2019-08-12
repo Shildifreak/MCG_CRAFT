@@ -35,7 +35,7 @@
     ["HELLBLAU" ,                False,       0, [(11,12)]],
     ["ROT" ,                     False,       0, [(11,11)]],
     ["HELLROT" ,                 False,       0, [(12,11)]],
-    ["ÖL",                       False,       0, [( 1, 5)]],
+    ["Ã–L",                       False,       0, [( 1, 5)]],
     ["ROSA" ,                    False,       0, [(13,11)]],
     ["HELLGRAU",                 False,       0, [(12,12)]],
     ["DUNKELGRUN" ,              False,       0, [( 4,11)]],
@@ -71,7 +71,7 @@
     ["Damenbeine",               False,       0, [(15,11), (15,11), ( 7,13)]],
     # Beine
     ["Damenkoerper",              False,       0, [(12,13)]],
-    #Oberkörper
+    #OberkÃ¶rper
     ["Commandblock",             False,       0, [(10, 1)]],
     ["Fruhlingsgrass",           False,       2, [( 7, 3), ( 0, 0), ( 0, 1)]],
     ["Fruhlingslaub",            False,       0, [(11, 1)]],
