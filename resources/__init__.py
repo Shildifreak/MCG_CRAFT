@@ -15,9 +15,6 @@ SLIDING = 0.000001
 
 
 class Block(voxelengine.Block):
-    defer = False
-    deferred = [] #Block, key, value
-    
     blast_resistance = 0
     defaults = {"p_level":0,
                 "p_stronglevel":None,
@@ -39,16 +36,12 @@ class Block(voxelengine.Block):
     def __setitem__(self, key, value):
         if value == self[key]:
             return
-        if Block.defer:
-            Block.deferred.append((self,key,value))
-            return
         if key == "id":
             self.morph()
         if value == self.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
             super(Block,self).__delitem__(key)
         else:
             super(Block,self).__setitem__(key,value)
-        self.world.changed_blocks.append(self.position)
 
     # helper functions
     def redstone_activated(self):

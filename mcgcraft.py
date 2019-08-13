@@ -300,7 +300,7 @@ class ValidTag(object):
 
 Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag","callback","exclusive"])
 
-blockread_counter = 0
+#blockread_counter = 0
 class World(voxelengine.World):
     BlockClass = resources.Block
     def __init__(self,*args,**kwargs):
@@ -309,38 +309,21 @@ class World(voxelengine.World):
         self.set_requests = collections.defaultdict(list) # position: [Request,...]
         self.move_requests = [] # (position_from, position_to)
         
-    def get_block(self,position,*args,**kwargs):
-        global blockread_counter
-        blockread_counter += 1
-        return super(World,self).get_block(position,*args,**kwargs)
+    #def get_block(self,position,*args,**kwargs):
+    #    global blockread_counter
+    #    blockread_counter += 1
+    #    return super(World,self).get_block(position,*args,**kwargs)
 
-    def set_block(self,position,block,*args,**kwargs):
-        if not isinstance(position,Vector):
-            position = Vector(position)
-        super(World,self).set_block(position, block,*args,**kwargs)
-        self.changed_blocks.append(position)
+    #def set_block(self,position,block,*args,**kwargs):
+    #    if not isinstance(position,Vector):
+    #        position = Vector(position)
+    #    super(World,self).set_block(position, block,*args,**kwargs)
 
     def tick(self):
-        ui.set_stats("changed_blocks",len(self.changed_blocks))
-        # do entity updates
-        if self.changed_blocks:
-            for entity in self.get_entities(): #M# limited distance, not all?
-                entity.block_update()
+        self.handle_block_requests()
+        super(World,self).tick()
 
-        # do timestep for blockupdates -> first compute all then update all, so update order doesn't matter
-        resources.Block.defer = True
-        block_updates = [(position-face, face) for position in self.changed_blocks
-                                               for face in ((-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1),(0,0,0))]
-        self.changed_blocks = []
-        block_updates.sort(key = lambda x:x[0]) # necessary for groupby to work
-        for position, group in itertools.groupby(block_updates,lambda x:x[0]):
-            faces = [x[1] for x in group]
-            self[position].block_update(faces)
-        resources.Block.defer = False
-        while resources.Block.deferred:
-            block, key, value = resources.Block.deferred.pop()
-            block[key] = value
-
+    def handle_block_requests(self):
         # translate move_requests
         for position_from, position_to in self.move_requests:
             valid_tag = ValidTag()
@@ -375,7 +358,7 @@ class World(voxelengine.World):
         self.move_requests.append((position_from, position_to))
 
     def request_set_block(self, position, blockname, priority, valid_tag, callback, exclusive):
-        pass
+        self.set_requests[position].append(Request(blockname, priority, valid_tag, callback, exclusive))
 
 class UI(object):
     def __init__(self, config, worldtypes):
@@ -472,7 +455,6 @@ def gameloop():
         with voxelengine.GameServer(**settings) as g:
             print("done") # Game starting ... done
             while config["run"]:
-                print("other stuff")
                 if config["play"]:
                     config["play"] = False
                     g.launch_client()
@@ -482,25 +464,29 @@ def gameloop():
                 zeitstats(timer)
                 #print blockread_counter
                 blockread_counter = 0
-                #
-                print("game update")
+                
+                # game update
                 g.update()
-                print("world tick")
+                
+                # world tick
                 w.tick()
-                print("player update")
+                
+                # player update
                 for player in g.get_players():
                     player.update()
-                print("random ticks")
+
+                # random ticks
                 for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
                     w.random_ticks_at(random_tick_source["position"])
-                #M#
-                print("mob spawning")
+
+                #M# mob spawning
                 if config["mobspawning"]:
                     for entity_class in resources.entityClasses.values():
                         if len(entity_class.instances) < entity_class.LIMIT:
                             entity_class.try_to_spawn(w)
-                print("entity update")
-                for entity in w.entities.find_entities(EVERYWHERE, "update"): #replace with near player sometime
+ 
+                # entity update
+                for entity in w.entities.find_entities(EVERYWHERE, "update"): #M# replace with near player(s) sometime
                     entity.update()
             save()
         print("Game stopped")

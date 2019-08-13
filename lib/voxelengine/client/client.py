@@ -16,6 +16,7 @@ import ast
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"..","modules"))
+sys.path.append(os.path.join(PATH,"..",".."))
 
 import pyglet
 from pyglet import image
@@ -27,12 +28,14 @@ from pyglet.window import key, mouse
 import socket_connection_3 as socket_connection
 from shared import *
 from shader import Shader
+from collision_forms import BinaryBox, Box, Point
 
-RENDERDISTANCE = 2 # chunks in each direction - e.g. RENDERDISTANCE = 2 means 5*5*5 = 125 chunks
+RENDERDISTANCE = Vector(2,2,2) # chunks in each direction - e.g. RENDERDISTANCE = (2,2,2) means 5*5*5 = 125 chunks
 CHUNKBASE = 4
 CHUNKSIZE = 2**CHUNKBASE
 TICKS_PER_SEC = 60
-MSGS_PER_TICK = 20
+MSGS_PER_TICK = 100
+ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE = CHUNKSIZE**DIMENSION*6
 
 focus_distance = 0
 
@@ -323,8 +326,9 @@ class Chunkdict(dict):
         if center_chunk_position != self._last_center_chunk_position:
             self._last_center_chunk_position = center_chunk_position
 
-            offsets_1D = range(-RENDERDISTANCE, RENDERDISTANCE + 1)
-            offsets = itertools.product(offsets_1D,repeat=DIMENSION)
+            #offsets_1D = range(-RENDERDISTANCE, RENDERDISTANCE + 1)
+            #offsets = itertools.product(offsets_1D,repeat=DIMENSION)
+            offsets = itertools.product(*(range(-r, r+1) for r in RENDERDISTANCE))
             new = set(center_chunk_position + offset for offset in offsets)
             removed = self.monitored_chunks - new
             added = new - self.monitored_chunks        
@@ -333,13 +337,16 @@ class Chunkdict(dict):
             self.current_monitor_id += 1
             for chunkpos in removed:
                 self[chunkpos].unmonitored_since_id = self.current_monitor_id
-            for chunkpos in added:
-                x1, y1, z1 = chunkpos << CHUNKBASE
-                x2, y2, z2 = x1+CHUNKSIZE-1, y1+CHUNKSIZE-1, z1+CHUNKSIZE-1
-                m_id = self[chunkpos].unmonitored_since_id
-                yield "update %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, m_id)
-            lowest_corner_chunk = center_chunk_position - (RENDERDISTANCE,)*DIMENSION
-            highest_corner_chunk = center_chunk_position + (RENDERDISTANCE,)*DIMENSION
+            #sort added by distance to position
+            added_areas_with_mid = [(BinaryBox(CHUNKBASE, chunkpos).bounding_box(),
+                                     self[chunkpos].unmonitored_since_id)
+                                    for chunkpos in added]
+            added_areas_with_mid.sort(key = lambda x, p=Point(position): x[0].distance(p))
+            for area, m_id in added_areas_with_mid:
+                #m_id = self[binary_box.position].unmonitored_since_id
+                yield "update %s %i" % (area, m_id)
+            lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
+            highest_corner_chunk = center_chunk_position + RENDERDISTANCE
             x1, y1, z1 = lowest_corner_chunk << CHUNKBASE
             x2, y2, z2 = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
             yield "monitor %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, self.current_monitor_id)
@@ -401,12 +408,12 @@ class Model(object):
     def process_queue(self):
         start = time.time()
         while time.time() - start < 1.0 / TICKS_PER_SEC:
-            if self.blockface_update_buffer:
-                position, face = self.blockface_update_buffer.popleft()
-                self._update_face(position,face)
-            elif self.queue:
+            if self.queue and len(self.blockface_update_buffer) <= ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE:
                 func,args = self.queue.popleft()
                 func(*args)
+            elif self.blockface_update_buffer:
+                position, face = self.blockface_update_buffer.popleft()
+                self._update_face(position,face)
             else:
                 break
 
@@ -482,7 +489,7 @@ class Model(object):
         if (position,face) in self.shown:
             self.hide_face(position,face)
             #M# man könnte auch das vorhandene updaten
-        x, y, z = position
+        #x, y, z = position
         block_name = self.get_block(position)
         if block_name == "AIR":
             return

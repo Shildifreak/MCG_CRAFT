@@ -108,6 +108,10 @@ class Player(object):
 				block = event.data
 				position = block.position
 				self.outbox.add("set", position, block.client_version())
+			if event.tag == "entity_leave":
+				entity = event.data
+				if entity == self.entity:
+					self._notice_position()
 
 	### it follows a long list of private methods that make sure a player acts like one ###
 
