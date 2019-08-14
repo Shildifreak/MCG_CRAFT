@@ -20,7 +20,7 @@ import appdirs
 import resources
 
 from voxelengine.modules.shared import *
-from voxelengine.modules.collision_forms import EVERYWHERE
+from voxelengine.modules.geometry import Vector, EVERYWHERE
 import voxelengine.server.world_data_example
 
 CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)

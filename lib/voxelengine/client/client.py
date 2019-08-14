@@ -8,7 +8,8 @@ import sys, os, inspect
 import warnings
 from collections import deque
 import collections
-import itertools, functools
+import itertools
+from functools import reduce
 import operator
 import ast
 #from __init__ import Vector, Chunk
@@ -28,7 +29,7 @@ from pyglet.window import key, mouse
 import socket_connection_3 as socket_connection
 from shared import *
 from shader import Shader
-from collision_forms import BinaryBox, Box, Point
+from geometry import Vector, BinaryBox, Box, Point, Ray
 
 RENDERDISTANCE = Vector(2,2,2) # chunks in each direction - e.g. RENDERDISTANCE = (2,2,2) means 5*5*5 = 125 chunks
 CHUNKBASE = 4
@@ -1037,7 +1038,7 @@ class Window(pyglet.window.Window):
         vector = self.get_sight_vector()
         if CHUNKSIZE == None:
             return
-        block = hit_test(lambda pos:self.model.get_block(pos)!="AIR", self.position, vector, focus_distance)[1]
+        block = Ray(self.position, vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", focus_distance)[1]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)

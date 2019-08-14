@@ -1,6 +1,6 @@
 from voxelengine.modules.message_buffer import MessageBuffer
-from voxelengine.modules.shared import ACTIONS, Vector
-from voxelengine.modules.collision_forms import Box
+from voxelengine.modules.shared import ACTIONS
+from voxelengine.modules.geometry import Vector, Box
 
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""

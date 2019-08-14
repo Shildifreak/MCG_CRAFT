@@ -7,7 +7,7 @@ print("PATH", PATH)
 
 import voxelengine
 from voxelengine.modules.shared import *
-from voxelengine.modules.collision_forms import Hitbox
+from voxelengine.modules.geometry import Vector, Hitbox
 
 GRAVITY = 35
 AIRSLIDING = 1

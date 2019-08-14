@@ -7,8 +7,7 @@ from voxelengine.server.blocks.block_world_index import BlockWorldIndex
 from voxelengine.server.blocks.block import Block
 from voxelengine.server.event_system import Event
 from voxelengine.modules.frozen_dict import freeze
-from voxelengine.modules.collision_forms import BinaryBox
-from voxelengine.modules.shared import Vector
+from voxelengine.modules.geometry import Vector, BinaryBox
 
 class BlockWorld(object):
 	BlockClass = Block

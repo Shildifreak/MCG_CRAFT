@@ -6,8 +6,7 @@ if __name__ == "__main__":
 
 import math
 from voxelengine.modules.observableCollections import ObservableDict
-from voxelengine.modules.shared import Vector
-import voxelengine.modules.collision_forms as collision_forms
+from voxelengine.modules.geometry import Vector, Point
 from voxelengine.server.event_system import Event
 
 class Entity(ObservableDict):
@@ -28,7 +27,7 @@ class Entity(ObservableDict):
         self.register_item_callback(self._notify_chunk_observers,"texture")
         self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
-        self.HITBOX = collision_forms.Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
+        self.HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
 
     def _on_position_change(self, new_position):
         """set position of entity"""

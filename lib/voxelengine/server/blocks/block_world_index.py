@@ -4,7 +4,7 @@ if __name__ == "__main__":
 	__package__ = "voxelengine.server.blocks"
 
 import collections
-from voxelengine.modules import collision_forms as collision_forms
+from voxelengine.modules.geometry import BinaryBox
 
 class BlockWorldIndex(object):
 	def __init__(self, get_tags_for_position):
@@ -16,7 +16,7 @@ class BlockWorldIndex(object):
 		if new_tags == None:
 			new_tags = get_tags_for_position(position)
 		#assert new_tags == get_tags_for_position(position)
-		bb = collision_forms.BinaryBox(position, 0)
+		bb = BinaryBox(position, 0)
 		if bb not in self._block_tag_cache:
 			return
 		# get tags that this block previously had by looking up 1x1x1 BinaryBox, calculate difference for each tag (+1,0,-1) <=> added, kept, removed
