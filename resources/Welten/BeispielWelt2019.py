@@ -2,8 +2,6 @@
 import math
 import random
 
-terrain_generator = []
-
 spawnpoint = (0,10,0)
 
 

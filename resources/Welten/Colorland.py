@@ -1,6 +1,5 @@
 import random
 
-terrain_generator = []
 spawnpoint = (0,20,0)
 
 def init(welt):

@@ -22,6 +22,8 @@ server -> client
 		lösche HUD Element
 	focushud
 		bringe Client in Mausmodus
+	error some msg
+		Client hat irgendwas falsch gemacht
 
 	setarea ... deprecated
 

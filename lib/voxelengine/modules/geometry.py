@@ -59,9 +59,9 @@ class Vector(tuple):
         return self*other
 
     def add_scalar(self, other):
-        return Vector(i+other for other in self)
+        return Vector(i+other for i in self)
 
-    def normalize(self):
+    def round(self):
         return Vector(int(round(i)) for i in self)
 
     def length(self):
@@ -113,7 +113,10 @@ class Area(object):
 
 class BinaryBox(collections.namedtuple("BinaryBox",["scale","position"])):
     def bounding_box(self):
-        return Box(Vector(self.position)<<self.scale, Vector(p+1 for p in self.position)<<self.scale)
+        anchor_point = Vector(self.position)<<self.scale
+        lower_bounds = anchor_point.add_scalar(-0.5) # offset because blocks have their anchorpoint in the center
+        upper_bounds = lower_bounds.add_scalar(1<<self.scale)
+        return Box(lower_bounds, upper_bounds)
 
     def get_parent(self):
         BinaryBox(self.scale+1, Vector(self.position)>>1)
@@ -145,22 +148,12 @@ def _t(x, n=10):
 
 class Box(Area):
     def __init__(self, lower_bounds, upper_bounds):
-        self.lower_bounds = lower_bounds
-        self.upper_bounds = upper_bounds
+        self.lower_bounds = Vector(lower_bounds)
+        self.upper_bounds = Vector(upper_bounds)
 
     def __add__(self, offset):
         return Box(self.lower_bounds+offset, self.upper_bounds+offset)
-    
-    def old_binary_box_cover(self):
-        # get size of binary boxes
-        size = log2(max(self.upper_bounds-self.lower_bounds))
-        # get start and end position of binary boxes
-        bb_lower_bounds = Vector(floorshift(x, size) for x in self.lower_bounds)
-        bb_upper_bounds = Vector(ceilshift (x, size) for x in self.upper_bounds)
-        #assert min(bb_upper_bounds - bb_lower_bounds) > 0 #M# THINK ABOUT BOXES WITH LENGTH 0 ON ONE OR MORE SIDES!!
-        for bb_position in itertools.product(*map(range, bb_lower_bounds, bb_upper_bounds)):
-            yield BinaryBox(size, bb_position)
-    
+
     @staticmethod
     def _sizes(upper_bound, lower_bound):
         dif = upper_bound ^ lower_bound
@@ -178,8 +171,8 @@ class Box(Area):
     def binary_box_cover(self):
         oldsize = log2(max(self.upper_bounds-self.lower_bounds))
         # get size of binary boxes
-        ubs = map(math.ceil, self.upper_bounds)
-        lbs = map(math.floor,self.lower_bounds)
+        ubs = self.upper_bounds.round()
+        lbs = self.lower_bounds.round()
         
         sizes_one_block, sizes_two_blocks = zip(*map(self._sizes, ubs, lbs))
         size = max(sizes_two_blocks)
@@ -190,10 +183,9 @@ class Box(Area):
         if size < oldsize and size+1 in sizes_one_block:
             size = size + 1
         # get start and end position of binary boxes
-        bb_lower_bounds = Vector(floorshift(x, size) for x in self.lower_bounds)
-        bb_upper_bounds = Vector(ceilshift (x, size) for x in self.upper_bounds)
-        #assert min(bb_upper_bounds - bb_lower_bounds) > 0 #M# THINK ABOUT BOXES WITH LENGTH 0 ON ONE OR MORE SIDES!!
-        for bb_position in itertools.product(*map(range, bb_lower_bounds, bb_upper_bounds)):
+        bb_lower_bounds = lbs >> size
+        bb_upper_bounds = ubs >> size
+        for bb_position in itertools.product(*map(range, bb_lower_bounds, bb_upper_bounds.add_scalar(1))):
             yield BinaryBox(size, Vector(bb_position))
     
     def _distance_to_BinaryBox(self, other):
@@ -220,7 +212,7 @@ class Box(Area):
         return "Box(%s, %s)" % (self.lower_bounds, self.upper_bounds)
         
     def __str__(self):
-        return "%s %s %s %s %s %s" % (*self.lower_bounds, *self.upper_bounds)
+        return " ".join(map(str, (*self.lower_bounds, *self.upper_bounds)))
 
 class Sphere(Area):
     def __init__(self, center, radius):
@@ -297,7 +289,7 @@ class Ray(Area):
 
         """
         position = self.origin
-        block_pos = position.normalize()
+        block_pos = position.round()
         offset = Vector(0.5 if d >= 0 else -0.5 for d in self.direction)
         distance = 0
         dx,dy,dz = self.direction

@@ -273,7 +273,7 @@ class Player(voxelengine.Player):
         ticks = 5
         for a in range(ticks):
             dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
-            block = player.entity.world.get_block((player.entity["position"]+dp).normalize(),load_on_miss = False)
+            block = player.entity.world.get_block((player.entity["position"]+dp).round(),load_on_miss = False)
             if block:
                 block.random_ticked()
 

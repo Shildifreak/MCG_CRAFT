@@ -323,7 +323,7 @@ class Chunkdict(dict):
     
     def monitor_around(self, position):
         """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
-        center_chunk_position = position.normalize() >> CHUNKBASE
+        center_chunk_position = position.round() >> CHUNKBASE
         if center_chunk_position != self._last_center_chunk_position:
             self._last_center_chunk_position = center_chunk_position
 

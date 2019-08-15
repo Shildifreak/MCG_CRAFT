@@ -11,7 +11,7 @@ class Player(object):
 		self.entity = None
 		self.world = None
 		self.monitored_area = None #Box(Vector(-10,-10,-10),Vector(10,10,10))
-		self.monitor_ticks = {} # {m_id:gametick,...} gameticks when monitored area was changed 
+		self.monitor_ticks = {0:0} # {m_id:gametick,...} gameticks when monitored area was changed 
 		self.outbox = MessageBuffer()
 		for msg in initmessages:
 			self.outbox.add(*msg)
@@ -147,13 +147,17 @@ class Player(object):
 
 	def _handle_input(self,msg):
 		"""do something so is_pressed and was_pressed work"""
-		if msg.startswith("tick"):
-			self.outbox.reset_msg_counter(-int(msg.split(" ")[1]))
-		elif msg.startswith("rot"):
-			x,y = map(float,msg.split(" ")[1:])
+		cmd, *args = msg.split(" ")
+
+		if cmd == "tick" and len(args) == 1:
+			self.outbox.reset_msg_counter(-int(args[0]))
+
+		elif cmd == "rot" and len(args) == 2:
+			x,y = map(float,args)
 			self.entity["rotation"] = (x,y)
-		elif msg.startswith("keys"):
-			action_states = int(msg.split(" ")[1])
+
+		elif cmd == "keys" and len(args) == 1:
+			action_states = int(args[0])
 			for i,a in enumerate(ACTIONS):
 				new_state = bool(action_states & (1<<(i+1)))
 				if new_state and not self.is_pressed(a):
@@ -161,16 +165,25 @@ class Player(object):
 				if not new_state and self.is_pressed(a):
 					self.was_released_set.add(a)
 				self.action_states[a] = new_state
-		elif msg.startswith("monitor"):
+
+		elif cmd == "monitor" and len(args) == 7:
 			print("Player",msg)
-			x1,y1,z1, x2,y2,z2, m_id = map(int, msg.split(" ")[1:])
+			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
+			m_id = int(args[6])
 			self.monitored_area = Box(Vector(x1,y1,z1), Vector(x2,y2,z2))
 			self.monitor_ticks[m_id] = self.world.clock.current_gametick # needed for partial update when resuming monitoring of some area
-		elif msg.startswith("update"):
+
+		elif cmd == "update" and len(args) == 7:
 			print("Player", msg)
-			x1,y1,z1, x2,y2,z2, m_id = map(int, msg.split(" ")[1:])
-			since_tick = self.monitor_ticks.get(m_id,0)
+			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
+			m_id = int(args[6])
+			try:
+				since_tick = self.monitor_ticks[m_id]
+			except KeyError:
+				since_tick = 0
+				self.outbox.add("error", "unknown m_id",m_id)
 			self._update_area(Box(Vector((x1,y1,z1)), Vector((x2,y2,z2))), since_tick)
+
 		else:
 			self.was_pressed_set.add(msg)
 

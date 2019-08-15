@@ -84,7 +84,7 @@ class MessageBuffer(object):
         self.group_of = {"goto":(goto_group,),
                          "setentity":(entity_group,vip_entity_group), "delentity":(entity_group,vip_entity_group),
                          "set":(block_group,), "del":(block_group,), "setarea":(block_group,), "delarea":(block_group,), "clear":(block_group,), "chunksize":(block_group,),
-                         "focusdist":(misc_group,), "setup":(misc_group,), "monitor_tick":(misc_group,),
+                         "focusdist":(misc_group,), "setup":(misc_group,), "monitor_tick":(misc_group,), "error":(misc_group,),
                          "sethud":(hud_group,), "delhud":(hud_group,), "focushud":(hud_group,),
                         }
         self.groups = (misc_group, vip_entity_group, goto_group, hud_group, block_group, entity_group)

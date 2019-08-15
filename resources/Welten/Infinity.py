@@ -1,10 +1,25 @@
 import collections
 import random
+import functools
 
 import tree
 
 def init(welt):
     pass
+
+@functools.lru_cached(1000)
+def terrain(position):
+    x,y,z = position
+
+    # if baum:
+    #   return baum
+    if y <= steinhoehe(x,z):
+        return "STONE"
+    if y <= erdhoehe(x,z):
+        return "DIRT"
+    if y <= grashoehe(x,z):
+        return "GRASS"
+    return "AIR"
 
 def cache(func):
     c = collections.OrderedDict()
@@ -123,13 +138,5 @@ def baum_function(chunk):
         for d_pos, block in tree.tree_structure(baumtyp):
             dx, dy, dz = d_pos
             chunk.set_block((x+dx,y+dy,z+dz),block)
-
-relief_gras = terrain_generator_from_heightfunc(grashoehe,"GRASS")
-relief_dirt = terrain_generator_from_heightfunc(erdhoehe,"DIRT")
-relief_stein = terrain_generator_from_heightfunc(steinhoehe,"STONE")
-
-
-
-terrain_generator = [relief_gras,relief_dirt,relief_stein,baum_function]
 
 spawnpoint = (0,int(heightfunction(0,0)+10),0)
