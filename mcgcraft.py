@@ -231,7 +231,8 @@ class Player(voxelengine.Player):
                 nv += (0, 1, 0)
             if self.is_pressed("shift"):
                 nv -= (0, 1, 0)
-            pe["position"] += nv*pe["FLYSPEED"]*pe.dt
+            if nv != (0,0,0):
+                pe["position"] += nv*pe["FLYSPEED"]*pe.dt
             pe["velocity"] = (0,0,0)
             return
 

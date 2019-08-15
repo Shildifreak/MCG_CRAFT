@@ -1,3 +1,5 @@
+import collections
+
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
 from voxelengine.modules.geometry import Vector, Box
@@ -102,16 +104,29 @@ class Player(object):
 		self.outbox.add("focushud")
 
 	def handle_events(self, events):
+		entity_events = collections.defaultdict(set) # {entity:tags}
+
 		for event in events:
 			print("player received:",event.tag)
 			if event.tag == "block_update":
 				block = event.data
 				position = block.position
 				self.outbox.add("set", position, block.client_version())
-			if event.tag == "entity_leave":
+			elif event.tag in ("entity_leave", "entity_enter", "entity_change"):
 				entity = event.data
-				if entity == self.entity:
-					self._notice_position()
+				entity_events[entity].add(event.tag)
+			elif event.tag in "entity_enter":
+				entity = event.data
+				entity_movements[entity] = "move"
+
+		for entity, tags in entity_events.items():
+			if entity == self.entity and "entity_leave" in tags:
+				self._notice_position()
+			if "entity_leave" in tags and not "entity_enter" in tags:
+				self._del_entity(entity)
+			else:
+				self._set_entity(entity)
+				
 
 	### it follows a long list of private methods that make sure a player acts like one ###
 
@@ -162,7 +177,9 @@ class Player(object):
 	def _notice_position(self):
 		"""set position of camera/player"""
 		if self.entity["position"]:
-			self.outbox.add("goto",*self.entity["position"])
+			if self.entity.world != self.world:
+				self._set_world(self.entity.world)
+			self.outbox.add("goto",self.entity["position"])
 
 	def _set_world(self, new_world):
 		"""to be called when self.entity.world has changed """

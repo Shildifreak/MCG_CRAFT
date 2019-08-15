@@ -23,8 +23,8 @@ class Entity(ObservableDict):
 
         self.register_item_callback(self._on_position_change,"position")
         self.register_item_callback(self._on_tags_change,"tags")
-        self.register_item_callback(self._notify_chunk_observers,"rotation")
-        self.register_item_callback(self._notify_chunk_observers,"texture")
+        self.register_item_callback(self._on_visible_change,"rotation")
+        self.register_item_callback(self._on_visible_change,"texture")
         self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
         self.HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
@@ -83,9 +83,9 @@ class Entity(ObservableDict):
     def handle_events(self, events):
         pass
 
-    def _notify_chunk_observers(self,*_):
+    def _on_visible_change(self,*_):
         if self.world:
-            self.world.event_system.add_event(0,Event("entity_move",self.HITBOX+self["position"],self))
+            self.world.event_system.add_event(0,Event("entity_change",self.HITBOX+self["position"],self))
 
 if __name__ == "__main__":
     e = Entity()
