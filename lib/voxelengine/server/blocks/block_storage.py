@@ -37,7 +37,7 @@ class BlockStorage(object):
 			return True
 		return False
 	
-	def get_block_id(self, position, timestep=-1, relative_timestep=True):
+	def get_block_id(self, position, timestep=0, relative_timestep=True):
 		""" if block is not found returns self.NO_BLOCK_ID"""
 		try:
 			block_history = self.structures[position]
@@ -70,7 +70,6 @@ class BlockStorage(object):
 
 	def list_changes(self, area, since_tick):
 		assert self.valid_history(since_tick)
-		print("BlockStorage.list_changes")
 		for binary_box in area.binary_box_cover():
 			for position, history in self.structures.list_blocks_in_binary_box(binary_box):
 				if position in area:
@@ -92,12 +91,12 @@ if __name__ == "__main__":
 	bs = BlockStorage(blocks = (), clock = clock)
 
 	bs.set_block_id((0,0,0), 5)
-	clock.current_gametick = 1
 	print(bs.get_block_id((0,0,0)))
+	clock.current_gametick = 1
 
 	bs.set_block_id((0,0,0), 4)
-	clock.current_gametick = 2
 	print(bs.get_block_id((0,0,0)))
+	clock.current_gametick = 2
 
 	if (bs.get_block_id((0,0,0), -10)) is BlockStorage.NO_BLOCK_ID:
 		print("unknown history worked")

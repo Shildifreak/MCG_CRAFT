@@ -6,10 +6,12 @@ if __name__ == "__main__":
 
 import math
 from voxelengine.modules.observableCollections import ObservableDict
-from voxelengine.modules.geometry import Vector, Point
+from voxelengine.modules.geometry import Vector, Point, Ray
 from voxelengine.server.event_system import Event
 
 class Entity(ObservableDict):
+    HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
+
     def __init__(self,data = None):
         ObservableDict.__init__(self,data if data != None else {})
         self.world = None
@@ -26,8 +28,6 @@ class Entity(ObservableDict):
         self.register_item_callback(self._on_visible_change,"rotation")
         self.register_item_callback(self._on_visible_change,"texture")
         self.register_item_sanitizer(lambda pos: Vector(pos),"position")
-
-        self.HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
 
     def _on_position_change(self, new_position):
         """set position of entity"""
@@ -79,6 +79,38 @@ class Entity(ObservableDict):
         dx = math.cos(math.radians(x - 90)) * m
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
+    
+    def get_focused_pos(self, max_distance):
+        """Line of sight search from current position. If a block is
+        intersected it's position is returned, along with the face and distance:
+            (distance, position, face)
+        If no block is found, return (None, None, None).
+
+        max_distance : How many blocks away to search for a hit.
+        """ 
+        line_of_sight = Ray(self["position"], self.get_sight_vector())
+        return line_of_sight.hit_test(lambda v,b=self.world.blocks: b[v]!="AIR", max_distance)
+
+    def get_focused_entity(self, max_distance):
+        """Line of sight search from current position. If an entity is
+        intersected it is returned, along with the distance:
+            (distance, entity)
+        If no entity is found, return (None, None).
+
+        max_distance : How many blocks away to search for a hit."""
+        nearest_entity = None
+        line_of_sight = Ray(self["position"],self.get_sight_vector())
+        for entity in self.world.entities.find_entities(line_of_sight.bounding_box(max_distance)): #M# limit considered entities
+            if entity is self:
+                continue
+            d = entity.HITBOX.raytest(entity["position"],line_of_sight)
+            if (d != False) and (d < max_distance):
+                nearest_entity = entity
+                max_distance = d
+        if nearest_entity:
+            return max_distance, nearest_entity
+        return (None, None)
+
     
     def handle_events(self, events):
         pass

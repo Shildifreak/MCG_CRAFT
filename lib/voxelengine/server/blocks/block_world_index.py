@@ -14,8 +14,8 @@ class BlockWorldIndex(object):
 	def notice_change(self, position, new_tags=None):
 		"""new_tags can be provided to avoid overhead of calling get_tags_for_position, but it has to be the same tags"""
 		if new_tags == None:
-			new_tags = get_tags_for_position(position)
-		#assert new_tags == get_tags_for_position(position)
+			new_tags = self.get_tags_for_position(position)
+		assert new_tags == self.get_tags_for_position(position)
 		bb = BinaryBox(position, 0)
 		if bb not in self._block_tag_cache:
 			return
@@ -44,7 +44,7 @@ class BlockWorldIndex(object):
 		return counter
 
 	def _get_tags(self, binary_box):
-		return set(k for k,v in self._get_tag_counter(binary_box) if v > 0)
+		return set(k for k,v in self._get_tag_counter(binary_box).items() if v > 0)
 	
 	def find_blocks(self, area, tags, count=None, order=None, point=None):
 		"""
@@ -74,7 +74,8 @@ class BlockWorldIndex(object):
 		while bbs:
 			bb = bbs.pop(0)
 			bb_tags = self._get_tags(bb)
-			if tags.issubset(bb_tags) and bb.collides_with(area): #M# could try to swap and see how performance changes
+			if tags.issubset(bb_tags) and bb.bounding_box().collides_with(area): #M# could try to swap and see how performance changes
+				assert bb.scale >= 0
 				if bb.scale == 0:
 					yield bb.position
 				else:

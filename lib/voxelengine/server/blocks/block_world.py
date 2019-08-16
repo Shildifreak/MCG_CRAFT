@@ -10,7 +10,7 @@ from voxelengine.modules.frozen_dict import freeze
 from voxelengine.modules.geometry import Vector, BinaryBox
 
 class BlockWorld(object):
-	BlockClass = Block
+	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
 	def __init__(self, block_world_data, event_system, clock):
 		self.event_system = event_system
 		
@@ -30,7 +30,7 @@ class BlockWorld(object):
 		block = self.BlockClass(blockdata, position=position, blockworld=self)
 		return block
 	
-	def __getitem__(self, position, timestep = -1, relative_timestep = True):
+	def __getitem__(self, position, timestep = 0, relative_timestep = True):
 		position = Vector(position)
 		block_id = self.block_storage.get_block_id(position, timestep, relative_timestep)
 		return self._block_by_id(block_id, position)

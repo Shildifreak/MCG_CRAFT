@@ -124,7 +124,7 @@ class Player(voxelengine.Player):
     def init(self): #called in init_function after world has created entity for player
         self.set_focus_distance(8)
 
-        self.flying = True
+        self.flying = False
 
         # just for testing:
         self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"}]
@@ -162,6 +162,19 @@ class Player(voxelengine.Player):
         self.entity.register_item_callback(update_lives,"lives")
 
     def update(self):
+        # stuff that doesn't need entity
+        if self.was_pressed("fly"):
+            self.flying = not self.flying
+        if self.was_pressed("inv"):
+            self.inventory_display.toggle()
+        for pressed in self.was_pressed_set:
+            if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
+                self.inventory_display.handle_click(pressed)
+
+        # stuff that needs entity
+        if not self.entity:
+            print("mcgcraft.Player.update","that's weird, why doesn't player have entity?")
+            return
         pe = self.entity
         #if not self.is_active(): # freeze player if client doesnt respond
         #    return
@@ -178,8 +191,8 @@ class Player(voxelengine.Player):
 
         for event_name in ("left click", "right click"):
             if self.was_pressed(event_name):
-                d_block, pos, face = self.get_focused_pos()
-                d_entity, entity = self.get_focused_entity()
+                d_block, pos, face = self.entity.get_focused_pos(self.focus_distance)
+                d_entity, entity = self.entity.get_focused_entity(self.focus_distance)
 
                 # nothing to click on
                 if (d_block == None) and (d_entity == None):
@@ -202,14 +215,6 @@ class Player(voxelengine.Player):
                 do_next = True if self.is_pressed("shift") else action1()
                 if do_next:
                     action2()
-
-        if self.was_pressed("fly"):
-            self.flying = not self.flying
-        if self.was_pressed("inv"):
-            self.inventory_display.toggle()
-        for pressed in self.was_pressed_set:
-            if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
-                self.inventory_display.handle_click(pressed)
 
         # Movement
         pe.update_dt()
@@ -303,9 +308,10 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 
 #blockread_counter = 0
 class World(voxelengine.World):
-    BlockClass = resources.Block
     def __init__(self,*args,**kwargs):
         super(World,self).__init__(*args,**kwargs)
+        self.blocks.BlockClass = resources.Block
+        
         self.changed_blocks = []
         self.set_requests = collections.defaultdict(list) # position: [Request,...]
         self.move_requests = [] # (position_from, position_to)
@@ -428,7 +434,6 @@ def gameloop():
             dt = time.time() - t
             print("done")
             print("blocks:", len(w.blocks.block_storage.structures), "in", dt, "s")
-            print("sleeping 1s"); time.sleep(1)
 
         def save():
             print("Game saving ...", end="", flush=True)

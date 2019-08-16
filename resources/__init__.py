@@ -3,11 +3,9 @@ import math, random, time, collections
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
-print("PATH", PATH)
-
 import voxelengine
 from voxelengine.modules.shared import *
-from voxelengine.modules.geometry import Vector, Hitbox
+from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox
 
 GRAVITY = 35
 AIRSLIDING = 1
@@ -42,6 +40,16 @@ class Block(voxelengine.Block):
             super(Block,self).__delitem__(key)
         else:
             super(Block,self).__setitem__(key,value)
+
+    def handle_event_default(self, event):
+        print("No handler for event",event.tag)
+    
+    def handle_events(self, events):
+        """API for event system"""
+        for event in events:
+            f_name = "handle_event_"+event.tag
+            f = getattr(self, f_name, self.handle_event_default)
+            f(event)
 
     # helper functions
     def redstone_activated(self):
@@ -117,19 +125,33 @@ class Block(voxelengine.Block):
 
     def mined(self,character,face):
         """drop item or something... also remember to set it to air. Return value see activated"""
-        block = self.world[self.position]
+        block = self.blockworld[self.position]
         character.pickup_item({"id":self["id"],"count":1})
-        self.world[self.position] = "AIR"
+        self.blockworld[self.position] = "AIR"
         
 
-    def exploded(self,entf):
-        if entf < 1:
+    def handle_event_explosion(self,event):
+        position = Vector(event.args)
+        distance = (position - self.position).length()
+        if distance < 1:
             if random.random() > self.blast_resistance:
                 self.world[self.position] = "AIR"
 
-    def collides_with(self,hitbox,position):
-        #print type(self), self.__class__, self["id"], blockClasses[self["id"]]
-        return True
+    def get_tags(self):
+        """
+        return tags of this entity, this can be events that it reacts to or just for finding it in the world
+        default tags include:
+        - solid     .. which means they got a hitbox (see collides_with for further instruction
+        - explosion .. this block got an event handler for explosions
+        """
+        return {"solid", "explosion"}
+
+    def collides_with(self, area):
+        """
+        if a block is solid and his bounding box collides with <area>,
+        this method is used to test if they actually collide
+        """
+        return True #full blocks always collide if their bounding box collides
 
 class SolidBlock(Block):
     defaults = Block.defaults.copy()
@@ -256,7 +278,7 @@ class Entity(voxelengine.Entity):
             return (block for block in blocks if block.collides_with(diff_area))
         blocks = entity.potential_collide_blocks(new_position)
         prev_area = entity.HITBOX+previous_position
-        return (block for block in blocks if not (block.bounding_box.collides_with(prev_area) and
+        return (block for block in blocks if not (BinaryBox(0, block.position).bounding_box().collides_with(prev_area) and
                                                   block.collides_with(prev_area)))
 
     def bool_collide_difference(entity,new_position,previous_position):
@@ -291,7 +313,6 @@ class Entity(voxelengine.Entity):
         #M# todo: cast ray from each point to detect collision and so on !!!
         steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
         pos = entity["position"]
-        print("Entity.update_position steps %s pos %s" % (steps, pos))
         for step in range(steps):
             for i in range(DIMENSION):
                 mask          = Vector([int(i==j) for j in range(DIMENSION)])

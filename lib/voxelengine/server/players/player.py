@@ -45,41 +45,6 @@ class Player(object):
 		"""return whether key was released since last update"""
 		return key in self.was_released_set
 
-	def get_focused_pos(self,max_distance=None):
-		"""Line of sight search from current position. If a block is
-		intersected it's position is returned, along with the face and distance:
-			(distance, position, face)
-		If no block is found, return (None, None, None).
-
-		max_distance : How many blocks away to search for a hit.
-		""" 
-		if max_distance == None:
-			max_distance = self.focus_distance
-		return hit_test(lambda v:self.entity.world.get_block(v)["id"]!="AIR",self.entity["position"],
-						self.entity.get_sight_vector(),max_distance)
-	
-	def get_focused_entity(self,max_distance=None):
-		#M# to be moved to entity!
-		"""Line of sight search from current position. If an entity is
-		intersected it is returned, along with the distance.
-		If no block is found, return (None, None).
-
-		max_distance : How many blocks away to search for a hit."""
-		if max_distance == None:
-			max_distance = self.focus_distance
-		nearest_entity = None
-		ray = Ray(self.entity["position"],self.entity.get_sight_vector())
-		for entity in self.entity.world.get_entities(): #M# limit considered entities
-			if entity is self.entity:
-				continue
-			d = entity.HITBOX.raytest(entity["position"],ray)
-			if (d != False) and (d < max_distance):
-				nearest_entity = entity
-				max_distance = d
-		if nearest_entity:
-			return max_distance, nearest_entity
-		return (None, None)
-
 	def set_focus_distance(self,distance):
 		"""Set maximum distance for focusing block"""
 		self.outbox.add("focusdist","%g"%distance)
@@ -107,7 +72,6 @@ class Player(object):
 		entity_events = collections.defaultdict(set) # {entity:tags}
 
 		for event in events:
-			print("player received:",event.tag)
 			if event.tag == "block_update":
 				block = event.data
 				position = block.position
@@ -118,6 +82,8 @@ class Player(object):
 			elif event.tag in "entity_enter":
 				entity = event.data
 				entity_movements[entity] = "move"
+			else:
+				print("player received",event.tag)
 
 		for entity, tags in entity_events.items():
 			if entity == self.entity and "entity_leave" in tags:
@@ -167,14 +133,12 @@ class Player(object):
 				self.action_states[a] = new_state
 
 		elif cmd == "monitor" and len(args) == 7:
-			print("Player",msg)
 			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
 			m_id = int(args[6])
 			self.monitored_area = Box(Vector(x1,y1,z1), Vector(x2,y2,z2))
 			self.monitor_ticks[m_id] = self.world.clock.current_gametick # needed for partial update when resuming monitoring of some area
 
 		elif cmd == "update" and len(args) == 7:
-			print("Player", msg)
 			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
 			m_id = int(args[6])
 			try:

@@ -31,10 +31,16 @@ class Vector(tuple):
 
     def __mul__(self,other):
         if isinstance(other,(float,int)):
-            return Vector(map(lambda x: x*other,self))
+            return Vector(i*other for i in self)
         else:
             #return Vector(s*o for s,o in zip(self, other))
             return Vector(map(operator.mul, self, other))
+
+    def __truediv__(self,other):
+        if isinstance(other,(float,int)):
+            return Vector(i/other for i in self)
+        else:
+            return Vector(map(operator.div, self, other))
 
     def __rshift__(self,other):
         return Vector(i>>other for i in self)
@@ -57,6 +63,9 @@ class Vector(tuple):
 
     def __rmul__(self,other):
         return self*other
+    
+    def __rdiv__(self,other):
+        raise NotImplementedError()
 
     def add_scalar(self, other):
         return Vector(i+other for i in self)
@@ -70,6 +79,9 @@ class Vector(tuple):
     def sqr_length(self):
         #return sum(map(operator.mul,self,self))
         return sum(i**2 for i in self)
+
+    def normalize(self):
+        return self / self.length()
 
     def __str__(self):
         return " ".join(map(str,self))
@@ -242,6 +254,9 @@ class Ray(Area):
         self.direction = direction
         self.dirfrac = Vector((1.0/d if d!=0 else float("inf")) for d in direction)
 
+    def bounding_box(self, length):
+        return Box(self.origin, self.origin+self.direction.normalize()*length)
+
     def distance_from_origin_to_Box(self, box):
         """returns False if no collision else distance from origin of ray to front of box,
         this can be negative if origin is inside box"""
@@ -275,7 +290,7 @@ class Ray(Area):
     def _distance_to_Ray(self, other):
         raise NotImplementedError()
 
-    def hit_test(self, block_at_func, max_distance=8):
+    def hit_test(self, block_at_func, max_distance):
         """ Line of sight search from current position.
         returns (distance, blockpos, face)
         If no block is found, return (None, None, None).
@@ -327,8 +342,8 @@ class Point(Sphere):
 
 class Hitbox(Box):
     def __init__(self, width, height, eye_level):
-        super(Hitbox, self).__init__(Vector(-width, -width,       -eye_level),
-                                     Vector( width,  width, height-eye_level))
+        super(Hitbox, self).__init__(Vector(-width,       -eye_level, -width),
+                                     Vector( width, height-eye_level,  width))
         self.hitpoints = [Vector((dx,dy,dz)) for dx in floatrange(-width,width)
                                              for dy in floatrange(-eye_level,height-eye_level)
                                              for dz in floatrange(-width,width)]

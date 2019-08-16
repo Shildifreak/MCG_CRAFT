@@ -3,6 +3,8 @@ from resources import *
 
 @register_block("AIR")
 class AirBlock(Block):
+    def get_tags(self):
+        return set() # no solid tag
     def collides_with(self,hitbox,position):
         return False
 
