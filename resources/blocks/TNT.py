@@ -5,7 +5,8 @@ import random
 class tntblock(Block):
     blast_resistance =  0
     def handle_event_block_update(self,event):
-        for face in faces:
+        print(event)
+        for face in FACES:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
             if nachbarblock["p_level"] > 0:

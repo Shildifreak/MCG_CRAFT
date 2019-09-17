@@ -48,7 +48,7 @@ class World(object):
 
 if __name__ == "__main__":
 	from voxelengine.server.world import World
-	from voxelengine.server.world_data_example import data    
+	from voxelengine.server.world_data_template import data    
 	data["block_world"]["generator"] = {
 		"name":"Simple Terrain Generator",
 		"seed":0,

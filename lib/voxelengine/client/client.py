@@ -40,6 +40,41 @@ ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE = CHUNKSIZE**DIMENSION*6
 
 focus_distance = 0
 
+# Mapping of keys to events
+KEYMAP = [
+    (key._1    ,"inv1" ),
+    (key._2    ,"inv2" ),
+    (key._3    ,"inv3" ),
+    (key._4    ,"inv4" ),
+    (key._5    ,"inv5" ),
+    (key._6    ,"inv6" ),
+    (key._7    ,"inv7" ),
+    (key._8    ,"inv8" ),
+    (key._9    ,"inv9" ),
+    (key._0    ,"inv0" ),
+    (key.W     ,"for"  ),
+    (key.S     ,"back" ),
+    (key.A     ,"left" ),
+    (key.D     ,"right"),
+    (key.SPACE ,"jump" ),
+    (key.TAB   ,"fly"  ),
+    (key.E     ,"inv"  ),
+    (key.LSHIFT,"shift"),
+    ]
+import appdirs
+configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
+configfn = os.path.join(configdir,"clientsettings.py")
+print(configfn)
+if os.path.exists(configfn):
+    with open(configfn) as configfile:
+        config = eval(configfile.read(),globals())
+        if "controls" in config:
+            KEYMAP = config["controls"]
+        else:
+            print("no controls found in file, using default controls")
+else:
+    print("file not found, using default controls")
+
 FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 0,-1, 0]), #bottom
          Vector([ 0, 0, 1]), #front
@@ -468,7 +503,8 @@ class Model(object):
         else:
             fv = FACES[face]
             b = self.get_block(position+fv)
-            if is_transparent(b):
+            # only show faces facing into transparent blocks and not if blocks are the same
+            if is_transparent(b) and b != self.get_block(position): #M# maybe get current block as argument instead of by position
                 self.show_face(position,face)
             else:
                 self.hide_face(position,face)
@@ -629,7 +665,8 @@ class Model(object):
         self.occlusion_cache.clear()
         self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
         self.update_visibility(position)
-        if is_transparent(prev_block_name) != is_transparent(block_name):
+        #M# todo: make this better (different transparency classes)
+        if is_transparent(prev_block_name) or is_transparent(block_name):
             self.update_visibility_around(position)
 
     def _remove_block(self, position):
@@ -891,30 +928,11 @@ class Window(pyglet.window.Window):
         modifiers : int
             Number representing any modifying keys that were pressed.
         """
-        # Mapping of keys to events
-        keymap = [(key._1    ,"inv1" ),
-                  (key._2    ,"inv2" ),
-                  (key._3    ,"inv3" ),
-                  (key._4    ,"inv4" ),
-                  (key._5    ,"inv5" ),
-                  (key._6    ,"inv6" ),
-                  (key._7    ,"inv7" ),
-                  (key._8    ,"inv8" ),
-                  (key._9    ,"inv9" ),
-                  (key._0    ,"inv0" ),
-                  (key.W     ,"for"  ),
-                  (key.S     ,"back" ),
-                  (key.A     ,"left" ),
-                  (key.D     ,"right"),
-                  (key.SPACE ,"jump" ),
-                  (key.TAB   ,"fly"  ),
-                  (key.E     ,"inv"  ),
-                  (key.LSHIFT,"shift"),
-                  ]
-        used_keys = set([i[0] for i in keymap])
+        
+        used_keys = set([i[0] for i in KEYMAP])
         eventstates = int(bool(modifiers & key.MOD_CTRL))
         if symbol in used_keys:
-            for k,e in keymap:
+            for k,e in KEYMAP:
                 if self.keystates[k]:
                     eventstates |= 1<<(ACTIONS.index(e)+1)
             self.client.send("keys "+str(eventstates))

@@ -25,6 +25,9 @@ class Block(dict):
 	def __ne__(self,other):
 		return not (self == other)
 	
+	def __hash__(self):
+		return object.__hash__(self)
+	
 	def client_version(self):
 		orientation = self.get("base","")+str(self.get("rotation",""))
 		blockmodel = self["id"]+self.get("state","")

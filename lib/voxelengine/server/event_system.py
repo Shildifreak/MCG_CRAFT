@@ -38,6 +38,9 @@ class EventSystem(object):
 		assert delay >= 0
 		self.event_queue[delay].append(event)
 	
+	def clear_events(self):
+		self.event_queue.clear()
+	
 	def process_events(self):
 		if self.event_queue:
 			events = self.event_queue[0]
@@ -48,6 +51,7 @@ class EventSystem(object):
 			while events:
 				event = events.pop(0)
 				for block in self.world.blocks.find_blocks(event.area, event.tag):
+					print(block, type(block), dir(block))
 					targets[block].append(event)
 				for entity in self.world.entities.find_entities(event.area, event.tag):
 					targets[entity].append(event)

@@ -14,13 +14,10 @@ class AirBlock(Block):
 @register_block("mcgcraft:bedrock")
 class StoneBlock(Block):
     blast_resistance = 1
-    def activated(self,character,face):
-        """something like placing block depending on direction character is looking"""
-        # what should happen if you rightclick bedrock?
 
     def mined(self,character,face):
         """can't mine bedrock, so this function does nothing instead of default something"""
-        print("hey, you can't mine bedrock")
+        #print("hey, you can't mine bedrock")
 
     def get_tags(self):
         return super(StoneBlock,self).get_tags() - {"explosion"} # can't explode

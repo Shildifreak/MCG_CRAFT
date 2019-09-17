@@ -2,9 +2,11 @@ dist/
 build/
 saves/
 *.pyc
+__pycache__
 .fuse_hidden*
 *.zip
 *.html
 Thumbs.db
 test/
 tests/
+config/

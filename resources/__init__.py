@@ -250,8 +250,8 @@ class Entity(voxelengine.Entity):
         x = random.randint(-40,40)
         y = random.randint(-10,20)
         z = random.randint(-40,40)
-        block = world.get_block((x,y-3,z),load_on_miss = False)
-        if block and block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
+        block = world.blocks[(x,y-3,z)]
+        if block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
             entity = cls()
             entity.set_world(world,(x,y,z))
             return entity
