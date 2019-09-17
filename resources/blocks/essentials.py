@@ -4,8 +4,8 @@ from resources import *
 @register_block("AIR")
 class AirBlock(Block):
     def get_tags(self):
-        return set() # no solid tag
-    def collides_with(self,hitbox,position):
+        return set() # no solid tag, no explosion tag
+    def collides_with(self,area):
         return False
 
 
@@ -21,5 +21,6 @@ class StoneBlock(Block):
     def mined(self,character,face):
         """can't mine bedrock, so this function does nothing instead of default something"""
         print("hey, you can't mine bedrock")
-    def exploded(self,entf):
-        pass
+
+    def get_tags(self):
+        return super(StoneBlock,self).get_tags() - {"explosion"} # can't explode

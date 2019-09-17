@@ -23,7 +23,7 @@ class World(object):
 		self.clock = Clock(metadata["clock"])
 		self.event_system = EventSystem(self, data["events"])
 		self.entities = EntityWorld()
-		self.blocks = BlockWorld(data["block_world"], self.event_system, self.clock)
+		self.blocks = BlockWorld(self, data["block_world"], self.event_system, self.clock)
 		self.players = PlayerWorld(data["players"])
 	
 	def __getitem__(self, *args, **kwargs):

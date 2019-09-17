@@ -5,7 +5,8 @@ from resources import *
 class Redstone(Block):
     defaults = Block.defaults.copy()
     defaults["p_directions"] = (Vector((1,0,0)),Vector((-1,0,0)),Vector((0,0,1)),Vector((0,0,-1)),Vector((0,-1,0)))
-    def block_update(self,faces):
+    
+    def handle_event_block_update(self,event):
         connections = FACES[:]
         # hier weitere verbindungen einfügen (für diagonalen)
         maxpower = 1
@@ -18,8 +19,12 @@ class Redstone(Block):
                 maxpower = max(maxpower, level)
         self["p_level"] = maxpower - 1
         self["state"] = str(self["p_level"])
-    def collides_with(self,hitbox,position):
+
+    def collides_with(self,area):
         return False
+
+    def get_tags(self):
+        return super(Redstone,self).get_tags().union({"block_update"}) - {"solid"}
 
 #        Block.block_update(self,faces)
 
@@ -40,7 +45,7 @@ class Redstone_Item(Item):
 
 @register_block("Repeater")
 class Repeater(Block):
-    def block_update(self,faces):
+    def handle_event_block_update(self,event):
         d = self.get_front_facing_vector()
         self["p_directions"] = (d,)
         
@@ -55,6 +60,8 @@ class Repeater(Block):
             "id":"Repeater",
             "rotation":self["rotation"]}
 
+    def get_tags(self):
+        return super(Repeater,self).get_tags().union({"block_update"})
 
 
 

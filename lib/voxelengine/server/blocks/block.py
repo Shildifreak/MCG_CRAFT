@@ -1,3 +1,5 @@
+from voxelengine.server.blocks.block_world_view import BlockWorldView
+
 class Block(dict):
 	"""convenience class for handling block data"""
 	__slots__ = ("position","blockworld")
@@ -8,6 +10,10 @@ class Block(dict):
 		super(Block, self).__init__(data)
 		self.position = position
 		self.blockworld = blockworld
+
+	world = property(lambda self: self.blockworld.world)
+
+	relative = property(lambda self: BlockWorldView(self.blockworld, self.position))
 
 	def __eq__(self,other):
 		if isinstance(other,dict):

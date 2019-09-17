@@ -4,7 +4,7 @@ import random
 @register_block("TNT")
 class tntblock(Block):
     blast_resistance =  0
-    def block_update(self,faces):
+    def handle_event_block_update(self,event):
         for face in faces:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
@@ -22,15 +22,17 @@ class tntblock(Block):
                     dp = type(self.position)((dx,dy,dz))
                     self.world[tp].exploded(dp.length()/tntrange)
         
-    def exploded(self,entf):
+    def handle_event_explosion(self,event):
         if entf < 1:
             self.activated(None,None)
 
+    def get_tags(self):
+        return super(tntblock,self).get_tags().union({"block_update"})
 
 @register_block("A-TNT")
 class a_tntblock(Block):
     blast_resistance= 0
-    def block_update(self,faces):
+    def handle_event_block_update(self,event):
         for face in faces:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
@@ -48,14 +50,17 @@ class a_tntblock(Block):
                     dp = type(self.position)((dx,dy,dz))
                     self.world[tp].exploded(dp.length()/tntrange)
         
-    def exploded(self,entf):
+    def handle_event_explosion(self,event):
         if entf < 1:
             self.activated(None,None)
-            
+
+    def get_tags(self):
+        return super(a_tntblock,self).get_tags().union({"block_update"})
+
 @register_block("B-TNT")
 class b_tntblock(Block):
     blast_resistance= 0
-    def block_update(self,faces):
+    def handle_event_block_update(self,event):
         for face in faces:
             nachbarblockposition = self.position + face
             nachbarblock = self.world[nachbarblockposition]
@@ -73,6 +78,9 @@ class b_tntblock(Block):
                 dp = type(self.position)((dx,dy,dz))
                 self.world[tp].exploded(dp.length()/tntrange)
         
-    def exploded(self,entf):
+    def handle_event_explosion(self,event):
         if entf < 1:
             self.activated(None,None)
+
+    def get_tags(self):
+        return super(b_tntblock,self).get_tags().union({"block_update"})

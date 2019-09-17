@@ -11,7 +11,7 @@ from voxelengine.modules.geometry import Vector, BinaryBox
 
 class BlockWorld(object):
 	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
-	def __init__(self, block_world_data, event_system, clock):
+	def __init__(self, world, block_world_data, event_system, clock):
 		self.event_system = event_system
 		
 		self.blockdata_encoder = BlockDataEncoder(block_world_data["codec"])
@@ -21,6 +21,7 @@ class BlockWorld(object):
 												reference_delete_callback = self.blockdata_encoder.decrement_count)
 		self.block_world_index = BlockWorldIndex(self.get_tags)
 		self.world_generator   = world_generation.load_generator(block_world_data["generator"])
+		self.world = world
 	
 	def _block_by_id(self, block_id, position):
 		if block_id == self.block_storage.NO_BLOCK_ID:
