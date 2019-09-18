@@ -119,7 +119,8 @@ class GameServer(object):
     
     def launch_client(self):
         port = self.socket_server.get_entry_port()
-        command = ["python3",
+        python = "python" if sys.platform == "win32" else "python3"
+        command = [python,
                    os.path.join(PATH, "..", "client", "client.py"),
                    "--host=localhost",
                    "--port=%i" %port
