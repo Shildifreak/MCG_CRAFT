@@ -1,4 +1,7 @@
 import collections
+import _thread as thread
+import threading
+import time
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -22,6 +25,12 @@ class Player(object):
 		self.quit_flag = False
 		
 		self.hud_cache = {}
+		
+		self.DO_ASYNC_UPDATE = True
+		self.area_updates = collections.OrderedDict()
+		self.new_area_updates_event = threading.Event()
+		if self.DO_ASYNC_UPDATE:
+			thread.start_new_thread(self._update_area_loop, ())
 
 	def quit(self):
 		self.quit_flag = True
@@ -101,10 +110,34 @@ class Player(object):
 		if since_tick != 0 and not self.world.blocks.block_storage.valid_history(since_tick):
 			since_tick = 0
 			self.outbox.add("delarea", area)
-		for position, block in self.world.blocks.list_changes(area, since_tick):
-			self.outbox.add("set", position, block.client_version())
-		# chunksize, all blocks in radius, etc
-		# if since tick is not available send clear_area first
+		block_adder = self.outbox.get_block_adder(area)
+		if self.DO_ASYNC_UPDATE:
+			old = self.area_updates.pop(repr(area), None) #M# hacky, think to make areas hashable
+			if old:
+				block_adder.close()
+				block_adder = old[3]
+				since_tick = old[2]
+			self.area_updates[repr(area)] = (self.world, area, since_tick, block_adder) #M# is this thread save?
+			self.new_area_updates_event.set()
+			self.new_area_updates_event.clear()
+		else:
+			self._async_update_area(self.world, area, since_tick, block_adder)
+
+	@staticmethod
+	def _async_update_area(world, area, since_tick, block_adder, sleep=0):
+		for position, block in world.blocks.list_changes(area, since_tick):
+			block_adder.add("set", position, block.client_version())
+			time.sleep(sleep)
+		block_adder.close()
+	
+	def _update_area_loop(self):
+		while not self.quit_flag:
+			self.new_area_updates_event.wait()
+			print("got new updates to send")
+			while self.area_updates:
+				_, args = self.area_updates.popitem(last=False)
+				self._async_update_area(*args,sleep=0.0001)
+				time.sleep(0.0001)
 
 	def _update(self):
 		"""internal update method, automatically called by game loop"""

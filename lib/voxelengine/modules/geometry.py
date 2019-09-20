@@ -53,6 +53,12 @@ class Vector(tuple):
 
     def __neg__(self):
         return Vector(-e for e in self)
+        
+    def __xor__(self, other):
+        if isinstance(other, int):
+            return Vector(i^other for i in self)
+        else:
+            return Vector(map(operator.xor, self, other))
 
 
     def __radd__(self,other):
@@ -66,6 +72,9 @@ class Vector(tuple):
     
     def __rdiv__(self,other):
         raise NotImplementedError()
+    
+    def __rxor__(self,other):
+        return self^other
 
     def add_scalar(self, other):
         return Vector(i+other for i in self)

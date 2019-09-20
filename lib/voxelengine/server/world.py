@@ -4,6 +4,7 @@ if __name__ == "__main__":
 	__package__ = "voxelengine.server"
 
 from collections import defaultdict
+import threading
 
 from voxelengine.server.blocks.block_world import BlockWorld
 from voxelengine.server.event_system import EventSystem
@@ -13,9 +14,11 @@ from voxelengine.server.players.player_world import PlayerWorld
 class Clock(dict):
 	def __init__(self, *args, **kwargs):
 		super(Clock, self).__init__(*args, **kwargs)
+		self.tick_event = threading.Event()
 	current_gametick = property(lambda self:self["gametick"], lambda self, value:self.__setitem__("gametick",value))
 	def tick(self):
 		self.current_gametick += 1
+		self.tick_event.set(); self.tick_event.clear()
 
 class World(object):
 	def __init__(self, data):

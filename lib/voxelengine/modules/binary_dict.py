@@ -90,9 +90,6 @@ def binary_zip3(*ints):
 	return signs, ints_zipped
 
 if __name__ == "__main__":
-	from collections import namedtuple
-	from shared import Vector
-	BinaryBox = namedtuple("BinaryBox",["scale","position"])
 	
 	print(binary_zip(1,2,3))
 	print(binary_zip(-2,2,-4))
@@ -122,8 +119,7 @@ if __name__ == "__main__":
 	#d[1,1,0] = "1,1,0"
 	#d[1,1,1] = "1,1,1"
 	print(d)
-	print(tuple(d.list_blocks_in_binary_box(BinaryBox(1,Vector(0,0,-1)))))
-
+	
 	import timeit, random
 	n = 100000
 	samples = [random.sample(range(-100,100),3) for _ in range(n)]
@@ -136,5 +132,15 @@ if __name__ == "__main__":
 	print( timeit.timeit(wrapper(binary_zip2,iter(samples)), number=n) )
 	print( timeit.timeit(wrapper(binary_zip3,iter(samples)), number=n) )
 	
+	
 	for sample in samples[:10]:
-		print(binary_zip(*sample), binary_zip2(*sample), binary_zip3(*sample))
+		print(binary_zip(*sample),
+			  binary_zip2(*sample),
+			  binary_zip2(*sample),
+			 )
+
+	if False:
+		from collections import namedtuple
+		from shared import Vector
+		BinaryBox = namedtuple("BinaryBox",["scale","position"])
+		print(tuple(d.list_blocks_in_binary_box(BinaryBox(1,Vector(0,0,-1)))))

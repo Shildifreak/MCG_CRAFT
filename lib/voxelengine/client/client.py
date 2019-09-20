@@ -327,7 +327,8 @@ class SimpleChunk(object):
 
     def set_block(self,position,value):
         if value == "AIR":
-            del self.blocks[position]
+            #del self.blocks[position]
+            self.blocks.pop(position, None)
         else:
             self.blocks[position] = value
 
