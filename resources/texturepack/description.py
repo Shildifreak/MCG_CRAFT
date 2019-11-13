@@ -8,10 +8,12 @@
 "TEXTURE_INFO" : [
     ["GRASS",                    False,       2, [( 0, 2), ( 0, 0), ( 0, 1)]],
     ["SAND",                     False,       0, [( 1, 0)]],
+    ["SANDSTEIN",                False,       1, [( 1, 0), ( 4, 5)]],
     ["BRICK",                    False,       0, [( 3, 0)]],
     ["BEDROCK",                  False,       0, [( 2, 0)]],
     ["DIRT",                     False,       0, [( 0, 0)]],
     ["STONE",                    False,       0, [( 5, 0)]],
+    ["MOSSSTONE",                False,       0, [( 3, 5)]],
     ["HOLZ",                     False,       0, [( 4, 0), ( 4, 0), ( 4, 1)]],
     ["LAUB",                     True ,       0, [(14, 0)]],
     ["GREEN" ,                   False,       0, [( 0, 2)]],
@@ -112,6 +114,7 @@
     ["FAN",                      False,       0, [( 8,10), ( 0,10)]],
     ["Repeater",                 True,        1, [(14,15), ( 6, 5), (14,15)]],
     ["AIM",                      False,       0, [(15,11)]],
+    ["KAKTUS",                   False,       0, [( 5, 6), ( 4, 2), ( 5, 6)]],
     ],
 
 "BLOCK_MODELS": [

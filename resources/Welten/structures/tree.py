@@ -25,3 +25,12 @@ def tree_structure(baumtyp):
                     yield (x,y+height+1,z), "LAUB"
             
             #if 0 <= y-chunkpos[1] < chunksize
+    if baumtyp == "kaktus":
+        h = random.randint(2,5)
+        for y in range(h):
+            yield (0,y+1,0), "KAKTUS"
+        if h > 4:
+            x = random.randint(-1,1)
+            y = random.randint(3,4)
+            z = random.randint(-1,1)
+            yield (x,y,z), "KAKTUS"

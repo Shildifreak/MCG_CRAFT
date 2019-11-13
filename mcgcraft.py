@@ -126,9 +126,9 @@ class Player(voxelengine.Player):
         self.flying = False
 
         # just for testing:
-        self.entity["inventory"] = [{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
-        self.entity["left_hand"] = {"id":"DOORSTEP","count":1}
-        self.entity["right_hand"] = {"id":"RACKETENWERFER"}
+        self.entity["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
+        self.entity["left_hand"] = {"id":"STONE","count":100}
+        self.entity["right_hand"] = {"id":"SAND","count":100}
 
         # inventory stuff
         for i in range(60):

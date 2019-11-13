@@ -326,7 +326,7 @@ class SimpleChunk(object):
         return self.blocks.get(position,"AIR")
 
     def set_block(self,position,value):
-        if value == "AIR":
+        if value == "AIR": #can't use AIR as default value anymore when working with terrain function!!!
             #del self.blocks[position]
             self.blocks.pop(position, None)
         else:

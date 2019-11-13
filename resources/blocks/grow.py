@@ -5,7 +5,7 @@ import tree
 
 class Dirt(Block):
     blast_resistance = 0
-    def random_ticked(self):
+    def handle_event_random_tick(self):
         if self.world[self.position + (0,1,0)] == "AIR":
             self.world[self.position] = "GRASS"
 
@@ -14,7 +14,7 @@ class Dirt(Block):
 
 @register_block("GRASS")
 class Grassblock(Block):
-    def random_ticked(self):
+    def handle_event_random_tick(self):
         for other in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume"]:
             if self.relative[(0,1,0)] == other:
                 if random.random()<0.008:
@@ -24,6 +24,8 @@ class Grassblock(Block):
                 break
         else:
             self.world.blocks[self.position] = "DIRT"
+    def get_tags(self):
+        return super(Grassblock,self).get_tags().union({"random_tick"})
             
 
 @register_block("grass")
@@ -36,6 +38,8 @@ class Grassblock(Block):
 class Plant(Block):
     def collides_with(self,area):
         return False
+    def get_tags(self):
+        return super(Setzling,self).get_tags()-{"solid"}
 
 
 @register_block("Setzling")

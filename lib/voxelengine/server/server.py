@@ -6,6 +6,7 @@ if __name__ == "__main__":
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 import subprocess
+import collections
 
 import voxelengine.modules.socket_connection_3 as socket_connection
 from voxelengine.server.players.player import Player
@@ -46,8 +47,10 @@ class GameServer(object):
         self.players = {}
         self.new_players = set()
 
-        self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._on_connect,
-                                                      on_disconnect=self._on_disconnect,name=name)
+        self._on_connect_queue = collections.deque()
+        self._on_disconnect_queue = collections.deque()
+        self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._async_on_connect,
+                                                      on_disconnect=self._async_on_disconnect,name=name)
         if "-debug" in sys.argv:
             print("game ready")
 
@@ -82,6 +85,12 @@ class GameServer(object):
         """get a list of connected players"""
         return self.players.values()
 
+    def _async_on_connect(self,addr):
+        self._on_connect_queue.append(addr)
+
+    def _async_on_disconnect(self,addr):
+        self._on_disconnect_queue.append(addr)
+    
     def _on_connect(self,addr):
         """place at worldspawn"""
         if "-debug" in sys.argv:
@@ -102,6 +111,10 @@ class GameServer(object):
     def update(self):
         """communicate with clients
         call regularly to make sure internal updates are performed"""
+        while self._on_connect_queue:
+            self._on_connect(self._on_connect_queue.popleft())
+        while self._on_disconnect_queue:
+            self._on_disconnect(self._on_disconnect_queue.popleft())
         for addr,player in self.players.items():
             for msg in player.outbox:
                 self.socket_server.send(msg,addr)

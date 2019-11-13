@@ -47,6 +47,7 @@ class Block(voxelengine.Block):
     def handle_events(self, events):
         """API for event system"""
         for event in events:
+            print("__init__:",self,"got",event.tag,"event")
             f_name = "handle_event_"+event.tag
             f = getattr(self, f_name, self.handle_event_default)
             f(event)
@@ -251,7 +252,8 @@ class Entity(voxelengine.Entity):
         y = random.randint(-10,20)
         z = random.randint(-40,40)
         block = world.blocks[(x,y-3,z)]
-        if block != "AIR" and len(cls.HITBOX.collide_blocks(world,Vector((x,y,z)))) == 0:
+        area = cls.HITBOX+Vector(x,y,z)
+        if block != "AIR" and not world.blocks.find_blocks(area, "solid"):
             entity = cls()
             entity.set_world(world,(x,y,z))
             return entity
