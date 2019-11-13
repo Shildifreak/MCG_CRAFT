@@ -140,7 +140,7 @@ class BinaryBox(collections.namedtuple("BinaryBox",["scale","position"])):
         return Box(lower_bounds, upper_bounds)
 
     def get_parent(self):
-        BinaryBox(self.scale+1, Vector(self.position)>>1)
+        return BinaryBox(self.scale+1, Vector(self.position)>>1)
 
     def get_children(self):
         for offset in itertools.product((0,1),repeat=len(self.position)):

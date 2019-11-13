@@ -18,7 +18,6 @@ class BlockWorldIndex(object):
 			new_tags = self.get_tags_for_position(position)
 		assert new_tags == self.get_tags_for_position(position)
 		bb = BinaryBox(0, position)
-		print(bb, self._block_tag_cache)
 		if bb not in self._block_tag_cache:
 			return
 		# get tags that this block previously had by looking up 1x1x1 BinaryBox, calculate difference for each tag (+1,0,-1) <=> added, kept, removed
@@ -32,6 +31,7 @@ class BlockWorldIndex(object):
 			tag_counter = self._block_tag_cache[bb]
 			tag_counter.update(tag_difference)
 			bb = bb.get_parent()
+			print("now doing",bb)
 	
 	def _get_tag_counter(self, binary_box):
 		# look for existing entry

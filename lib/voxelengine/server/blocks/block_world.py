@@ -7,7 +7,7 @@ from voxelengine.server.blocks.block_world_index import BlockWorldIndex
 from voxelengine.server.blocks.block import Block
 from voxelengine.server.event_system import Event
 from voxelengine.modules.frozen_dict import freeze
-from voxelengine.modules.geometry import Vector, BinaryBox
+from voxelengine.modules.geometry import Vector, BinaryBox, Sphere
 
 class BlockWorld(object):
 	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
@@ -53,7 +53,8 @@ class BlockWorld(object):
 		# update BlockWorldIndex
 		self.block_world_index.notice_change(position, block.get_tags())
 		# issue event for others to notice change
-		self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
+		#self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
+		self.event_system.add_event(0,Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
 	def get_tags(self, position):
 		return self[position].get_tags()
