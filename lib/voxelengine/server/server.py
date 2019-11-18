@@ -117,7 +117,7 @@ class GameServer(object):
             self._on_disconnect(self._on_disconnect_queue.popleft())
         for addr,player in self.players.items():
             for msg in player.outbox:
-                self.socket_server.send(msg,addr)
+                self.socket_server.send(addr,msg)
                 if player.outbox.sentcount >= 0: #test after send, so at least one massage is sent anyway
                     break
         for player in self.get_players():
@@ -142,15 +142,21 @@ class GameServer(object):
     
     def launch_web_client(self):
         path = os.path.join(PATH, "..", "client", "webclient", "index.html")
+        path = os.path.abspath(path)
+        #path = '"%s"'%path
         port = self.socket_server.get_entry_port()
         url = "file://{}?port={}".format(path, port)
-        command = ["firefox", url]
+        print(url)
+        browser = "firefox"
+        #browser = '"C:\\Program Files\\Mozilla Firefox\\firefox.exe"'
+        command = [browser, url]
+        #command = " ".join([browser, url])
         subprocess.Popen(command)
         #M# once it's using http:// instead of file:// switch from subprocess to webbrowser module for opening
 
 if __name__ == "__main__":
     from voxelengine.server.world import World
-    from voxelengine.server.world_data_example import data
+    from voxelengine.server.world_data_template import data
     from voxelengine.server.entities.entity import Entity
     data["block_world"]["generator"] = {
         "name":"Simple Terrain Generator",
@@ -180,8 +186,8 @@ spawnpoint = (0,0,0)
                 }
     w[(-1,1,-3)] = "GREEN"
     with GameServer(**settings) as g:
-        g.launch_client()
-        #g.launch_web_client()
+        #g.launch_client()
+        g.launch_web_client()
         while not g.get_players():
             g.update()
         w[(-1,2,-3)] = "YELLOW"
