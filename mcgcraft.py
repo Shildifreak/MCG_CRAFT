@@ -19,7 +19,7 @@ import voxelengine
 import voxelengine.modules.appdirs as appdirs
 
 from voxelengine.modules.shared import *
-from voxelengine.modules.geometry import Vector, EVERYWHERE
+from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
 import voxelengine.server.world_data_template
 
 CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)
@@ -271,15 +271,6 @@ class Player(voxelengine.Player):
 
                 pe["lives"] = b
 
-    def do_random_ticks(player):
-        radius = 30
-        ticks = 5
-        for a in range(ticks):
-            dp = (random.gauss(0,radius),random.gauss(0,radius),random.gauss(0,radius))
-            block = player.entity.world.get_block((player.entity["position"]+dp).round(),load_on_miss = False)
-            if block:
-                block.random_ticked()
-
     def display_item(self,name,item,position,size,align):
         w, h = size
         self.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
@@ -327,6 +318,14 @@ class World(voxelengine.World):
     def tick(self):
         self.handle_block_requests()
         super(World,self).tick()
+
+    def random_ticks_at(self, position):
+        radius = 10
+        rate = 0.5
+        tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
+        for block in tickable_blocks:
+            if random.random() < rate:
+                block.handle_event_random_tick()
 
     def handle_block_requests(self):
         # translate move_requests
@@ -482,6 +481,7 @@ def gameloop():
 
                 # random ticks
                 for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
+                    print(w, "is a random tick source")
                     w.random_ticks_at(random_tick_source["position"])
 
                 #M# mob spawning

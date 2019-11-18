@@ -20,6 +20,7 @@ class Mensch(Entity):
         self["right_hand"] = {"id":"AIR"}
         self["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
         self["lives"] = 9
+        self["tags"] = {"random_tick_source"}
 
     def right_clicked(self, character):
         print("Oh no, that hurts!")
