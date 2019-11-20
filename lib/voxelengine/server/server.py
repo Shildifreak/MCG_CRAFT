@@ -8,7 +8,7 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 import subprocess
 import collections
 
-import voxelengine.modules.socket_connection_3 as socket_connection
+import voxelengine.modules.socket_connection_4.socket_connection_4 as socket_connection
 from voxelengine.server.players.player import Player
 
 class GameServer(object):
@@ -130,29 +130,19 @@ class GameServer(object):
         #time.sleep(0.001) #wichtig damit das threading Zeug klappt
         #M# threading got improved in python3, hope that fixed this
     
-    def launch_client(self):
+    def launch_client(self, client_type = "desktop"):
+        path = os.path.join(PATH, "..", "client", client_type, "client.py")
+        if not os.path.exists(path):
+            print("no matching call for selected client type", client_type)
+            return
         port = self.socket_server.get_entry_port()
         python = "python" if sys.platform == "win32" else "python3"
         command = [python,
-                   os.path.join(PATH, "..", "client", "client.py"),
+                   path,
                    "--host=localhost",
                    "--port=%i" %port
                   ]
         subprocess.Popen(command)
-    
-    def launch_web_client(self):
-        path = os.path.join(PATH, "..", "client", "webclient", "index.html")
-        path = os.path.abspath(path)
-        #path = '"%s"'%path
-        port = self.socket_server.get_entry_port()
-        url = "file://{}?port={}".format(path, port)
-        print(url)
-        browser = "firefox"
-        #browser = '"C:\\Program Files\\Mozilla Firefox\\firefox.exe"'
-        command = [browser, url]
-        #command = " ".join([browser, url])
-        subprocess.Popen(command)
-        #M# once it's using http:// instead of file:// switch from subprocess to webbrowser module for opening
 
 if __name__ == "__main__":
     from voxelengine.server.world import World
@@ -187,7 +177,7 @@ spawnpoint = (0,0,0)
     w[(-1,1,-3)] = "GREEN"
     with GameServer(**settings) as g:
         #g.launch_client()
-        g.launch_web_client()
+        g.launch_client("web")
         while not g.get_players():
             g.update()
         w[(-1,2,-3)] = "YELLOW"

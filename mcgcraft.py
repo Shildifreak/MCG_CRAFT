@@ -320,7 +320,7 @@ class World(voxelengine.World):
         super(World,self).tick()
 
     def random_ticks_at(self, position):
-        radius = 10
+        radius = 2 #M# increase later but for now this would cause too much lag
         rate = 0.5
         tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
         for block in tickable_blocks:
@@ -461,7 +461,7 @@ def gameloop():
             while config["run"]:
                 if config["play"]:
                     config["play"] = False
-                    g.launch_client()
+                    g.launch_client(config["clienttype"])
                 if config["save"]:
                     save()
                 timer.tick()
@@ -481,7 +481,6 @@ def gameloop():
 
                 # random ticks
                 for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
-                    print(w, "is a random tick source")
                     w.random_ticks_at(random_tick_source["position"])
 
                 #M# mob spawning
@@ -509,6 +508,7 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
             "worldtype"  : "Colorland",
             "mobspawning": True,
             "whitelist"  : "127.0.0.1",
+            "clienttype" : "desktop",
             "parole"     : "",
             "port"       : "",
             "run"        : False,
@@ -531,11 +531,12 @@ def main():
         
     worldtypes = os.listdir(os.path.join("resources","Welten"))
     worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py") and not x.startswith("_")]
+    clienttypes = os.listdir(os.path.join("lib","voxelengine","client"))
     try:
         from gui.tkgui import GUI as UI
     except ImportError as e:
         print("GUI not working cause of:\n",e)
-    ui = UI(config, worldtypes)
+    ui = UI(config, worldtypes, clienttypes)
 
     if False: #M# sys.flags.interactive or False:
         thread.start_new_thread(gameloop,())

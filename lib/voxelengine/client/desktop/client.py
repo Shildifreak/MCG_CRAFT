@@ -16,8 +16,8 @@ import ast
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-sys.path.append(os.path.join(PATH,"..","modules"))
-sys.path.append(os.path.join(PATH,"..",".."))
+sys.path.append(os.path.join(PATH,"..","..","modules"))
+sys.path.append(os.path.join(PATH,"..","..",".."))
 
 import pyglet
 from pyglet import image
@@ -26,7 +26,7 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
-import socket_connection_3 as socket_connection
+import socket_connection_4.socket_connection_4 as socket_connection
 from shared import *
 from shader import Shader
 from geometry import Vector, BinaryBox, Box, Point, Ray
@@ -291,7 +291,7 @@ class BlockModelDict(dict):
 def load_setup(path):
     global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
     if not os.path.isabs(path): #M# do something to support urls
-        path = os.path.join(PATH,"..","texturepacks",path)
+        path = os.path.join(PATH,"..","..","texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
         description = ast.literal_eval(descriptionfile.read())
     TEXTURE_SIDE_LENGTH = description["TEXTURE_SIDE_LENGTH"]

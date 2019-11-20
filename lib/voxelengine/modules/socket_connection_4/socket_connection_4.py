@@ -12,9 +12,9 @@ import itertools
 
 import sys, os, inspect
 if __name__ == "__main__":
-	sys.path.append(os.path.abspath("../.."))
-	__package__ = "voxelengine.modules"
-from voxelengine.modules.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
+	sys.path.append(os.path.abspath("../../.."))
+	__package__ = "voxelengine.modules.socket_connection_4"
+from voxelengine.modules.socket_connection_4.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
 
 if sys.version < "3":
     import thread

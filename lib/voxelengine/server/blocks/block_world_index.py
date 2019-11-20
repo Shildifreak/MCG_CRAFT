@@ -13,7 +13,6 @@ class BlockWorldIndex(object):
 	
 	def notice_change(self, position, new_tags=None):
 		"""new_tags can be provided to avoid overhead of calling get_tags_for_position, but it has to be the same tags"""
-		print("notice_change was called")
 		if new_tags == None:
 			new_tags = self.get_tags_for_position(position)
 		assert new_tags == self.get_tags_for_position(position)
@@ -25,13 +24,11 @@ class BlockWorldIndex(object):
 		tag_difference = collections.Counter(new_tags)
 		tag_difference.subtract(previous_tags)
 
-		print("Tags changed:", position, previous_tags, new_tags, tag_difference)
 		# apply that change to BinaryBox and all parents
 		while bb in self._block_tag_cache:
 			tag_counter = self._block_tag_cache[bb]
 			tag_counter.update(tag_difference)
 			bb = bb.get_parent()
-			print("now doing",bb)
 	
 	def _get_tag_counter(self, binary_box):
 		# look for existing entry

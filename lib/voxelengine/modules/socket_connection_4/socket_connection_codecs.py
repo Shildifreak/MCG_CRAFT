@@ -4,20 +4,48 @@ class Disconnect(Exception):
     pass
 
 class Codec(object):
-    pass
+    def __init__(self, socket_buffer):
+        assert isinstance(socket_buffer, SocketBuffer)
+        self.socket_buffer = socket_buffer
 
-def auto_detect_codec(socket_buffer):
+    def get_messages(self):
+        yield from self.decode()
+        
+    def send_messages(self, msgs):
+        for msg in msgs:
+            self.encode(msg)
+        self.socket_buffer.flush()
+    
+    def close(self):
+        self.socket_buffer.close()
+
+    def encode(self, msg):
+        raise NotImplementedError()
+        # self.socket_buffer.write(...)
+
+    def decode(self):
+        raise NotImplementedError()
+        # self.socket_buffer.peek() # use for lookahead
+        # self.socket_buffer.read(n)
+        # yield message
+
+def CodecSwitcher(socket, InitialCodec = None):
+    socket_buffer = SocketBuffer(socket)
+
+    if InitialCodec:
+        return InitialCodec(socket_buffer)
+    
     t0 = time.time()
     TIMEOUT = 0.5
     while time.time()-t0 < TIMEOUT:
         buffer_content = socket_buffer.peek()
         if b"\r\n\r\n" in buffer_content:
             if b"Upgrade: websocket" in buffer_content:
-                return WebsocketServerCodec
+                return WebsocketServerCodec(socket_buffer)
             raise RuntimeError("No suitable codec found")
         if len(buffer_content) > 3 and not buffer_content.startswith("GET"):
-            return CustomCodec
-    return CustomCodec
+            return CustomCodec(socket_buffer)
+    return CustomCodec(socket_buffer)
 
 class SocketBuffer(object):
     def __init__(self, socket):
@@ -56,23 +84,6 @@ class SocketBuffer(object):
         self.socket.sendall(self.write_buffer)
         self.write_buffer = b""
 
-
-class CodecSwitcher(object):
-    def __init__(self, socket, InitialCodec = None):
-        self.socket = socket
-        self.socket_buffer = SocketBuffer(socket)
-        if InitialCodec == None:
-            InitialCodec = auto_detect_codec(self.socket_buffer)
-        self.codec = InitialCodec(self.socket_buffer)
-
-    def get_messages(self):
-        yield from self.codec.decode()
-        
-    def send_messages(self, msgs):
-        for msg in msgs:
-            self.codec.encode(msg)
-        self.socket_buffer.flush()
-    
     def close(self):
         self.socket.close()
 
@@ -84,10 +95,6 @@ SPLITSEQUENCE = b" "+ESCAPECHAR+b" " #single escape char can mark end of message
 SPLITLENGTH = len(SPLITSEQUENCE)
 class CustomCodec(Codec):
     already_scanned_bytes_of_buffer = 0 # can be skipped when looking for escapechar
-
-    def __init__(self, socket_buffer):
-        assert isinstance(socket_buffer, SocketBuffer)
-        self.socket_buffer = socket_buffer
     
     """ This is the custom codec for MCGCraft"""
     def encode(self, msg):
@@ -158,8 +165,7 @@ OPCODE_PONG         = 0xA
 
 class WebsocketServerCodec(Codec):
     def __init__(self, socket_buffer):
-        assert isinstance(socket_buffer, SocketBuffer)
-        self.socket_buffer = socket_buffer
+        super(WebsocketServerCodec, self).__init__(socket_buffer)
 
         #do stuff to set up connection
         self.handshake()

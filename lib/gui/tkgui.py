@@ -16,13 +16,13 @@ else:
 from . import filedialog
 
 class GUI(object):
-    def __init__(self, config, worldtypes = (), background = True):
+    def __init__(self, config, worldtypes = (), clienttypes = (), background = True):
         if background:
-            thread.start_new_thread(self.init,(config,worldtypes))
+            thread.start_new_thread(self.init,(config,worldtypes,clienttypes))
         else:
-            self.init(config,worldtypes)
+            self.init(config,worldtypes,clienttypes)
 
-    def init(self, config, worldtypes):
+    def init(self, config, worldtypes, clienttypes):
         self.queue = {}
         self.stats = {}
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
@@ -124,9 +124,30 @@ class GUI(object):
         whitelist_entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         whitelist_button_local = Tkinter.Radiobutton(text = "localhost", variable = whitelistvar, value = "127.0.0.1")
         whitelist_button_local.grid(column = 2, row = self.row, sticky = Tkinter.W)
-        whitelist_button_local = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16")
-        whitelist_button_local.grid(column = 3, row = self.row, sticky = Tkinter.W)
+        whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16")
+        whitelist_button_LAN.grid(column = 3, row = self.row, sticky = Tkinter.W)
         self.row += 3
+
+        # Client type
+        def setclienttype(*args):
+            config["clienttype"] = clienttypevar.get()        
+        clienttypevar = Tkinter.StringVar(root)
+        clienttypevar.set(config["clienttype"])
+        clienttypevar.trace("w",setclienttype)
+        
+        clienttype_button_desktop = Tkinter.Radiobutton(text = "Desktop", variable = clienttypevar, value = "desktop")
+        clienttype_button_desktop.grid(column = 2, row = self.row, sticky = Tkinter.W)
+        clienttype_button_web = Tkinter.Radiobutton(text = "Web", variable = clienttypevar, value = "web")
+        clienttype_button_web.grid(column = 3, row = self.row, sticky = Tkinter.W)
+
+        if config["clienttype"] not in clienttypes:
+            clienttypes = (config["clienttype"],) + tuple(clienttypes)
+
+        self.add_label("Client Type")
+        clienttype_menu = Tkinter.OptionMenu(root, clienttypevar, *clienttypes)
+        clienttype_menu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        clienttype_menu.configure(takefocus=1)
+        self.row += 1
         
         # Parole
 
@@ -203,13 +224,14 @@ if __name__ == "__main__":
                 "worldtype": "Colorland",
                 "mobspawning": False,
                 "whitelist": "127.0.0.1",
+                "clienttype": "desktop",
                 "parole"   : "",
                 "port"     : "",
                 "run"      : False,
                 "play"     : False,
                 "quit"     : False,
                 "save"     : False}
-    gui = GUI(config, ("one","two","three"), background = True)
+    gui = GUI(config, ("one","two","three"), ("desktop","web"), background = True)
     import time
     time.sleep(1)
     gui.set_stats("fps","16")
