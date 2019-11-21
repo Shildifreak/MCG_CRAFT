@@ -3,7 +3,7 @@
 # Copyright (C) 2013 Michael Fogleman
 
 import math
-import time
+import time, random
 import sys, os, inspect
 import warnings
 from collections import deque
@@ -1127,6 +1127,9 @@ def show_on_window(client):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
                 break
+        entity_id = random.getrandbits(32) #M# use player name
+        password = random.getrandbits(32) # use user provided password
+        client.send("control %s %s"%(entity_id, password))
         #setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True, client=client, fullscreen=False)

@@ -28,10 +28,18 @@ class InventoryDisplay():
     def __init__(self,player):
         self.player = player
         self.is_open = False #Full inventory or only hotbar
-        self.inventory = self.player.entity["inventory"]
+        self.inventory = None
         self.foreign_inventory = None
         self.current_pages = [0,0]
-        self.inventory.register_callback(self.callback)
+
+    def register(self, inventory):
+        self.unregister()
+        self.inventory = inventory
+        if self.inventory:
+            self.inventory.register_callback(self.callback)                
+    def unregister(self):
+        if self.inventory:
+            self.inventory.unregister_callback(self.callback)                        
 
     def callback(self,inventory):
         self.display()
@@ -120,45 +128,57 @@ class InventoryDisplay():
 
 class Player(voxelengine.Player):
     RENDERDISTANCE = 10
-    def init(self): #called in init_function after world has created entity for player
-        self.set_focus_distance(8)
 
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.set_focus_distance(8)
         self.flying = False
+        self.inventory_display = InventoryDisplay(self)
+
+    def create_character(self):
+        character = resources.entityClasses["Mensch"]()
+        character.set_world(self.world,self.world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        self.entity["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
-        self.entity["left_hand"] = {"id":"STONE","count":100}
-        self.entity["right_hand"] = {"id":"SAND","count":100}
+        character["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
+        character["left_hand"] = {"id":"STONE","count":100}
+        character["right_hand"] = {"id":"SAND","count":100}
 
         # inventory stuff
         for i in range(60):
-            self.entity["inventory"].append({"id":"AIR","count":i})
+            character["inventory"].append({"id":"AIR","count":i})
+        return character
 
-        self.inventory_display = InventoryDisplay(self)
+    def control(self, entity):
+        if self.entity:
+            self.entity.unregister_item_callback(self._open_inventory_callback,"open_inventory")
+            self.entity.unregister_item_callback(self._update_left_hand_image,"left_hand")
+            self.entity.unregister_item_callback(self._update_right_hand_image,"right_hand")
+            self.entity.unregister_item_callback(self._update_lives,"lives")
+        super().control(entity)
+        if self.entity:
+            self.inventory_display.register(self.entity["inventory"])
+            self.entity.register_item_callback(self._open_inventory_callback,"open_inventory")
+            self.entity.register_item_callback(self._update_left_hand_image,"left_hand")
+            self.entity.register_item_callback(self._update_right_hand_image,"right_hand")
+            self.entity.register_item_callback(self._update_lives,"lives")
 
-        def open_inventory_callback(boolean):
-            if boolean:
-                self.inventory_display.open(self.entity.foreign_inventory)
-                self.entity.foreign_inventory = None
-            else:
-                self.inventory_display.close()
-        self.entity.register_item_callback(open_inventory_callback,"open_inventory")
-
-        def update_left_hand_image(item):
-            self.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
-        def update_right_hand_image(item):
-            self.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
-        def update_inventar(inventar):
-            pass
-        def update_lives(lives):
-            #todo: fix!
-            for x in range(lives,10):
-                self.del_hud("heart"+str(x))
-            for x in range(lives):
-                self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
-        self.entity.register_item_callback(update_left_hand_image,"left_hand")
-        self.entity.register_item_callback(update_right_hand_image,"right_hand")
-        self.entity.register_item_callback(update_lives,"lives")
+    def _open_inventory_callback(self, boolean):
+        if boolean:
+            self.inventory_display.open(self.entity.foreign_inventory)
+            self.entity.foreign_inventory = None
+        else:
+            self.inventory_display.close()
+    def _update_left_hand_image(self, item):
+        self.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
+    def _update_right_hand_image(self, item):
+        self.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
+    def _update_lives(self, lives):
+        #todo: fix!
+        for x in range(lives,10):
+            self.del_hud("heart"+str(x))
+        for x in range(lives):
+            self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
 
     def update(self):
         # stuff that doesn't need entity
@@ -442,18 +462,18 @@ def gameloop():
                 print("skipped")
             config["save"] = False
 
-        def init_function(player):
-            spielfigur = resources.entityClasses["Mensch"]()
-            spielfigur.set_world(w,w.blocks.world_generator.spawnpoint)
-            player.control(spielfigur)
-            player.init()
-
         renderlimit = True #True: fast loading, False: whole world at once
-        settings = {"init_function": init_function,
-                    "wait" : False,
+
+        def playerFactory(*args,**kwargs): #M# find a better way for this
+            print(args, kwargs)
+            player = Player(*args,**kwargs)
+            player._set_world(w)
+            return player
+
+        settings = {"wait" : False,
                     "name" : config["name"],
                     "suggested_texturepack" : os.path.join("..","..","..","resources","texturepack"), #relative path from client
-                    "PlayerClass" : Player,
+                    "PlayerClass" : playerFactory,
                     }
         timer = Timer(TPS = 60)
         with voxelengine.GameServer(**settings) as g:
@@ -515,6 +535,8 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
             "play"       : False,
             "quit"       : False,
             "save"       : False,
+            
+            "auto_create_entities_for_players":True,
          }
 
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")

@@ -25,7 +25,7 @@ server -> client
 	error some msg
 		Client hat irgendwas falsch gemacht
 
-	setarea ... deprecated
+	setarea ... deprecated, for now
 
 client -> server
 	tick
@@ -38,6 +38,7 @@ client -> server
 	
 	update x_min y_min z_min x_max y_max z_max m_id
 	
+	control entity_id password
 
 	scrolling: n
 	

@@ -6,6 +6,7 @@ import time
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
 from voxelengine.modules.geometry import Vector, Box
+from voxelengine.server.entities.entity import Entity
 
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""
@@ -41,6 +42,11 @@ class Player(object):
 		self.entity = entity
 		self._set_world(entity.world)
 		self._notice_position()
+
+	def create_character(self):
+		character = Entity()
+		character.set_world(self.world,self.world.blocks.world_generator.spawnpoint)
+		return character
 
 	def is_pressed(self,key):
 		"""return whether key is pressed """
@@ -105,6 +111,23 @@ class Player(object):
 
 	### it follows a long list of private methods that make sure a player acts like one ###
 
+	def _control_request(self, entity_id, password):
+		assert self.world #M# maybe make world required for creating player
+		for entity in self.world.entities.entities:
+			if entity.get("id",object()) == entity_id:
+				if entity.get("password",object()) == password:
+					break
+				else:
+					self.outbox.add("error", "Wrong password for controlling entity %s"%entity_id)
+					return
+		else:
+			#M# if settings["auto_create_entities_for_players"]
+			entity = self.create_character()
+			entity["id"] = entity_id
+			entity["password"] = password
+		self.control(entity)
+		
+
 	def _update_area(self, area, since_tick):
 		"""when entering new world or walking around make sure to send list of modified blocks when compared to world at since_tick (use 0 for initial terrain generation)"""
 		if since_tick != 0 and not self.world.blocks.block_storage.valid_history(since_tick):
@@ -153,7 +176,8 @@ class Player(object):
 
 		elif cmd == "rot" and len(args) == 2:
 			x,y = map(float,args)
-			self.entity["rotation"] = (x,y)
+			if self.entity:
+				self.entity["rotation"] = (x,y)
 
 		elif cmd == "keys" and len(args) == 1:
 			action_states = int(args[0])
@@ -180,6 +204,10 @@ class Player(object):
 				since_tick = 0
 				self.outbox.add("error", "unknown m_id",m_id)
 			self._update_area(Box(Vector((x1,y1,z1)), Vector((x2,y2,z2))), since_tick)
+
+		elif cmd == "control" and len(args) == 2:
+			entity_id, password = args
+			self._control_request(entity_id, password)
 
 		else:
 			self.was_pressed_set.add(msg)

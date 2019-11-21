@@ -25,7 +25,6 @@ class GameServer(object):
         spawnpoint : (world, (x,y,z)) where to place new players
 
     kwargs (optionale Argumente):
-        init_function : function to call with new players (callback)
         wait          : wait for players to disconnect before leaving with statement
         name          : name of the server
 
@@ -33,13 +32,11 @@ class GameServer(object):
     """
 
     def __init__(self,
-                 init_function=lambda player:None,
                  wait=True,
                  name="MCG-CRAFT",
                  suggested_texturepack="basic_colors",
                  PlayerClass=Player,
                  ):
-        self.init_function = init_function
         self.wait = wait
         self.suggested_texturepack = suggested_texturepack
         self.PlayerClass = PlayerClass
@@ -99,7 +96,6 @@ class GameServer(object):
         p = self.PlayerClass(initmessages)
         self.players[addr] = p
         self.new_players.add(p)
-        self.init_function(p)
 
     def _on_disconnect(self,addr):
         if "-debug" in sys.argv:
@@ -147,7 +143,6 @@ class GameServer(object):
 if __name__ == "__main__":
     from voxelengine.server.world import World
     from voxelengine.server.world_data_template import data
-    from voxelengine.server.entities.entity import Entity
     data["block_world"]["generator"] = {
         "name":"Simple Terrain Generator",
         "seed":0,
@@ -167,13 +162,6 @@ spawnpoint = (0,0,0)
 
     w = World(data)
 
-    def spawn_player(player):
-        spielfigur = Entity()
-        spielfigur.set_world(w,w.blocks.world_generator.spawnpoint)
-        player.control(spielfigur)
-
-    settings = {"init_function" : spawn_player,
-                }
     w[(-1,1,-3)] = "GREEN"
     with GameServer(**settings) as g:
         #g.launch_client()

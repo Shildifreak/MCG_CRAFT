@@ -1,4 +1,5 @@
-import sys, os, inspect, subprocess
+import os, inspect, threading, time
+import http.server, webbrowser
 
 # PATH to this file
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -15,22 +16,22 @@ parser.add_option("-P",
               action="store")
 options, args = parser.parse_args()
 
-
-path = os.path.join(PATH, "index.html")
-path = os.path.abspath(path)
-
 port = options.port
 host = options.host
+http_port = 8080
 
-if sys.platform == "win32":
-    url = 'file://"{}"?port={}&host={}'.format(path, port, host)
-    browser = '"C:\\Program Files\\Mozilla Firefox\\firefox.exe"'
-    command = " ".join([browser, url])
-    
-else:
-    url = "file://{}?port={}&host={}".format(path, port, host)
-    browser = "firefox"
-    command = [browser, url]
+print("serving page from",PATH)
+os.chdir(PATH)
+# just serve index.html from current working directory
+Handler = http.server.SimpleHTTPRequestHandler
+httpd = http.server.HTTPServer(("", http_port), Handler)
+http_thread = threading.Thread(target=httpd.serve_forever)
 
-#M# once it's using http:// instead of file:// switch from subprocess to webbrowser module for opening
-subprocess.Popen(command)
+http_thread.start()
+url = "http://localhost:%i?port=%s&host=%s" %(http_port,port,host)
+webbrowser.open(url) #maybe insert sleep before
+
+time.sleep(10)
+
+httpd.shutdown()
+http_thread.join()
