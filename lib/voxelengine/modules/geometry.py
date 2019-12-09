@@ -118,6 +118,8 @@ class Area(object):
             return self._distance_to_Ray(other)
         if isinstance(other, Everywhere):
             return -1
+        if isinstance(other, Nowhere):
+            return 1
         raise ValueError("Can't calculate distance to object of type %s" % type(other))
 
     def _distance_to_Box(self, other):
@@ -346,6 +348,14 @@ class Everywhere(Area):
     def distance(self, other):
         return -1
 EVERYWHERE = Everywhere()
+
+class Nowhere(Area):
+    __slots__ = ()
+    def distance(self, other):
+        return 1
+    def __bool__(self):
+        raise NotImplementedError()
+NOWHERE = Nowhere()
 
 class Point(Sphere):
     def __init__(self, position):

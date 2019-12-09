@@ -1,3 +1,9 @@
+Dinge die man in der AG machen könnte:
+	Schafe:
+		ändern Textur wenn angeklickt und geben Wolle -> wächst nach wenn sie Gras fressen
+		suchen nach Grasblöcken in der Umgebung 
+		verschiedene AIs / Persönlichkeiten -> faul, quirlig, verfressen, anhänglich, ängstlich, ...
+
 Menü:
 	Name des Spiels (default = Benutzername + "s MCGCraftServer")
 	Speicherort (browse) (standartmäßig leer)
@@ -13,13 +19,18 @@ Menü:
 	** leer wenn kein Spiel läuft?
 
 Bugs:
+	block updates from block updates are scheduled in same tick
+	hud doesn't update when resizing desktop client
+	tnt crashes client
+	placing redstone torch creates wrong block
 	already done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
-	Größe der Spielfigur als Breite, Höhe, etc. anstelle von Eckpunkten
-	collide(character,blockpos) funktion die sagt ob Spielfigur mit Stelle kollidiert -> beim Block platzieren benutzen
+	Einhörner sichtbar machen wenn man sie anklickt
+	masken für blockübertragung optimieren
+	decorator um deterministische init function in terrain function umzuwandeln
 	scheduling Funktion
 
 Plan:
@@ -90,10 +101,16 @@ INTERNAL
 	blocks can have special right click action
 	Blocks that dont have full Hitbox (like torches) can be combined as long as their hitboxes dont collide
 
-
-
-
-
+WORLD GENERATION
+	# initlevels: (managing multi-chunk-structures)
+	# inf (finished): finished, Entities may be here, can be send to client, ...
+	#   4 (structs) : postmulti-single-chunk-structures
+	#   3 (structs) : multi-chunk-structures
+	#   2 (structs) : premulti-single-chunk-structures
+	#   1 (terrain) : terrain build
+	#   0 (plain)   : nothing generated yet
+	#  -1 (vacuum)  : not even air
+	# idea: every chunk may require chunks around him to be at a level of at least (his level - 1)
 
 grass
 	block_update

@@ -5,7 +5,7 @@ import time
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
-from voxelengine.modules.geometry import Vector, Box
+from voxelengine.modules.geometry import Vector, Box, NOWHERE
 from voxelengine.server.entities.entity import Entity
 
 class Player(object):
@@ -14,7 +14,7 @@ class Player(object):
 	def __init__(self,initmessages=()):
 		self.entity = None
 		self.world = None
-		self.monitored_area = None #Box(Vector(-10,-10,-10),Vector(10,10,10))
+		self.monitored_area = NOWHERE
 		self.monitor_ticks = {0:0} # {m_id:gametick,...} gameticks when monitored area was changed 
 		self.outbox = MessageBuffer()
 		for msg in initmessages:
@@ -94,9 +94,6 @@ class Player(object):
 			elif event.tag in ("entity_leave", "entity_enter", "entity_change"):
 				entity = event.data
 				entity_events[entity].add(event.tag)
-			elif event.tag in "entity_enter":
-				entity = event.data
-				entity_movements[entity] = "move"
 			else:
 				print("player received",event.tag)
 
@@ -133,6 +130,7 @@ class Player(object):
 		if since_tick != 0 and not self.world.blocks.block_storage.valid_history(since_tick):
 			since_tick = 0
 			self.outbox.add("delarea", area)
+		# blocks
 		block_adder = self.outbox.get_block_adder(area)
 		if self.DO_ASYNC_UPDATE:
 			old = self.area_updates.pop(repr(area), None) #M# hacky, think to make areas hashable
@@ -192,8 +190,16 @@ class Player(object):
 		elif cmd == "monitor" and len(args) == 7:
 			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
 			m_id = int(args[6])
+			previously_monitored_area = self.monitored_area
 			self.monitored_area = Box(Vector(x1,y1,z1), Vector(x2,y2,z2))
 			self.monitor_ticks[m_id] = self.world.clock.current_gametick # needed for partial update when resuming monitoring of some area
+			# entities
+			previous_entities = set(self.world.entities.find_entities(previously_monitored_area))
+			new_entities = set(self.world.entities.find_entities(self.monitored_area))
+			for entity in previous_entities - new_entities:
+				self._del_entity(entity)
+			for entity in new_entities - previous_entities:
+				self._set_entity(entity)
 
 		elif cmd == "update" and len(args) == 7:
 			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
@@ -226,7 +232,7 @@ class Player(object):
 		if new_world:
 			new_world.players.add(self)
 		self.world = new_world
-		self.monitored_area = None
+		self.monitored_area = NOWHERE
 		self.outbox.add("clear")
 
 	def _set_entity(self,entity):

@@ -4,12 +4,6 @@ import random
 
 spawnpoint = (0,10,0)
 
-
-
-# Das ist eine Funktion die Bäume erzeugt
-def baum(position, size, direction):
-    pass
-
 def init(welt):
     n = 5
     for x in range(-n,n):
@@ -21,6 +15,3 @@ def init(welt):
             for dy in range(-20,y-5):
                 welt.blocks[(x,dy,z)] = "STONE"
             welt.blocks[(x,-20,z)] = "BEDROCK"
-    
-    baum((0,0,0), 10, (0,1,0))
-    

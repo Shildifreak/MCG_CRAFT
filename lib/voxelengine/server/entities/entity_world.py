@@ -14,7 +14,8 @@ class EntityWorld(object):
 			tags = {tags} #M# could use frozenset instead
 		for entity in self.entities:
 			if tags.issubset(entity["tags"]):
-				yield entity
+				if area.collides_with(entity.HITBOX + entity["position"]):
+					yield entity
 
 	def notice_move(self, entity, old_position, new_position):
 		pass

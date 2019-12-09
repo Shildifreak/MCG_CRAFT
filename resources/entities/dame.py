@@ -15,6 +15,7 @@ class Dame(Entity):
         self["SPEED"] = 1.3
         self["JUMPSPEED"] = 10
         self["sprint"] = 20
+        self["tags"] = {"update"}
 
     #def right_clicked(self, character):
     #    print "Muuhhh"

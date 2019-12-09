@@ -512,8 +512,9 @@ def gameloop():
                             entity_class.try_to_spawn(w)
  
                 # entity update
-                for entity in w.entities.find_entities(EVERYWHERE, "update"): #M# replace with near player(s) sometime
+                for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
                     entity.update()
+                
             save()
         print("Game stopped")
     rememberconfig = config.copy()

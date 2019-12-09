@@ -253,7 +253,8 @@ class Entity(voxelengine.Entity):
         z = random.randint(-40,40)
         block = world.blocks[(x,y-3,z)]
         area = cls.HITBOX+Vector(x,y,z)
-        if block != "AIR" and not world.blocks.find_blocks(area, "solid"):
+        if block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")):
+            print("spawning",cls,"at position",(x,y,z))
             entity = cls()
             entity.set_world(world,(x,y,z))
             return entity

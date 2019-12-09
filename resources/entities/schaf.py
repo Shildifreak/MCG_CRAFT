@@ -5,7 +5,7 @@ import random
 
 class Schaf(Entity):
     HITBOX = Hitbox(0.6,1.5,1)
-    LIMIT = 1
+    LIMIT = 3
     instances = []
     
     def __init__(self):
@@ -17,12 +17,13 @@ class Schaf(Entity):
         self["forward"] = False
         self["turn"] = 0
         self["nod"] = False
+        self["tags"] = {"update"}
 
-    #def right_clicked(self, character):
-    #    print "Muuhhh"
+    def right_clicked(self, character):
+        print("Muuh")
         
-    #def left_clicked(self, character):
-    #    print "Maehhh"
+    def left_clicked(self, character):
+        print("Maehhh")
 
     def update(self):
         if self["position"][1] < -100:
@@ -52,14 +53,13 @@ class Schaf(Entity):
         sx,sy,sz = self.get_sight_vector()
         if self["forward"]:
             nv += Vector((sx,0,sz))*self["SPEED"]
-            jump = self.world.get_block((self["position"]+Vector((sx,-0.5,sz))).normalize()) != "AIR"
+            jump = self.world.blocks[(self["position"] + Vector(sx,-0.5,sz)).round()] != "AIR"
         else:
             jump = not random.randint(0,2000)
         if self["nod"]:
-            p = (self["position"]+Vector((0,-2,0))).normalize()
-            #print p, self.world.get_block(p)
-            if self.world.get_block(p) == "GRASS":
-                self.world[p] = "DIRT"
+            p = (self["position"]+Vector(0,-2,0)).round()
+            if self.world.blocks[p] == "GRASS":
+                self.world.blocks[p] = "DIRT"
         sv = self.horizontal_move(jump)
         self["velocity"] += ((1,1,1)-sv)*nv
         self.update_position()

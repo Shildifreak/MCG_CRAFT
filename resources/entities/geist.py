@@ -4,7 +4,7 @@ from voxelengine.modules.geometry import Vector, Hitbox
 @register_entity("Geist")
 
 class Geist(Entity):
-    HITBOX = Hitbox(0.6,1.5,1)
+    HITBOX = Hitbox(1.49,2.99,1.49)
     LIMIT = 1
     instances = []
 
@@ -12,12 +12,17 @@ class Geist(Entity):
         super(Geist,self).__init__()
 
         self["texture"] = "GEIST"
-        self["SPEED"] = 5
+        self["SPEED"] = 1
         self["JUMPSPEED"] = 10
         self["forward"] = False
         self["turn"] = 0
+        self["tags"] = {"update"}
 
     def update(self):
+        if self["position"][1] < -100:
+            self.kill()
+            return
+
         self.update_dt()
        
         vy=self["velocity"][1]
@@ -25,8 +30,8 @@ class Geist(Entity):
         vy=vy-1
 
         if self.onground():
-            vy = 6
+            vy = self["JUMPSPEED"]
 
-        self["velocity"] = Vector((1,vy,0))
+        self["velocity"] = Vector((0,vy,self["SPEED"]))
             
         self.update_position()

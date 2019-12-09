@@ -4,8 +4,8 @@ import time, random
 @register_entity("Einhorn")
 
 class Einhorn(Entity):
-    HITBOX = Hitbox(0,0,0)
-    LIMIT = 5
+    HITBOX = Hitbox(0.6,1.5,1)
+    LIMIT = 1
     instances = []
     
     def __init__(self):
@@ -17,6 +17,12 @@ class Einhorn(Entity):
         self["sprint"] = 20
         self["forward"] = False
         self["turn"] = 0
+
+    def right_clicked(self, character):
+        self["texture"] = "SCHAF"
+        
+    def left_clicked(self, character):
+        self["texture"] = "SCHAF"
 
     def update(self):
         pass
