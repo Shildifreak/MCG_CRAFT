@@ -7,7 +7,7 @@ if __name__ != "__main__":
 
 import sys, os
 sys.path.append("lib")
-import voxelengine.client.client as client
+import voxelengine.client.desktop.client as client
 import tkinter
 
 def select(options):

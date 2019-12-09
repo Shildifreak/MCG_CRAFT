@@ -103,7 +103,9 @@ class Entity(ObservableDict):
         for entity in self.world.entities.find_entities(line_of_sight.bounding_box(max_distance)): #M# limit considered entities
             if entity is self:
                 continue
-            d = entity.HITBOX.raytest(entity["position"],line_of_sight)
+            d = line_of_sight.distance_from_origin_to_Box(entity.HITBOX+
+                                                          entity["position"]
+                                                          )
             if (d != False) and (d < max_distance):
                 nearest_entity = entity
                 max_distance = d

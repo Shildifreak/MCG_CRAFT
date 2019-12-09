@@ -81,7 +81,10 @@ class SocketBuffer(object):
         self.write_buffer += msg_bytes
     
     def flush(self):
-        self.socket.sendall(self.write_buffer)
+        try:
+            self.socket.sendall(self.write_buffer)
+        except socket.error:
+            raise Disconnect()
         self.write_buffer = b""
 
     def close(self):

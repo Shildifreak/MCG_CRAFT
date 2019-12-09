@@ -1,20 +1,8 @@
-Seiten einzeln sichtbar
-setup richtig benutzen -> weniger globale Variablen
-entities -> in Chunks eintragen
-         -> anzeigen
-compress benutzen wenn ein Chunk nicht mehr aktiv gebraucht wird
-laden/entladen mit unterschiedlicher Entfernung
-rausfinden warum ab einer gewissen Entfernung das automatische Laden versagt
-id vs name mess aufräumen
-transparency
-test if multi init level chunkgeneration works
+﻿# BUGS:
+hud doesn't update when resizing desktop client
+tnt crashes client
+placing redstone torch creates wrong block
 
-
-# TODO:
-# players attribut für welt -> für ladepriorität benutzen
-# change order of xyz to yxz in Chunkformat
-# deloading with bigger radius than loading
-# (maybe add optional visibility filter to server)
 
 # ABOUT:
 # initlevels: (managing multi-chunk-structures)

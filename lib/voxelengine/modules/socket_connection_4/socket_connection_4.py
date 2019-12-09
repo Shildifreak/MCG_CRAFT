@@ -21,6 +21,8 @@ if sys.version < "3":
 else:
     import _thread as thread
 
+PACKAGESIZE = 2048 #M# this beeing too small may cause problems with long server names
+
 class symmetric_addr_socket_mapping(object):
     def __init__(self):
         self._addr_to_socket = dict()
@@ -136,7 +138,7 @@ class server(template):
         while not self.closed:
             try:
                 if select.select([self.info_socket],[],[],1)[0]:
-                    msg, addr = self.info_socket.recvfrom(PACKAGESIZE) #buffer size could be smaller, but who cares
+                    msg, addr = self.info_socket.recvfrom(PACKAGESIZE)
                     if self.closed:
                         break
                     print (repr(msg.decode()),repr("PING "+self.key))
@@ -186,7 +188,10 @@ class server(template):
         self.update()
         client_socket = self.clients.get_socket(addr)
         if client_socket:
-            client_socket.send_messages(msgs)
+            try:
+                client_socket.send_messages(msgs)
+            except Disconnect as e:
+                pass #M# do something here?
         else:
             raise ValueError("no connection to %s available")
 

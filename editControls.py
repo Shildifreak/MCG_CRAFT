@@ -28,6 +28,7 @@ actions = [
     ("fly", "fliegen"),
     ("inv", u"inventar öffnen/schließen"),
     ("shift", u"ducken + sekundäre Mausfunktionen"),
+    ("sprint", u"sprinten"),
     ("inv1", u"Inventarplatz 1 auswählen"),
     ("inv2", u"Inventarplatz 2 auswählen"),
     ("inv3", u"Inventarplatz 3 auswählen"),

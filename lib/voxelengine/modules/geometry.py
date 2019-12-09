@@ -175,6 +175,9 @@ class Box(Area):
     def __add__(self, offset):
         return Box(self.lower_bounds+offset, self.upper_bounds+offset)
 
+    def __radd__(self, other):
+        return self + other
+
     @staticmethod
     def _sizes(upper_bound, lower_bound):
         dif = upper_bound ^ lower_bound
@@ -270,8 +273,8 @@ class Ray(Area):
         """returns False if no collision else distance from origin of ray to front of box,
         this can be negative if origin is inside box"""
         # based on https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
-        t135 = (box.lower_bound - self.origin)*self.dirfrac
-        t246 = (box.upper_bound - self.origin)*self.dirfrac
+        t135 = (box.lower_bounds - self.origin)*self.dirfrac
+        t246 = (box.upper_bounds - self.origin)*self.dirfrac
 
         tmin = max(map(min,t135,t246))
         tmax = min(map(max,t135,t246))

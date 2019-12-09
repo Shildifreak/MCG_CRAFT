@@ -15,14 +15,12 @@ class Dirt(Block):
 @register_block("GRASS")
 class Grassblock(Block):
     def handle_event_random_tick(self):
-        for other in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume"]:
-            if self.relative[(0,1,0)] == other:
-                if random.random()<0.008:
-                    self.relative[(0,1,0)] = random.choice(["grass","grass","grass","grass",
+        if self.relative[(0,1,0)] == "AIR":
+            if random.random()<0.008:
+                self.relative[(0,1,0)] = random.choice(["grass","grass","grass","grass",
                                                                        "LilaBlume","WeisseBlume","RoteBlume",
                                                                        "BlaueBlume","GelbeBlume","SonnenBlume"])
-                break
-        else:
+        elif self.relative[(0,1,0)] not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume"]:
             self.world.blocks[self.position] = "DIRT"
     def get_tags(self):
         return super(Grassblock,self).get_tags().union({"random_tick"})
@@ -39,14 +37,14 @@ class Plant(Block):
     def collides_with(self,area):
         return False
     def get_tags(self):
-        return super(Setzling,self).get_tags()-{"solid"}
+        return super(Plant,self).get_tags()-{"solid"}
 
 
 @register_block("Setzling")
 
 class Setzling(Block):
     blast_resistance = 0
-    def random_ticked(self):
+    def handle_event_random_tick(self):
         for d_pos, block in tree.tree_structure("eiche"):
             self.relative[d_pos-(0,1,0)] = block
 

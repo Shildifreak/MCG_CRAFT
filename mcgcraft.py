@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
 #* encoding: utf-8 *#
 
 if __name__ != "__main__":
@@ -235,6 +235,8 @@ class Player(voxelengine.Player):
                 if do_next:
                     action2()
 
+        speed_modifier = 5 if self.is_pressed("sprint") else 1
+
         # Movement
         pe.update_dt()
         
@@ -256,7 +258,7 @@ class Player(voxelengine.Player):
             if self.is_pressed("shift"):
                 nv -= (0, 1, 0)
             if nv != (0,0,0):
-                pe["position"] += nv*pe["FLYSPEED"]*pe.dt
+                pe["position"] += nv*pe["FLYSPEED"]*speed_modifier*pe.dt
             pe["velocity"] = (0,0,0)
             return
 
@@ -271,8 +273,8 @@ class Player(voxelengine.Player):
 
         pe["velocity"] += nv*pe["ACCELERATION"]
         l = pe["velocity"].length()
-        if l > pe["SPEED"]:
-            f = pe["SPEED"] / l
+        if l > pe["SPEED"]*speed_modifier:
+            f = pe["SPEED"]*speed_modifier / l
             pe["velocity"] *= (f,1,f)
 
         # save previous velocity and onground
@@ -472,7 +474,7 @@ def gameloop():
 
         settings = {"wait" : False,
                     "name" : config["name"],
-                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepack"), #relative path from client
+                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepacks",config["texturepack"]), #relative path from client
                     "PlayerClass" : playerFactory,
                     }
         timer = Timer(TPS = 60)
@@ -529,6 +531,7 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
             "mobspawning": True,
             "whitelist"  : "127.0.0.1",
             "clienttype" : "desktop",
+            "texturepack": "default",
             "parole"     : "",
             "port"       : "",
             "run"        : False,

@@ -149,6 +149,25 @@ class GUI(object):
         clienttype_menu.configure(takefocus=1)
         self.row += 1
         
+
+        # Texturepack
+        texturepacktypes = ("default", "weihnachtsdeko")
+
+        def settexturepack(*args):
+            config["texturepack"] = texturepackvar.get()        
+        texturepackvar = Tkinter.StringVar(root)
+        texturepackvar.set(config["texturepack"])
+        texturepackvar.trace("w",settexturepack)
+        
+        if config["texturepack"] not in texturepacktypes:
+            texturepacktypes = (config["texturepack"],) + tuple(texturepacktypes)
+
+        self.add_label("Texturepack")
+        texturepack_menu = Tkinter.OptionMenu(root, texturepackvar, *texturepacktypes)
+        texturepack_menu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        texturepack_menu.configure(takefocus=1)
+        self.row += 1
+
         # Parole
 
         # Start/Stop
@@ -225,6 +244,7 @@ if __name__ == "__main__":
                 "mobspawning": False,
                 "whitelist": "127.0.0.1",
                 "clienttype": "desktop",
+                "texturepack": "default",
                 "parole"   : "",
                 "port"     : "",
                 "run"      : False,
