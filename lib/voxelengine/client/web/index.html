@@ -1,0 +1,68 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style>
+			body {
+				height: 100vh;
+				padding: 0;
+				margin: 0;
+			}
+			#logbox {
+				overflow-y: scroll;
+				width: 20em;
+				height: 100vh;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
+	</head>
+
+	<body>
+
+	<div id="logbox">
+	</div>
+
+	<script type="text/javascript">
+		var logbox = document.getElementById("logbox");
+		
+		var queryDict = {};
+		location.search.substr(1).split("&").forEach(function(item) {queryDict[item.split("=")[0]] = item.split("=")[1]});
+		
+		var address = "ws://localhost:" + queryDict["port"] + "/"
+		
+		var username = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+		var password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+		
+		var ws;
+		ws = new WebSocket(address)
+		
+		ws.onopen = function() {
+			console.log("onopen");
+			ws.send("monitor -10 -10 -10 10 10 10 1");
+			ws.send("update -10 -10 -10 10 10 10 0");
+			ws.send("update -0.5 15.5 -0.5 15.5 31.5 15.5 0");
+			ws.send("control "+username+" "+password);
+		}
+		
+		ws.onmessage = function(msg) {
+			logbox.innerHTML = msg.data + "<br>" + logbox.innerHTML
+			console.log(msg.data);
+			ws.send("tick");
+		}
+		
+		ws.onclose = function() {
+			console.log("onclose");
+			//alert("server disconnected - you may as well close this tab");
+		}
+		
+		ws.onerror = function(e) {
+			console.log("onerror");
+			console.log(e);
+			alert(e);
+		}
+	
+	</script>
+
+	</body>
+
+</html>

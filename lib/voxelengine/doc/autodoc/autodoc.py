@@ -36,7 +36,7 @@ def filtertext(text):
 sys.path.append("../../..")
 import voxelengine
 with open("voxelengine.html","w") as f:
-    print >> f, filtertext(h.docmodule(voxelengine))
+    print(filtertext(h.docmodule(voxelengine)), file=f)
 
 #sys.path.append("../../modules")
 #import shared

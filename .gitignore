@@ -5,7 +5,6 @@ saves/
 __pycache__
 .fuse_hidden*
 *.zip
-*.html
 Thumbs.db
 test/
 tests/
