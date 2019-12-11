@@ -338,8 +338,8 @@ class World(voxelengine.World):
     #    super(World,self).set_block(position, block,*args,**kwargs)
 
     def tick(self):
-        self.handle_block_requests()
         super(World,self).tick()
+        self.handle_block_requests()
 
     def random_ticks_at(self, position):
         radius = 2 #M# increase later but for now this would cause too much lag
@@ -353,7 +353,7 @@ class World(voxelengine.World):
         # translate move_requests
         for position_from, position_to in self.move_requests:
             valid_tag = ValidTag()
-            block = self.get_block(position_from)
+            block = self.blocks[position_from]
             self.set_requests[position_from].append(Request("AIR",0,valid_tag,None,True))
             self.set_requests[position_to  ].append(Request(block,0,valid_tag,None,True))
         self.move_requests = []
@@ -375,7 +375,7 @@ class World(voxelengine.World):
         for position, requests in  self.set_requests.items():
             for request in requests:
                 if request.valid_tag:
-                    self.set_block(position, request.block)
+                    self.blocks[position] = request.block
                 if request.callback:
                     request.callback(request.valid_tag)
         self.set_requests.clear()

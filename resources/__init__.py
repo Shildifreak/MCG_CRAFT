@@ -41,16 +41,18 @@ class Block(voxelengine.Block):
         else:
             super(Block,self).__setitem__(key,value)
 
-    def handle_event_default(self, event):
-        print("No handler for event",event.tag)
+    def handle_event_default(self, events):
+        print("No handler for event",events[0].tag)
     
     def handle_events(self, events):
         """API for event system"""
+        grouped_events = collections.defaultdict(set)
         for event in events:
-            print("__init__:",self,"got",event.tag,"event")
-            f_name = "handle_event_"+event.tag
+            grouped_events[event.tag].add(event)
+        for tag, events in grouped_events.items():
+            f_name = "handle_event_"+tag
             f = getattr(self, f_name, self.handle_event_default)
-            f(event)
+            f(events)
 
     # helper functions
     def redstone_activated(self):

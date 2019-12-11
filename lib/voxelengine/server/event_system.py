@@ -48,14 +48,17 @@ class EventSystem(object):
 			events = ()
 		while events:
 			targets = defaultdict(list)
+			block_targets = defaultdict(list)
 			while events:
 				event = events.pop(0)
-				for block in self.world.blocks.find_blocks(event.area, event.tag):
-					targets[block].append(event)
+				for position in self.world.blocks.block_world_index.find_blocks(event.area, event.tag):
+					block_targets[position].append(event)
 				for entity in self.world.entities.find_entities(event.area, event.tag):
 					targets[entity].append(event)
 				for player in self.world.players.find_players(event.area, event.tag):
 					targets[player].append(event)
+			for position, target_events in block_targets.items():
+				targets[self.world.blocks[position]] = target_events
 			for target, target_events in targets.items():
 				target.handle_events(target_events)
 
