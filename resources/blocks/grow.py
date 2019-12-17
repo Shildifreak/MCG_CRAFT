@@ -36,8 +36,11 @@ class Grassblock(Block):
 class Plant(Block):
     def collides_with(self,area):
         return False
+    def handle_event_block_update(self,events):
+        if self.relative[(0,-1,0)] != "GRASS":
+            self.world.blocks[self.position] = "AIR"
     def get_tags(self):
-        return super(Plant,self).get_tags()-{"solid"}
+        return super(Plant,self).get_tags().union({"block_update"})-{"solid"}
 
 
 @register_block("Setzling")

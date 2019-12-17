@@ -119,6 +119,10 @@ class InventoryDisplay():
     
     def swap(self,inventory,index,hand):
         x, y = self.player.entity[hand], inventory[index]
+        #hier prüfen ob x in inventory rein darf
+        if not inventory.may_contain(x):
+            return
+        #
         x.parent = None
         y.parent = None
         self.player.entity[hand], inventory[index] = y, x    

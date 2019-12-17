@@ -1,4 +1,4 @@
-Dinge die man in der AG machen könnte:
+﻿Dinge die man in der AG machen könnte:
 	Schafe:
 		ändern Textur wenn angeklickt und geben Wolle -> wächst nach wenn sie Gras fressen
 		suchen nach Grasblöcken in der Umgebung 
@@ -19,7 +19,8 @@ Menü:
 	** leer wenn kein Spiel läuft?
 
 Bugs:
-	block updates from block updates are scheduled in same tick
+	Hebel funktioniert nicht
+	entities werden nicht ordentlich entfernt wenn server gestoppt wird
 	hud doesn't update when resizing desktop client
 	tnt crashes client
 	placing redstone torch creates wrong block

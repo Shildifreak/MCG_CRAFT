@@ -25,13 +25,13 @@ class Geist(Entity):
 
         self.update_dt()
        
-        vy=self["velocity"][1]
+        vx,vy,vz=self["velocity"]
 
         vy=vy-1
 
         if self.onground():
             vy = self["JUMPSPEED"]
 
-        self["velocity"] = Vector((0,vy,self["SPEED"]))
+        self["velocity"] = Vector((vx*self["SPEED"],vy,vz*self["SPEED"]))
             
         self.update_position()

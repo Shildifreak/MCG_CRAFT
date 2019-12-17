@@ -5,22 +5,22 @@ import random
 
 class Schaf(Entity):
     HITBOX = Hitbox(0.6,1.5,1)
-    LIMIT = 3
+    LIMIT = 5
     instances = []
     
     def __init__(self):
         super(Schaf,self).__init__()
 
         self["texture"] = "SCHAF"
-        self["SPEED"] = 5
-        self["JUMPSPEED"] = 10
+        self["SPEED"] = 10
+        self["JUMPSPEED"] = 25
         self["forward"] = False
         self["turn"] = 0
         self["nod"] = False
         self["tags"] = {"update"}
 
     def right_clicked(self, character):
-        print("Muuh")
+        self["texture"] = "SCHAF,GESCHOREN"
         
     def left_clicked(self, character):
         print("Maehhh")

@@ -91,6 +91,10 @@ class Observable(object):
     def copy(self):
         raise NotImplementedError()
 
+    def may_contain(self, item):
+        #M# todo: test for inception
+        return True
+
 class ObservableDict(Observable):
     static_keys = True
     def __init__(self,data={}):

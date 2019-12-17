@@ -9,6 +9,12 @@ class notPlacable(Item):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         return self.use_on_air(character)
 
+class Kreditkarteninventar(ObservableDict):
+    def may_contain(self, item):
+        if item["id"] in ("Muenzen", "Scheine"):
+            return True
+        else:
+            return False
 
 @register_item("Kredidtkarte")
 class Kredidtkarte(notPlacable):
@@ -18,7 +24,7 @@ class Kredidtkarte(notPlacable):
         try:
             self.item["inventory"]
         except KeyError:
-            self.item["inventory"] = ObservableDict()
+            self.item["inventory"] = Kreditkarteninventar()
             for i in range(28):
                 self.item["inventory"][i] = {"id":"AIR"}
 

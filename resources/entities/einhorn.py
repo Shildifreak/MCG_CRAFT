@@ -17,6 +17,7 @@ class Einhorn(Entity):
         self["sprint"] = 20
         self["forward"] = False
         self["turn"] = 0
+        self["tags"] = {"random_tick_source"}
 
     def right_clicked(self, character):
         self["texture"] = "SCHAF"
