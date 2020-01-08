@@ -1,0 +1,7 @@
+    ["BRUCHSTEIN" ,              False,       0, ["bruchstein.png"]],
+    ["SCHNEEERDE" ,              False,       0, ["schnee_top.png", "dirt.png", "schnee_side.png"]],
+    ["SCHNEE" ,                  False,       0, ["schnee.png"]],
+    ["WOLLE" ,                   False,       0, ["schnee_top.png"]],
+    ["STEINZIEGEL" ,             False,       0, ["steinziegel.png"]],
+    ["SCHILDBLOCK" ,             False,       0, ["schildblock.png"]],
+    // bis hier INVENTAR 2

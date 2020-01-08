@@ -23,16 +23,15 @@ Bugs:
 	entities werden nicht ordentlich entfernt wenn server gestoppt wird
 	hud doesn't update when resizing desktop client
 	tnt crashes client
-	placing redstone torch creates wrong block
-	already done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
+	yalready done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
-	Einhörner sichtbar machen wenn man sie anklickt
 	masken für blockübertragung optimieren
+	restrict write access in block methods to own block
 	decorator um deterministische init function in terrain function umzuwandeln
-	scheduling Funktion
+	scheduling Funktion -> instead use events
 
 Plan:
 	display_as attribute für alternative textur/modell

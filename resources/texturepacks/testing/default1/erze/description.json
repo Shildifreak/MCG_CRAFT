@@ -1,0 +1,12 @@
+    ["DIAMANT" ,                 False,       0, [( 6, 2)]],
+    ["REDSTONE" ,                False,       0, [( 7, 2)]],
+    ["GOLD" ,                    False,       0, [( 5, 2)]],
+    ["GOLDERZ" ,                 False,       0, [( 3, 2)]],
+    ["IRON" ,                    False,       0, [( 6, 1), ( 6, 1), (11, 0)]],
+    ["SMARAGTBLOCK" ,            False,       0, [( 1, 1)]],
+    ["SMARAGTERZ" ,              False,       0, [( 2, 2)]],
+    ["DIAMANTERZ" ,              False,       0, [( 2, 1)]],
+    ["EISENERZ" ,                False,       0, [( 7, 1)]],
+    ["KOHLEERZ" ,                False,       0, [( 1, 2)]],
+    ["Quarzsaule",               False,       0, [( 9, 2)]],
+    #Erze
