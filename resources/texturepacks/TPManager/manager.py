@@ -77,7 +77,6 @@ window = pygame.display.set_mode(window_size)
 
 def select(position):
 	global selected_position, selected_name
-	position = position[0] // IMAGE_SIZE, position[1] // IMAGE_SIZE
 	if position == selected_position:
 		selected_position = None
 	else:
@@ -128,6 +127,13 @@ def reload():
 	
 	update()
 
+HELPTEXT = """
+F1: Display help text
+F2: Rename Tile
+F5: Reload
+Arrow Keys: Move Cursor
+"""
+
 ende = False
 while not ende:
 	for event in pygame.event.get():
@@ -135,10 +141,22 @@ while not ende:
 			ende = True
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
-				select(event.pos)
+				pos = event.pos[0] // IMAGE_SIZE, event.pos[1] // IMAGE_SIZE
+				select(pos)
 		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_r:
+			if event.key == pygame.K_F1:
+				print(HELPTEXT)
+			if event.key in (pygame.K_r, pygame.K_F2):
 				rename()
+			if event.key == pygame.K_F5:
+				reload()
+			if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
+				if not selected_position:
+					selected_position = (0,0)
+				x = selected_position[0] - (event.key == pygame.K_LEFT) + (event.key == pygame.K_RIGHT)
+				y = selected_position[1] - (event.key == pygame.K_UP) + (event.key == pygame.K_DOWN)
+				select((x,y))
+				
 	pygame.display.update()
 
 pygame.quit()

@@ -2,7 +2,7 @@
 	"NAME" : {
 		"icon" : "side.png",
 		
-		"images" : {
+		"faces" : {
 			"top" : "top.png",
 			"bottom" : "bottom.png",
 			// "front" : "side.png",

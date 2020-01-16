@@ -1,0 +1,40 @@
+{
+ "TEXTURE_SIZE": [
+  16,
+  16
+ ],
+ "INDEX": {
+  "damengesicht_left": [
+   0,
+   1
+  ],
+  "damengesicht_front": [
+   1,
+   1
+  ],
+  "damengesicht_right": [
+   2,
+   1
+  ],
+  "damengesicht_back": [
+   3,
+   1
+  ],
+  "damengesicht_top": [
+   1,
+   0
+  ],
+  "damengesicht_bottom": [
+   1,
+   2
+  ],
+  "damenbeine": [
+   2,
+   2
+  ],
+  "damenkoerper": [
+   3,
+   2
+  ]
+ }
+}

@@ -1,0 +1,13 @@
+desktop_version_1.0
+	used by desktop client
+	textures in one square 
+
+web_version_1.0
+	used by web client
+	all textures are below each other
+
+universal_version_1.0
+	used as source for texture pack manager
+
+normalized_universal_description
+	all keys present on images, etc

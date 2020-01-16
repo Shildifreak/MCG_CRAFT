@@ -1,5 +1,5 @@
 # -*- coding: cp1252 -*-
-# Copyright (C) 2016 - 2018 Joram Brenz
+# Copyright (C) 2016 - 2020 Joram Brenz
 # Copyright (C) 2013 Michael Fogleman
 
 import math
@@ -190,11 +190,12 @@ def tex_coord(x, y, dx = 1, dy = 1):
     dx -= 2 * p
     dy -= 2 * p
 
-    m = 1.0 / TEXTURE_SIDE_LENGTH
-    x  *= m
-    y  *= m
-    dx *= m
-    dy *= m
+    mx = 1.0 / TEXTURE_DIMENSIONS[0]
+    my = 1.0 / TEXTURE_DIMENSIONS[1]
+    x  *= mx
+    y  *= my
+    dx *= mx
+    dy *= my
 
     return x, y, x + dx, y, x + dx, y + dy, x, y + dy
 
@@ -290,12 +291,12 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(path):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_SIDE_LENGTH, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
     if not os.path.isabs(path): #M# do something to support urls
         path = os.path.join(PATH,"..","..","texturepacks",path)
     with open(os.path.join(path,"description.py"),"r") as descriptionfile:
         description = ast.literal_eval(descriptionfile.read())
-    TEXTURE_SIDE_LENGTH = description["TEXTURE_SIDE_LENGTH"]
+    TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
     TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
     TEXTURE_PATH = os.path.join(path,"textures.png")
@@ -303,7 +304,7 @@ def load_setup(path):
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
     BLOCKNAMES = []
-    for name, transparency, icon_index, textures in description["TEXTURE_INFO"]:
+    for name, transparency, icon_index, textures in description["BLOCKS"]:
         n = 0.5 - 0.01*transparency
         if not transparency:
             BLOCKNAMES.append(name)
@@ -836,7 +837,7 @@ class Window(pyglet.window.Window):
             elif test("sethud",10):
                 position = Vector(map(float,c[3:6]))
                 rotation = float(c[6])
-                size = map(float,c[7:9])
+                size = Vector(map(float,c[7:9]))
                 element_data = c[1],c[2],position,rotation,size,int(c[9])
                 self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
             elif test("delhud",2):

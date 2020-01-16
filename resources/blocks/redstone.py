@@ -17,8 +17,11 @@ class Redstone(Block):
                 if level == None:
                     level = block["p_level"]
                 maxpower = max(maxpower, level)
-        self["p_level"] = maxpower - 1
-        self["state"] = str(self["p_level"])
+        p_level = maxpower - 1
+        if self["p_level"] != p_level:
+            self["p_level"] = p_level
+            self["state"] = str(p_level)
+            self.save()
 
     def collides_with(self,area):
         return False
@@ -30,18 +33,8 @@ class Redstone(Block):
 
 @register_item("Redstone")
 class Redstone_Item(Item):
-    def use_on_block(self,character,blockpos,face):
-        new_pos = blockpos + face
-        block_id = self.item["id"]
-        character.world[new_pos] = {"id":block_id,"state":"0"}
-        #M# remove block again if it collides with placer (check for all entities here later)
-        if new_pos in character.collide(character["position"]):
-            character.world[new_pos] = "AIR"
-        else:
-            self.item["count"] -= 1
-        if self.item["count"] <= 0:
-            self.item.parent[self.item.parent_key] = {"id": "AIR"}
-
+    def block_version(self):
+        return {"id":self.item["id"],"state":"0"}
 
 @register_block("Repeater")
 class Repeater(Block):

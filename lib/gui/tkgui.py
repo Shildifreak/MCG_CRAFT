@@ -151,7 +151,7 @@ class GUI(object):
         
 
         # Texturepack
-        texturepacktypes = ("default", "weihnachtsdeko")
+        texturepacktypes = ("default_stable", "weihnachtsdeko", "default")
 
         def settexturepack(*args):
             config["texturepack"] = texturepackvar.get()        

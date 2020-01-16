@@ -1,11 +1,11 @@
 # A texturepack file contains all information that is game specific and important to the client
 
 {
-"TEXTURE_SIDE_LENGTH" : 16,
+"TEXTURE_DIMENSIONS" : (16,16),
 #"TEXTURE_EDGE_CUTTING" : 0.1, #value between 0 and 0.5 -> how much to cut away from the sides of each texture
 
    #["Name",               transparenz,    icon, [( oben), (unten), ( vorne), ( hinten), ( links), ( rechts)]],
-"TEXTURE_INFO" : [
+"BLOCKS" : [
     ["SCHNEEERDE",                    False,       2, [( 0, 2), ( 0, 0), ( 0, 1)]],
     ["SAND",                     False,       0, [( 1, 0)]],
     ["SANDSTEIN",                False,       1, [( 1, 0), ( 4, 5)]],

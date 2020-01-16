@@ -1,5 +1,7 @@
 import collections, itertools, threading
 
+from voxelengine.modules.geometry import BinaryBox
+
 class GotoGroup(object):
     def __init__(self):
         self.message = None
@@ -56,6 +58,7 @@ class BlockMask(object):
     def add_masked_area(self, area):
         if area.collides_with(self.area):
             self.masked_areas.append(area)
+            print("masked_areas:",len(self.masked_areas))
     def is_masked(self, position):
         assert position in self.area
         if position in self.masked_positions:
@@ -65,23 +68,49 @@ class BlockMask(object):
                 return True
         return False
 
+class PositionIndexedSet(object):
+    def __init__(self):
+        #self.data = set()
+        self.index = collections.defaultdict(set)
+        self.counter = collections.Counter()
+    def add(self, mask):
+        for bb in mask.area.binary_box_cover():
+            self.index[bb].add(mask)
+            self.counter[bb.scale] += 1
+    def remove(self, mask):
+        for bb in mask.area.binary_box_cover():
+            self.index[bb].remove(mask)
+            if self.index[bb] == set():
+                del self.index[bb]
+            self.counter[bb.scale] -= 1
+            if self.counter[bb.scale] <= 0:
+                del self.counter[bb.scale]
+    def at_position(self, position):
+        masks = set()
+        for scale in self.counter.keys():
+            bb = BinaryBox(scale, position >> scale)
+            masks.update(self.index[bb])
+        return masks
+    def __len__(self):
+        return sum(self.counter.values())
+
 class BlockGroup(object):
     def __init__(self):
         self.serialized = []
         self.unserialized = collections.OrderedDict()
         self.chunksize = None
-        self.masks = set()
+        self.masks = PositionIndexedSet()
         self._lock = threading.Lock()
 
     def add_mask(self, mask):
         with self._lock:
             self.masks.add(mask)
-            print(len(self.masks),"masks")
+            #print(len(self.masks),"masks")
     
     def remove_mask(self, mask):
         with self._lock:
             self.masks.remove(mask)
-            print(len(self.masks),"masks")
+            #print(len(self.masks),"masks")
 
     def add(self, message, mask=None):
         with self._lock:
@@ -92,7 +121,7 @@ class BlockGroup(object):
                     return
                 # add message and update masks
                 self.unserialized[position] = message
-                for m in self.masks:
+                for m in self.masks.at_position(position):
                     m.add_masked_position(position)
 
             elif message[0] in ("setarea","delarea"):

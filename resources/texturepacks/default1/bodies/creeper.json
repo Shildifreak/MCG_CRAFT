@@ -1,0 +1,16 @@
+{
+ "TEXTURE_SIZE": [
+  16,
+  16
+ ],
+ "INDEX": {
+  "creeper_face": [
+   0,
+   0
+  ],
+  "creeper": [
+   1,
+   0
+  ]
+ }
+}

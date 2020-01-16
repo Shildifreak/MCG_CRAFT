@@ -32,6 +32,7 @@ Verbesserungskram:
 	restrict write access in block methods to own block
 	decorator um deterministische init function in terrain function umzuwandeln
 	scheduling Funktion -> instead use events
+	Türschwelle entfernen
 
 Plan:
 	display_as attribute für alternative textur/modell

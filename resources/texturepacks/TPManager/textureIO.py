@@ -52,6 +52,7 @@ class TextureFile(object):
 	def read_texture(self, name):
 		return self.surface.subsurface(self.get_rect(name))
 	def write_texture(self, name, surface):
+		# WARN IF .xcf FILE EXISTS!
 		pass
 	def get_name(self, position):
 		reversed_index = {tuple(pos):name for name,pos in self.description["INDEX"].items()}

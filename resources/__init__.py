@@ -184,11 +184,14 @@ class Item(object):
         self.item.setdefault("count",1)
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
+    def block_version(self):
+        """use the output of this function when trying to place the item into the world as a block"""
+        return self.item["id"]
+    
     def use_on_block(self,character,blockpos,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         new_pos = blockpos + face
-        block_id = self.item["id"]
-        character.world[new_pos] = block_id
+        character.world[new_pos] = self.block_version()
         #M# remove block again if it collides with placer (check for all entities here later)
         if new_pos in character.collide_blocks():
             character.world[new_pos] = "AIR"
