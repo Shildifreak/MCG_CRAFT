@@ -478,6 +478,7 @@ def gameloop():
 
         settings = {"wait" : False,
                     "name" : config["name"],
+                    "parole" : config["parole"],
                     "suggested_texturepack" : os.path.join("..","..","..","resources","texturepacks",".versions","desktop",config["texturepack"]), #relative path from client
                     "PlayerClass" : playerFactory,
                     }
@@ -487,7 +488,7 @@ def gameloop():
             while config["run"]:
                 if config["play"]:
                     config["play"] = False
-                    g.launch_client(config["clienttype"])
+                    g.launch_client(config["clienttype"], config["username"], config["password"])
                 if config["save"]:
                     save()
                 timer.tick()
@@ -522,8 +523,8 @@ def gameloop():
             save()
         print("Game stopped")
     rememberconfig = config.copy()
-    for key in ("run","play","quit","save"):
-        rememberconfig.pop(key)
+    for key in ("run","play","quit","save","refresh","address"):
+        rememberconfig.pop(key, None)
     with open(configfn,"w") as configfile:
         configfile.write(repr(rememberconfig))
     print()
@@ -535,9 +536,11 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
             "worldtype"  : "Colorland",
             "mobspawning": True,
             "whitelist"  : "127.0.0.1",
+            "parole"     : "",
+            "username" : "",
+            "password" : "",
             "clienttype" : "desktop",
             "texturepack": "default",
-            "parole"     : "",
             "port"       : "",
             "run"        : False,
             "play"       : False,
@@ -563,7 +566,7 @@ def main():
     worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py") and not x.startswith("_")]
     clienttypes = os.listdir(os.path.join("lib","voxelengine","client"))
     try:
-        from gui.tkgui import GUI as UI
+        from gui.tkgui import ServerGUI as UI
     except ImportError as e:
         print("GUI not working cause of:\n",e)
     ui = UI(config, worldtypes, clienttypes)

@@ -47,11 +47,11 @@ class Repeater(Block):
             "do stuff"
         # tbc.
 
-    def activated(self,character,face):
-        d = self.get_front_facing_vector()
-        self.world[self.position+d] = {
-            "id":"Repeater",
-            "rotation":self["rotation"]}
+    #def activated(self,character,face):
+    #    d = self.get_front_facing_vector()
+    #    self.world[self.position+d] = {
+    #        "id":"Repeater",
+    #        "rotation":self["rotation"]}
 
     def get_tags(self):
         return super(Repeater,self).get_tags().union({"block_update"})

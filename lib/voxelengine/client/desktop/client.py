@@ -1129,8 +1129,16 @@ def show_on_window(client):
                 path = c.split(" ",1)[-1]
                 load_setup(path)
                 break
-        entity_id = random.getrandbits(32) #M# use player name
-        password = random.getrandbits(32) # use user provided password
+        if options.name:
+            entity_id = options.name
+            password = options.password
+            if not options.password:
+                print("Consider setting a password when using a name.")
+        else:
+            entity_id = random.getrandbits(32)
+            password = random.getrandbits(32)
+            if options.password:
+                print("Ignoring user set password because no name was given.")
         client.send("control %s %s"%(entity_id, password))
         #setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
@@ -1152,7 +1160,7 @@ def show_on_window(client):
 def get_servers():
     if options.host and options.port:
         return [((options.host, options.port),"Direct Connection")]
-    servers = socket_connection.search_servers(key="voxelgame")
+    servers = socket_connection.search_servers(key="voxelgame"+options.parole)
     print(servers)
     if options.host:
         servers[:] = [server for server in servers if server[0][0] == options.host]
@@ -1191,6 +1199,18 @@ parser.add_option("-H",
 parser.add_option("-P",
               "--port", dest="port",
               help="only consider servers on this PORT", metavar="PORT", type="int",
+              action="store")
+parser.add_option(
+              "--parole", dest="parole",
+              help="find servers with this parole", metavar="PAROLE", default="",
+              action="store")
+parser.add_option("-N",
+              "--name", dest="name",
+              help="use this name for playing on the server", metavar="NAME",
+              action="store")
+parser.add_option(
+              "--password", dest="password",
+              help="set a password to prevent others from connecting with your name", metavar="PASSWORD",
               action="store")
 options, args = parser.parse_args()
 if __name__ == '__main__':

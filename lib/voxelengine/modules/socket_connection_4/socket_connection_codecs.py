@@ -57,7 +57,10 @@ class SocketBuffer(object):
     def _recv(self):
         if select.select([self.socket],[],[],0.0)[0]:
             try:
-                self.read_buffer += self.socket.recv(1024)
+                new_data = self.socket.recv(1024)
+                if not new_data:
+                    raise Disconnect()
+                self.read_buffer += new_data
             except socket.error:
                 raise Disconnect()
 

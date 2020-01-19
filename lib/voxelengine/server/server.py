@@ -34,10 +34,12 @@ class GameServer(object):
     def __init__(self,
                  wait=True,
                  name="MCG-CRAFT",
+                 parole="",
                  suggested_texturepack="basic_colors",
-                 PlayerClass=Player,
+                 PlayerClass=Player
                  ):
         self.wait = wait
+        self.parole = parole
         self.suggested_texturepack = suggested_texturepack
         self.PlayerClass = PlayerClass
 
@@ -46,7 +48,7 @@ class GameServer(object):
 
         self._on_connect_queue = collections.deque()
         self._on_disconnect_queue = collections.deque()
-        self.socket_server = socket_connection.server(key="voxelgame",on_connect=self._async_on_connect,
+        self.socket_server = socket_connection.server(key="voxelgame"+self.parole,on_connect=self._async_on_connect,
                                                       on_disconnect=self._async_on_disconnect,name=name)
         if "-debug" in sys.argv:
             print("game ready")
@@ -126,7 +128,7 @@ class GameServer(object):
         #time.sleep(0.001) #wichtig damit das threading Zeug klappt
         #M# threading got improved in python3, hope that fixed this
     
-    def launch_client(self, client_type = "desktop"):
+    def launch_client(self, client_type, username, password):
         path = os.path.join(PATH, "..", "client", client_type, "client.py")
         if not os.path.exists(path):
             print("no matching call for selected client type", client_type)
@@ -136,7 +138,11 @@ class GameServer(object):
         command = [python,
                    path,
                    "--host=localhost",
-                   "--port=%i" %port
+                   "--port=%i" %port,
+                   "--parole=%s" %self.parole,
+                   "--name=%s" %username,
+                   "--password=%s" %password,
+
                   ]
         subprocess.Popen(command)
 

@@ -36,7 +36,8 @@ class Player(object):
 	def quit(self):
 		self.quit_flag = True
 		if self.entity:
-			self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
+			#self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
+			pass
 
 	def control(self,entity):
 		self.entity = entity
