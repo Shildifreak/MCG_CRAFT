@@ -76,15 +76,6 @@
     "HELLGRAU"                 : {"faces":{"all": "hellgrau"   }},
     "WEISS"                    : {"faces":{"all": "weiss"      }},
 
-    
-    # WERKZEUGE
-    "Muenzen"                  : {"icon":"muenze"                },
-    "Scheine"                  : {"icon":"schein"                },
-    "Kredidtkarte"             : {"icon":"kredidtkarte"          },
-    "TORCH"                    : {"icon":"torch_on"              },
-    "LAMP"                     : {"icon":"lamp_off"              },
-    "HERZ"                     : {"icon":"herz"                  },
-
     # ERZE
     "DIAMANT"                  : {"faces":{"all": "diamant_block"  }},
     "DIAMANTERZ"               : {"faces":{"all": "diamant_erz"    }},
@@ -156,6 +147,18 @@
     "WAND"                     : {"faces":{"all":"grun"}},
     "AIM"                      : {"faces":{"all":"gold"}},
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
+    },
+
+"ITEMS" : {
+    # Items for Blocks will be created automatically
+
+    "Muenzen"                  : {"icon":"muenze"                },
+    "Scheine"                  : {"icon":"schein"                },
+    "Kredidtkarte"             : {"icon":"kredidtkarte"          },
+
+    "TORCH"                    : {"icon":"torch_on"              },
+    "LAMP"                     : {"icon":"lamp_off"              },
+    "HERZ"                     : {"icon":"herz"                  },
     },
 
 #{

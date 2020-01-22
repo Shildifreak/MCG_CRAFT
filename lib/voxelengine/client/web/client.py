@@ -14,6 +14,18 @@ parser.add_option("-P",
               "--port", dest="port",
               help="only consider servers on this PORT", metavar="PORT", type="int",
               action="store")
+parser.add_option(
+              "--parole", dest="parole",
+              help="find servers with this parole", metavar="PAROLE", default="",
+              action="store")
+parser.add_option("-N",
+              "--name", dest="name",
+              help="use this name for playing on the server", metavar="NAME",
+              action="store")
+parser.add_option(
+              "--password", dest="password",
+              help="set a password to prevent others from connecting with your name", metavar="PASSWORD",
+              action="store")
 options, args = parser.parse_args()
 
 port = options.port
@@ -28,7 +40,7 @@ httpd = http.server.HTTPServer(("", http_port), Handler)
 http_thread = threading.Thread(target=httpd.serve_forever)
 
 http_thread.start()
-url = "http://localhost:%i?port=%s&host=%s" %(http_port,port,host)
+url = "http://localhost:%i?port=%s&host=%s&parole=%s&name=%s&password=%s" %(http_port,port,host,options.parole,options.name,options.password)
 webbrowser.open(url) #maybe insert sleep before
 
 time.sleep(10)

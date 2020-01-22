@@ -31,6 +31,14 @@ def generate_desktop_version(normalized_universal_description, texture_directory
 		block = blockname, transparent, icon_index, texture_list
 		description["BLOCKS"].append(block)
 	
+	for itemname, itemdata in normalized_universal_description["ITEMS"].items():
+		icon = (0, texture_index[itemdata["icon"]])
+		transparent = False
+		texture_list = [icon]*6
+		icon_index = 0
+		block = itemname, transparent, icon_index, texture_list # as of now desktop version needs a block for each item
+		description["BLOCKS"].append(block)
+	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
 		icon = (0, texture_index[blockmodeldata["icon"]])

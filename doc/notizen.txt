@@ -34,6 +34,8 @@ Verbesserungskram:
 	scheduling Funktion -> instead use events
 	Türschwelle entfernen
 
+	Möglichkeit für den Clienten Texturepack selbst auszuwählen?
+
 Plan:
 	display_as attribute für alternative textur/modell
 	Speichern sollte beinhalten: Weltgenerator?, Datum, Version, Entities
