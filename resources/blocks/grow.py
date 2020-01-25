@@ -49,7 +49,7 @@ class Setzling(Block):
     blast_resistance = 0
     def handle_event_random_tick(self):
         for d_pos, block in tree.tree_structure("eiche"):
-            self.relative[d_pos-(0,1,0)] = block
+            self.relative[(d_pos[0], d_pos[1]-1, d_pos[2])] = block
 
     def get_tags(self):
         return super(Setzling,self).get_tags().union({"random_tick"}) - {"solid"}

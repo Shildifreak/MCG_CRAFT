@@ -145,6 +145,8 @@ class Player(voxelengine.Player):
 
         # just for testing:
         character["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
+        for blockname in resources.blockClasses.keys():
+            character["inventory"].append({"id":blockname})
         character["left_hand"] = {"id":"STONE","count":100}
         character["right_hand"] = {"id":"SAND","count":100}
 

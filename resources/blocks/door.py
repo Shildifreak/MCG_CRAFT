@@ -8,7 +8,8 @@ class DoorTop(Block):
         self.relative[(0, 0,0)] = "DOORTOPOPEN"
         self.relative[(0,-1,0)] = "DOORBOTTOMOPEN"
     def mined(self,character,face):
-        pass
+        self.relative[(0, 0,0)] = "AIR"
+        self.relative[(0,-1,0)] = "AIR"
 
 @register_block("DOORBOTTOM")
 
@@ -18,7 +19,8 @@ class DoorBottom(Block):
         self.relative[(0,0,0)] = "DOORBOTTOMOPEN"
         self.relative[(0,1,0)] = "DOORTOPOPEN"
     def mined(self,character,face):
-        pass
+        self.relative[(0, 0,0)] = "AIR"
+        self.relative[(0, 1,0)] = "AIR"
 
 @register_block("DOORSTEP")
 
@@ -36,7 +38,8 @@ class DoorTopOpen(Block):
         self.relative[(0, 0,0)] = "DOORTOP"
         self.relative[(0,-1,0)] = "DOORBOTTOM"
     def mined(self,character,face):
-        pass
+        self.relative[(0, 0,0)] = "AIR"
+        self.relative[(0,-1,0)] = "AIR"
     def collides_with(self,area):
         return False
 
@@ -48,6 +51,7 @@ class DoorBottomOpen(Block):
         self.relative[(0,0,0)] = "DOORBOTTOM"
         self.relative[(0,1,0)] = "DOORTOP"
     def mined(self,character,face):
-        pass
+        self.relative[(0, 0,0)] = "AIR"
+        self.relative[(0, 1,0)] = "AIR"
     def collides_with(self,area):
         return False

@@ -159,7 +159,7 @@ class Block(voxelengine.Block):
 class SolidBlock(Block):
     defaults = Block.defaults.copy()
     defaults["p_stronglevel"] = 0
-    def block_update(self,directions):
+    def handle_event_block_update(self,event):
         """directions indicates where update(s) came from... usefull for observer etc."""
         """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
         # redstone Zeug
@@ -173,6 +173,9 @@ class SolidBlock(Block):
                     stronglevel = max(stronglevel, neighbour["p_level"])
         self["p_level"] = level
         self["p_stronglevel"] = stronglevel
+
+    def get_tags(self):
+        return super(SolidBlock, self).get_tags().union({"block_update"})
 
 # Default Item and Block (also usefull for inheritance)
 

@@ -11,3 +11,4 @@ class HebelBlock(Block):
             self["p_level"] = 0
         else:
             self["p_level"] = 15
+        self.save()
