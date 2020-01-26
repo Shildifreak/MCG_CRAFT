@@ -31,10 +31,12 @@ class BlockWorld(object):
 		block = self.BlockClass(blockdata, position=position, blockworld=self)
 		return block
 	
-	def __getitem__(self, position, timestep = 0, relative_timestep = True):
+	def __getitem__(self, position, t = 0, relative_timestep = True):
 		position = Vector(position)
-		block_id = self.block_storage.get_block_id(position, timestep, relative_timestep)
+		block_id = self.block_storage.get_block_id(position, t, relative_timestep)
 		return self._block_by_id(block_id, position)
+	
+	get = __getitem__
 	
 	def __setitem__(self, position, value):
 		position = Vector(position)
@@ -49,12 +51,13 @@ class BlockWorld(object):
 			blockdata = freeze(block)
 			block_id = self.blockdata_encoder.increment_count_and_get_id(blockdata)
 		# apply
-		self.block_storage.set_block_id(position, block_id)
-		# update BlockWorldIndex
-		self.block_world_index.notice_change(position, block.get_tags())
-		# issue event for others to notice change
-		#self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
-		self.event_system.add_event(0,Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
+		block_changed = self.block_storage.set_block_id(position, block_id)
+		if block_changed:
+			# update BlockWorldIndex
+			self.block_world_index.notice_change(position, block.get_tags())
+			# issue event for others to notice change
+			#self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
+			self.event_system.add_event(0,Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
 	def get_tags(self, position):
 		return self[position].get_tags()

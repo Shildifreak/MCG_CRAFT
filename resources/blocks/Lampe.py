@@ -8,6 +8,7 @@ class Lamp(SolidBlock):
             self["state"] = "ON"
         else:
             self["state"] = "OFF"
+        self.save()
 
     def get_tags(self):
         return super(Lamp,self).get_tags().union({"block_update"})

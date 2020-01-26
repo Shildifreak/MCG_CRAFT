@@ -1,6 +1,7 @@
 from collections import namedtuple, defaultdict
 
 Event = namedtuple("Event", ("tag","area","data"))
+Event.__new__.__defaults__ = (None,)
 Event.__doc__ += """
 search for entities and blocks in <area> that registered for <event_tag> and call them back with event_data"""
 

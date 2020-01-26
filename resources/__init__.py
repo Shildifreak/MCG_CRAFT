@@ -173,6 +173,7 @@ class SolidBlock(Block):
                     stronglevel = max(stronglevel, neighbour["p_level"])
         self["p_level"] = level
         self["p_stronglevel"] = stronglevel
+        self.save()
 
     def get_tags(self):
         return super(SolidBlock, self).get_tags().union({"block_update"})

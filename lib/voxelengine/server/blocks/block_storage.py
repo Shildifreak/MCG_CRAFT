@@ -57,16 +57,20 @@ class BlockStorage(object):
 		"""
 		always manipulates block at current timestamp
 		use block_id = NO_BLOCK_ID to delete blocks
+		returns whether the block was changed
 		"""
 		# warn if manipulating same block multiple times?
 		try:
 			block_history = self.structures[position]
 		except KeyError:
-			block_history = []
-			self.structures[position] = block_history
+			block_history = self.structures[position] = []
+		previous_block_id = block_history[-1][1] if block_history else self.NO_BLOCK_ID
+		if block_id == previous_block_id:
+			return False
 		# append, not replace even if same timestep. otherwise reference_delete_callback would have to be called
 		block_history.append((self.clock.current_gametick, block_id))
 		self._cleanup_history(block_history)
+		return True
 
 	def list_changes(self, area, since_tick):
 		assert self.valid_history(since_tick)

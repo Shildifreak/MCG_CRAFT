@@ -18,8 +18,8 @@ toggle_view, rename, replace left, replace right
 #TD_PATHS = ["../test%i"%i for i in range(2)]
 #TF_PATH  = "../test0/chest.png"
 
-TD_PATHS = ["../default%i"%i for i in range(2)]
-TF_PATH  = "../default0/textures.png"
+TD_PATHS = ["../default", "../test1"]
+TF_PATH  = "../default/textures.png"
 
 import pygame
 import itertools
