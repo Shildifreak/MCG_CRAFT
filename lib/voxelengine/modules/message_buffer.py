@@ -134,6 +134,16 @@ class BlockGroup(object):
                 self.serialized.append(message)
                 for m in self.masks:
                     m.add_masked_area(area)
+            
+            elif message[0] == "clear":
+                # serialize everything, add message and update masks
+                self.serialized.extend(self.unserialized.values())
+                self.unserialized.clear()
+                self.serialized.append(message)
+            
+            else:
+                raise ValueError("unexpected message type %s" % message[0])
+
 
     def pop(self):
         if self.serialized:

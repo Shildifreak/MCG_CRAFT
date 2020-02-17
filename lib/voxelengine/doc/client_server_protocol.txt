@@ -1,7 +1,8 @@
 
 server -> client
-	clear
-		lösche alle Blöcke, setzt monitored area zurück
+	clear generator_data
+		lösche alle Blöcke, setze monitored area zurück,
+                setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator
 	del x y z
 		lösche den Block
 	delarea xmin ymin zmin xmax ymax zmax
@@ -9,7 +10,7 @@ server -> client
 	set x y z block
 		setze block an stelle x y z
 	goto x y z
-		setze Kameraposition
+		setze Kameraposition, starte Neuberechnung von monitored area
 	focusdist n
 		setze Distanz bis zu der Blöcke anvisiert werden
 	setentity id model x y z yaw pitch
@@ -55,6 +56,5 @@ client -> server
 
 laden einer Welt:
 	client				server
-		<---- terrain ---
 		<---- clear -----
 		<---- goto ------

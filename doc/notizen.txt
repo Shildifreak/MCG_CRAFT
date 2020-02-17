@@ -4,31 +4,15 @@
 		suchen nach Grasblöcken in der Umgebung 
 		verschiedene AIs / Persönlichkeiten -> faul, quirlig, verfressen, anhänglich, ängstlich, ...
 
-Menü:
-	Name des Spiels (default = Benutzername + "s MCGCraftServer")
-	Speicherort (browse) (standartmäßig leer)
-	Weltgenerator(*)
-	whitelist (localhost / all / custom)
-	#Parole (erstmal nicht)
-	#Port
-	Start/Stop          Start&Play/Play
-	Stats**
-		TPS, Spieler, Entities, ...
-
-	*  ausgegraut wenn Speicherort schon existiert?
-	** leer wenn kein Spiel läuft?
 
 Bugs:
-	Hebel funktioniert nicht
-	entities werden nicht ordentlich entfernt wenn server gestoppt wird
-	hud doesn't update when resizing desktop client
 	tnt crashes client
+	entities werden nicht ordentlich entfernt wenn server gestoppt wird
 	yalready done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
-	masken für blockübertragung optimieren
 	restrict write access in block methods to own block
 	decorator um deterministische init function in terrain function umzuwandeln
 	scheduling Funktion -> instead use events
@@ -43,9 +27,22 @@ Plan:
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
 		-> Block-Entity-Updates -> called to entities in same chunk as changed block
 	Aufsammeln von Blöcken ermöglichen
-	Inventar -> abbauen/platzieren von Blöcken soll Anzahl verändern
-	Speichern um entities erweitern
-	Blocks with custom hitbox -> Entities walking up halfslabs, stairs, etc. without jumping
+	Entities walking up halfslabs, stairs, etc. without jumping
+
+
+Menü:
+	Name des Spiels (default = Benutzername + "s MCGCraftServer")
+	Speicherort (browse) (standartmäßig leer)
+	Weltgenerator(*)
+	whitelist (localhost / all / custom)
+	#Parole (erstmal nicht)
+	#Port
+	Start/Stop          Start&Play/Play
+	Stats**
+		TPS, Spieler, Entities, ...
+
+	*  ausgegraut wenn Speicherort schon existiert?
+	** leer wenn kein Spiel läuft?
 
 BLOCKS
 	DATA

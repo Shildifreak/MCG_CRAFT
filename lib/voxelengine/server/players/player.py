@@ -234,7 +234,11 @@ class Player(object):
 			new_world.players.add(self)
 		self.world = new_world
 		self.monitored_area = NOWHERE
-		self.outbox.add("clear")
+		generator_data = {"terrainjs":self.world.blocks.world_generator.terrain_js,
+                                  "seed"     :self.world.blocks.world_generator.seed,
+                                  "path"     :self.world.blocks.world_generator.path,
+                                  "name"     :self.world.blocks.world_generator.__name__}
+		self.outbox.add("clear",generator_data)
 
 	def _set_entity(self,entity):
 		priority = 1 if entity == self.entity else 0
