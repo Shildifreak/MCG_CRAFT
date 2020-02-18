@@ -12,15 +12,20 @@ import fnmatch
 
 from pkg_resources import resource_listdir, resource_filename
 
+if sys.platform == "linux":
+    PATTERN = '_v8.so'
+else:
+    PATTERN = '_v8*.so'
+
 # In python 3 the extension file name depends on the python version
 try:
-    EXTENSION_NAME = fnmatch.filter(resource_listdir('py_mini_racer', '.'), '_v8*.so')[0]
+    EXTENSION_NAME = fnmatch.filter(resource_listdir('py_mini_racer', '.'), PATTERN)[0]
     EXTENSION_PATH = resource_filename('py_mini_racer', EXTENSION_NAME)
 except NotImplementedError:
     if not hasattr(sys, "_MEIPASS"):
         raise
     __location__ = os.path.join(sys._MEIPASS, "_v8") # pylint: disable=no-member, protected-access
-    EXTENSION_NAME = fnmatch.filter(os.listdir(__location__), '_v8*.so')[0]
+    EXTENSION_NAME = fnmatch.filter(os.listdir(__location__), PATTERN)[0]
     EXTENSION_PATH = os.path.join(__location__, EXTENSION_NAME)
 
 class MiniRacerBaseException(Exception):
