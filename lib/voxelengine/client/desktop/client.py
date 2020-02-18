@@ -27,6 +27,7 @@ from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
 import socket_connection_4.socket_connection_4 as socket_connection
+import world_generation
 from shared import *
 from shader import Shader
 from geometry import Vector, BinaryBox, Box, Point, Ray
@@ -436,6 +437,18 @@ class Model(object):
         """for immediate execution use private method"""
         self.queue.append((self._clear,()))
 
+    def load_generator(self, generator_data):
+        generator_path = generator_data["path"]
+        with open(generator_path) as generator_file:
+            generator_code = generator_file.read()
+        if "code" in generator_data:
+            assert generator_data["code"] == generator_code
+        else:
+            generator_data["code"] = generator_code
+        
+        self.world_generator = world_generation.load_generator(generator_data)
+        print(self.world_generator)
+
     def del_area(self, position):
         """for immediate execution use private method"""
         self.queue.append((self._del_area,(position,)))
@@ -799,6 +812,11 @@ class Window(pyglet.window.Window):
             c = self.client.receive()
             if not c:
                 break
+            if c.startswith("clear"):
+                self.model.clear()
+                generator_data = ast.literal_eval(c[6:])
+                self.model.load_generator(generator_data)
+                continue
             c = c.split(" ")
             #M# maybe define this function somewhere else
             def test(name,argc):
@@ -807,9 +825,7 @@ class Window(pyglet.window.Window):
                         return True
                     print("Falsche Anzahl von Argumenten bei %s" %name)
                 return False
-            if test("clear",1):
-                self.model.clear()
-            elif test("del",4):
+            if test("del",4):
                 position = Vector(map(int,c[1:4]))
                 self.model.remove_block(position)
             elif test("delarea",7):

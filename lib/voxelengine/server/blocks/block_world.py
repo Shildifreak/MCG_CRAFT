@@ -1,6 +1,6 @@
 import functools
 
-import voxelengine.server.blocks.world_generation as world_generation
+import voxelengine.modules.world_generation as world_generation
 from voxelengine.server.blocks.blockdata_encoder import BlockDataEncoder
 from voxelengine.server.blocks.block_storage import BlockStorage
 from voxelengine.server.blocks.block_world_index import BlockWorldIndex
