@@ -13,11 +13,11 @@ import fnmatch
 from pkg_resources import resource_listdir, resource_filename
 
 if sys.platform == "darwin":
-    PATTERN = '_v8.cpython-36m-darwin.so'
+    PATTERN = '_v8*darwin.so'
 elif sys.platform == "linux":
-    PATTERN = '_v8.so'
+    PATTERN = '_v8*linux.so'
 elif sys.platform == "win32":
-    PATTERN = '_v8*.pyd'
+    PATTERN = '_v8*win32.so'
 else:
     PATTERN = '_v8*.so'
 
