@@ -6,12 +6,13 @@ import math
 import time, random
 import sys, os, inspect
 import warnings
-from collections import deque
+from collections import deque, defaultdict
 import collections
-import itertools
+import itertools, functools
 from functools import reduce
 import operator
 import ast
+import threading
 #from __init__ import Vector, Chunk
 
 # Adding directory with modules to python path
@@ -320,54 +321,56 @@ def load_setup(path):
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
 
-class SimpleChunk(object):
-    def __init__(self):
-        self.blocks = {}
-        self.unmonitored_since_id = 0 #monitor update id
-
-    def get_block(self,position):
-        return self.blocks.get(position,"AIR")
-
-    def set_block(self,position,value):
-        if value == "AIR": #can't use AIR as default value anymore when working with terrain function!!!
-            #del self.blocks[position]
-            self.blocks.pop(position, None)
-        else:
-            self.blocks[position] = value
-
-def iterchunk():
-    return itertools.product(*(range(1<<CHUNKSIZE),)*DIMENSION)
+#M# improve order of chunkpositions for better caching!
+CHUNKPOSITIONS = tuple(map(Vector, itertools.product(range(CHUNKSIZE),repeat=DIMENSION)))
+iterchunk = CHUNKPOSITIONS.__iter__
 
 def iterframe():
-    for de in (-1,1<<CHUNKSIZE):
-        for d1 in range(1<<CHUNKSIZE):
-            for d2 in range(1<<CHUNKSIZE): # faces
+    for de in (-1,CHUNKSIZE):
+        for d1 in range(CHUNKSIZE):
+            for d2 in range(CHUNKSIZE): # faces
                 yield (de,d1,d2)
                 yield (d1,de,d2)
                 yield (d1,d2,de)
-        for df in (-1,1<<CHUNKSIZE):
-            for d1 in range(1<<CHUNKSIZE): # edges
+        for df in (-1,CHUNKSIZE):
+            for d1 in range(CHUNKSIZE): # edges
                 yield (d1,de,df)
                 yield (de,d1,df)
                 yield (de,df,d1)
-            for dg in (-1,1<<CHUNKSIZE):    # corners
+            for dg in (-1,CHUNKSIZE):    # corners
                 yield (de,df,dg)
 
-class Chunkdict(dict):
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.monitored_chunks = set()
+class BlockStorage(object): # make this a dict itself?
+    def __init__(self):
+        self.terrain_function = None
+        self.blocks = {}
+
+    @functools.lru_cache()
+    def get_block(self,position):
+        return self.blocks.get(position,None) or self.terrain_function(position)
+
+    def set_block(self,position,value):
+        if value == self.get_block(position):
+            self.blocks.pop(position, None) #possible that position is not in blocks when defaultblock gets set twice
+        else:
+            self.blocks[position] = value
+        self.get_block.cache_clear()
+
+    def clear(self):
+        self.blocks = {}
+
+class ChunkManager(object):
+    def __init__(self):
+        self.unmonitored_since_ids = defaultdict(int) #chunkposition : monitor update id
         self.current_monitor_id = 0
+        self.monitored_chunks = set()
         self._last_center_chunk_position = None
     
-    def monitor_around(self, position):
-        """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
-        center_chunk_position = position.round() >> CHUNKBASE
+    def monitor_around(self, center_chunk_position):
+        """returns (added, removed) two sets of chunkpositions"""
         if center_chunk_position != self._last_center_chunk_position:
             self._last_center_chunk_position = center_chunk_position
 
-            #offsets_1D = range(-RENDERDISTANCE, RENDERDISTANCE + 1)
-            #offsets = itertools.product(offsets_1D,repeat=DIMENSION)
             offsets = itertools.product(*(range(-r, r+1) for r in RENDERDISTANCE))
             new = set(center_chunk_position + offset for offset in offsets)
             removed = self.monitored_chunks - new
@@ -376,31 +379,55 @@ class Chunkdict(dict):
             
             self.current_monitor_id += 1
             for chunkpos in removed:
-                self[chunkpos].unmonitored_since_id = self.current_monitor_id
-            #sort added by distance to position
-            added_areas_with_mid = [(BinaryBox(CHUNKBASE, chunkpos).bounding_box(),
-                                     self[chunkpos].unmonitored_since_id)
-                                    for chunkpos in added]
-            added_areas_with_mid.sort(key = lambda x, p=Point(position): x[0].distance(p))
-            for area, m_id in added_areas_with_mid:
-                #m_id = self[binary_box.position].unmonitored_since_id
-                yield "update %s %i" % (area, m_id)
-            lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
-            highest_corner_chunk = center_chunk_position + RENDERDISTANCE
-            x1, y1, z1 = lowest_corner_chunk << CHUNKBASE
-            x2, y2, z2 = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
-            yield "monitor %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, self.current_monitor_id)
+                self.unmonitored_since_ids[chunkpos] = self.current_monitor_id
+
+            return added, removed
+        return set(), set()
+
+    def clear(self):
+        self.unmonitored_since_ids = defaultdict(int)
+        #self.current_monitor_id = 0
+        self.monitored_chunks = set()
+        self._last_center_chunk_position = None
     
-    def __missing__(self, chunkposition):
-        chunk = SimpleChunk()
-        self[chunkposition] = chunk
-        return chunk
+    def has_blocks_to_be_updated(self):
+        pass
+    
+    def get_block_to_be_updated(self):
+        pass
 
 class SetQueue(collections.OrderedDict):
     def add(self, value):
         self[value] = None
     def popleft(self):
         return self.popitem(last=False)[0]
+
+class InitChunkQueue(object):
+    def __init__(self):
+        self.chunks = collections.OrderedDict()
+        self.current_chunk = None
+        self.positions = None
+        self.current_position = None
+    def _refill(self):
+        if self.chunks:
+            self.current_chunk = self.chunks.popitem(last=False)[0]
+            self.positions = iterchunk()
+            self.current_position = next(self.positions)
+        else:
+            self.current_chunk = None
+    def add(self, value):
+        self.chunks[value] = None
+        if not self.current_chunk:
+            self._refill()
+    def is_empty(self):
+        return self.current_chunk == None
+    def pop(self):
+        value = (self.current_chunk << CHUNKBASE) + self.current_position
+        try:
+            self.current_position = next(self.positions)
+        except StopIteration:
+            self._refill()
+        return value
 
 class Model(object):
 
@@ -416,12 +443,14 @@ class Model(object):
         self.textured_colorkey_group = TextureGroup(texture, parent = colorkey_group)
 
         self.shown = {} #{(position,face):vertex_list(batch_element)}
-        self.chunks = Chunkdict()
+        self.chunks = ChunkManager()
+        self.blocks = BlockStorage()
         self.entities = {} #{entity_id: (vertex_list,...,...)}
         self.hud_elements = {} #{hud_element_id: (vertex_list,element_data,corners)}
 
         self.queue = deque()
         self.blockface_update_buffer = SetQueue()
+        self.init_chunk_queue = InitChunkQueue()
 
         self.occlusion_cache = collections.OrderedDict()
 
@@ -433,21 +462,9 @@ class Model(object):
         """for immediate execution use private method"""
         self.queue.append((self._remove_block,(position,)))
 
-    def clear(self):
+    def clear(self, generator_data):
         """for immediate execution use private method"""
-        self.queue.append((self._clear,()))
-
-    def load_generator(self, generator_data):
-        generator_path = generator_data["path"]
-        with open(generator_path) as generator_file:
-            generator_code = generator_file.read()
-        if "code" in generator_data:
-            assert generator_data["code"] == generator_code
-        else:
-            generator_data["code"] = generator_code
-        
-        self.world_generator = world_generation.load_generator(generator_data)
-        print(self.world_generator)
+        self.queue.append((self._clear,(generator_data,)))
 
     def del_area(self, position):
         """for immediate execution use private method"""
@@ -460,14 +477,53 @@ class Model(object):
     def process_queue(self):
         start = time.time()
         while time.time() - start < 1.0 / TICKS_PER_SEC:
-            if self.queue and len(self.blockface_update_buffer) <= ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE:
-                func,args = self.queue.popleft()
-                func(*args)
-            elif self.blockface_update_buffer:
+            if len(self.blockface_update_buffer) <= ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE:
+                if self.queue:
+                    func, args = self.queue.popleft()
+                    func(*args)
+                    continue
+            if self.blockface_update_buffer:
                 position, face = self.blockface_update_buffer.popleft()
                 self._update_face(position,face)
-            else:
-                break
+                continue
+            if not self.init_chunk_queue.is_empty():
+                position = self.init_chunk_queue.pop()
+                if self.blocks.get_block(position) != "AIR":
+                    self.update_visibility(position)
+                continue
+            break
+
+    def load_generator(self, generator_data):
+        #print(generator_data)
+        self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
+        self.blocks.terrain_function = self.world_generator.terrain
+
+    def monitor_around(self, position):
+        """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
+        center_chunk_position = position.round() >> CHUNKBASE
+        added, removed = self.chunks.monitor_around(center_chunk_position)
+        
+        added_chunks_with_areas_and_mid = [(chunkpos,
+                                            BinaryBox(CHUNKBASE, chunkpos).bounding_box(),
+                                            self.chunks.unmonitored_since_ids[chunkpos])
+                                           for chunkpos in added]
+        #sort added by distance to position
+        added_chunks_with_areas_and_mid.sort(key = lambda x, p=Point(position): x[1].distance(p))
+
+        for chunkpos, area, m_id in added_chunks_with_areas_and_mid:
+            # update visibility of blocks in chunks (show blocks from terrain function)
+            if m_id == 0:
+                if self.world_generator.terrain_hint((CHUNKBASE,chunkpos),"visible"):
+                    self.init_chunk_queue.add(chunkpos)
+
+            # create messages for server
+            yield "update %s %i" % (area, m_id)
+        lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
+        highest_corner_chunk = center_chunk_position + RENDERDISTANCE
+        x1, y1, z1 = lowest_corner_chunk << CHUNKBASE
+        x2, y2, z2 = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
+        yield "monitor %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, self.chunks.current_monitor_id)
+
 
     ########## more private stuff ############
 
@@ -679,7 +735,7 @@ class Model(object):
     def _add_block(self, position, block_name):
         prev_block_name = self.get_block(position)
         self.occlusion_cache.clear()
-        self.chunks[position>>CHUNKSIZE].set_block(position,block_name)
+        self.blocks.set_block(position,block_name)
         self.update_visibility(position)
         #M# todo: make this better (different transparency classes)
         if is_transparent(prev_block_name) or is_transparent(block_name):
@@ -688,22 +744,26 @@ class Model(object):
     def _remove_block(self, position):
         self._add_block(position, "AIR")
 
-    def _clear(self):
-        for position,face in self.shown.keys():
+    def _clear(self, generator_data):
+        #for position,face in self.shown.keys():
+        while self.shown:
+            position, face = self.shown.popitem()
             self.hide_face(position,face)
         self.shown = {}
-        self.chunks = Chunkdict()
+        self.blocks.clear()
+        self.chunks.clear()
+        self.load_generator(generator_data)
 
     def _del_area(self, position):
-        #self.chunks[position] = SimpleChunk() #M# can most likely be removed?
         for relpos in iterchunk():
             self.hide((position<<CHUNKSIZE)+relpos)
         for relpos in iterframe():
             #M# hier müsste eigentlich immer nur die entsprechende Seite upgedated werden
             self.update_visibility((position<<CHUNKSIZE)+relpos)
-        del self.chunks[position] #M# maybe someday empty SimpleChunks will be deleted automatically
 
     def _set_area(self, position, codec, compressed_blocks):
+        raise DeprecationWarning("This code doesn't work anymore since Server side chunks have been removed")
+
         if isinstance(self.chunks[position],Chunk):
             self._del_area(position)
         c = Chunk(CHUNKSIZE,codec)
@@ -720,7 +780,7 @@ class Model(object):
 
     #M# test whether caching helps
     def get_block(self,position):
-        return self.chunks[position>>CHUNKSIZE].get_block(position)
+        return self.blocks.get_block(position)
 
 class Window(pyglet.window.Window):
 
@@ -762,7 +822,7 @@ class Window(pyglet.window.Window):
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
         pyglet.clock.schedule_interval(self.update, 1.0 / TICKS_PER_SEC)
-        self.updating = False #make sure there is only 1 update function per time
+        self.update_lock = threading.Lock() #make sure there is only 1 update function per time
 
         # key handler for convinient polling
         self.keystates = key.KeyStateHandler()
@@ -805,68 +865,65 @@ class Window(pyglet.window.Window):
 
     def update(self, dt):
         global focus_distance
-        if self.updating:
-            return
-        self.updating = True
-        while True:
-            c = self.client.receive()
-            if not c:
-                break
-            if c.startswith("clear"):
-                self.model.clear()
-                generator_data = ast.literal_eval(c[6:])
-                self.model.load_generator(generator_data)
-                continue
-            c = c.split(" ")
-            #M# maybe define this function somewhere else
-            def test(name,argc):
-                if name == c[0]:
-                    if len(c) == argc:
-                        return True
-                    print("Falsche Anzahl von Argumenten bei %s" %name)
-                return False
-            if test("del",4):
-                position = Vector(map(int,c[1:4]))
-                self.model.remove_block(position)
-            elif test("delarea",7):
-                x_min, y_min, z_min, x_max, y_max, z_max = map(int, c[1:7])
-                area = Box(Vector(x_min, y_min, z_min), Vector(x_max, y_max, z_max))
-                raise NotImplementedError()
-                position = Vector(map(int,c[1:4]))
-                self.model.del_area(position)
-            elif test("set", 5):
-                position = Vector(map(int,c[1:4]))
-                self.model.add_block(position,c[4])
-            elif test("goto",4):
-                position = Vector(map(float,c[1:4]))
-                self.position = position
-                for msg in self.model.chunks.monitor_around(position):
-                    self.client.send(msg)
-            elif test("focusdist",2):
-                focus_distance = float(c[1])
-            elif test("setentity",8):
-                position = Vector(map(float,c[3:6]))
-                rotation = map(float,c[6:8])
-                self.model.set_entity(int(c[1]),c[2],position,rotation)
-            elif test("delentity",2):
-                self.model.del_entity(int(c[1]))
-            elif test("sethud",10):
-                position = Vector(map(float,c[3:6]))
-                rotation = float(c[6])
-                size = Vector(map(float,c[7:9]))
-                element_data = c[1],c[2],position,rotation,size,int(c[9])
-                self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
-            elif test("delhud",2):
-                self.model.del_hud(c[1])
-            elif test("focushud",1):
-                self.set_exclusive_mouse(False)
-                self.hud_open = True
-            else:
-                print("unknown command", c)
-        self.model.process_queue()
-        m = max(0, MSGS_PER_TICK - len(self.model.queue))
-        self.client.send("tick %s" % m)
-        self.updating = False
+        with self.update_lock:
+            while True:
+                c = self.client.receive()
+                if not c:
+                    break
+                #print("client.py:", c)
+                if c.startswith("clear"):
+                    generator_data = ast.literal_eval(c[6:])
+                    self.model._clear(generator_data)
+                    continue
+                c = c.split(" ")
+                #M# maybe define this function somewhere else
+                def test(name,argc):
+                    if name == c[0]:
+                        if len(c) == argc:
+                            return True
+                        print("Falsche Anzahl von Argumenten bei %s" %name)
+                    return False
+                if test("del",4):
+                    position = Vector(map(int,c[1:4]))
+                    self.model.remove_block(position)
+                elif test("delarea",7):
+                    x_min, y_min, z_min, x_max, y_max, z_max = map(int, c[1:7])
+                    area = Box(Vector(x_min, y_min, z_min), Vector(x_max, y_max, z_max))
+                    raise NotImplementedError()
+                    position = Vector(map(int,c[1:4]))
+                    self.model.del_area(position)
+                elif test("set", 5):
+                    position = Vector(map(int,c[1:4]))
+                    self.model.add_block(position,c[4])
+                elif test("goto",4):
+                    position = Vector(map(float,c[1:4]))
+                    self.position = position
+                    for msg in self.model.monitor_around(position):
+                        self.client.send(msg)
+                elif test("focusdist",2):
+                    focus_distance = float(c[1])
+                elif test("setentity",8):
+                    position = Vector(map(float,c[3:6]))
+                    rotation = map(float,c[6:8])
+                    self.model.set_entity(int(c[1]),c[2],position,rotation)
+                elif test("delentity",2):
+                    self.model.del_entity(int(c[1]))
+                elif test("sethud",10):
+                    position = Vector(map(float,c[3:6]))
+                    rotation = float(c[6])
+                    size = Vector(map(float,c[7:9]))
+                    element_data = c[1],c[2],position,rotation,size,int(c[9])
+                    self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
+                elif test("delhud",2):
+                    self.model.del_hud(c[1])
+                elif test("focushud",1):
+                    self.set_exclusive_mouse(False)
+                    self.hud_open = True
+                else:
+                    print("unknown command", c)
+            self.model.process_queue()
+            m = max(0, MSGS_PER_TICK - len(self.model.queue))
+            self.client.send("tick %s" % m)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         self.client.send("scrolling: "+str(scroll_y))
@@ -1062,8 +1119,9 @@ class Window(pyglet.window.Window):
         fps = pyglet.clock.get_fps()
         queue = len(self.model.queue)
         face_buffer = len(self.model.blockface_update_buffer)
+        terrain_queue = len(self.model.init_chunk_queue.chunks)
         
-        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d' % (fps, x, y, z, queue, face_buffer)
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d' % (fps, x, y, z, queue, face_buffer, terrain_queue)
         self.label.draw()
         
 
@@ -1140,11 +1198,13 @@ def show_on_window(client):
         while True:
             c = client.receive()
             if c:
-                print(c)
-            if c and c.startswith("setup"):
-                path = c.split(" ",1)[-1]
-                load_setup(path)
-                break
+                if c.startswith("setup"):
+                    path = c.split(" ",1)[-1]
+                    load_setup(path)
+                    break
+                else:
+                    print(c)
+                    raise ValueError("got unexpected message while waiting for setup")
         if options.name:
             entity_id = options.name
             password = options.password

@@ -41,7 +41,6 @@ class Player(object):
 
 	def control(self,entity):
 		self.entity = entity
-		self._set_world(entity.world)
 		self._notice_position()
 
 	def create_character(self):
@@ -155,7 +154,6 @@ class Player(object):
 	def _update_area_loop(self):
 		while not self.quit_flag:
 			self.new_area_updates_event.wait()
-			print("got new updates to send")
 			while self.area_updates:
 				_, args = self.area_updates.popitem(last=False)
 				self._async_update_area(*args,sleep=0.0001)
@@ -234,10 +232,9 @@ class Player(object):
 			new_world.players.add(self)
 		self.world = new_world
 		self.monitored_area = NOWHERE
-		generator_data = {"terrainjs":self.world.blocks.world_generator.terrain_js,
-                                  "seed"     :self.world.blocks.world_generator.seed,
-                                  "path"     :self.world.blocks.world_generator.path,
-                                  "name"     :self.world.blocks.world_generator.__name__}
+		generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
+							"seed"   : self.world.blocks.world_generator.generator_data["seed"],
+							"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
 		self.outbox.add("clear",generator_data)
 
 	def _set_entity(self,entity):

@@ -1,6 +1,6 @@
 import functools
 
-import voxelengine.modules.world_generation as world_generation
+from voxelengine.modules.world_generation import WorldGenerator
 from voxelengine.server.blocks.blockdata_encoder import BlockDataEncoder
 from voxelengine.server.blocks.block_storage import BlockStorage
 from voxelengine.server.blocks.block_world_index import BlockWorldIndex
@@ -20,7 +20,7 @@ class BlockWorld(object):
 												#retention_period,
 												reference_delete_callback = self.blockdata_encoder.decrement_count)
 		self.block_world_index = BlockWorldIndex(self.get_tags)
-		self.world_generator   = world_generation.load_generator(block_world_data["generator"])
+		self.world_generator   = WorldGenerator(block_world_data["generator"])
 		self.world = world
 	
 	def _block_by_id(self, block_id, position):

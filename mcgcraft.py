@@ -441,14 +441,22 @@ def gameloop():
         else:
             print("Preparing World ...", end="")
             data = voxelengine.server.world_data_template.data
-            generator_path = os.path.join(PATH,"resources","Welten",config["worldtype"]+".py")
-            with open(generator_path) as generator_file:
-                data["block_world"]["generator"] = {
-                    "name":config["worldtype"],
-                    "seed":random.random(),
-                    "path":generator_path,
-                    "code":generator_file.read(),
-                    }
+            generator_data = data["block_world"]["generator"]
+            generator_data["name"] = config["worldtype"]
+            generator_data["seed"] = random.random()
+            generator_data["path"] = os.path.join(PATH,"resources","Welten",config["worldtype"])
+            generator_data["path_py"] = generator_data["path"] + ".py"
+            generator_data["path_js"] = generator_data["path"] + ".js"
+            if os.path.isfile(generator_data["path_py"]):
+                with open(generator_data["path_py"]) as generator_file_py:
+                    generator_data["code_py"] = generator_file_py.read()
+            else:
+                    generator_data["code_py"] = ""
+            if os.path.isfile(generator_data["path_js"]):
+                with open(generator_data["path_js"]) as generator_file_js:
+                    generator_data["code_js"] = generator_file_js.read()
+            else:
+                    generator_data["code_js"] = ""
             print("done")
             print("Creating World ... ", end="", flush=True)
             w = World(data)
@@ -565,7 +573,7 @@ def main():
         os.makedirs(configdir)
         
     worldtypes = os.listdir(os.path.join("resources","Welten"))
-    worldtypes = [x[:-3] for x in worldtypes if x.endswith(".py") and not x.startswith("_")]
+    worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
     clienttypes = os.listdir(os.path.join("lib","voxelengine","client"))
     try:
         from gui.tkgui import ServerGUI as UI
