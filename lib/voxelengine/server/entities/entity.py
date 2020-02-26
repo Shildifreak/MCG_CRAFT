@@ -100,7 +100,7 @@ class Entity(ObservableDict):
         max_distance : How many blocks away to search for a hit."""
         nearest_entity = None
         line_of_sight = Ray(self["position"],self.get_sight_vector())
-        for entity in self.world.entities.find_entities(line_of_sight.bounding_box(max_distance)): #M# limit considered entities
+        for entity in self.world.entities.find_entities(line_of_sight.bounding_box(max_distance)):
             if entity is self:
                 continue
             d = line_of_sight.distance_from_origin_to_Box(entity.HITBOX+

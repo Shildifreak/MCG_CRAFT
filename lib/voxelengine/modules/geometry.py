@@ -269,7 +269,11 @@ class Ray(Area):
         self.dirfrac = Vector((1.0/d if d!=0 else float("inf")) for d in direction)
 
     def bounding_box(self, length):
-        return Box(self.origin, self.origin+self.direction.normalize()*length)
+        c1 = self.origin
+        c2 = self.origin+self.direction.normalize()*length
+        lower_bounds = map(min,c1,c2)
+        upper_bounds = map(max,c1,c2)
+        return Box(lower_bounds, upper_bounds)
 
     def distance_from_origin_to_Box(self, box):
         """returns False if no collision else distance from origin of ray to front of box,
