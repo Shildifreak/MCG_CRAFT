@@ -1,5 +1,8 @@
 
 server -> client
+	setup setup_source
+		must be sent as first message to newly connected client and specifies where to find texturepack etc.
+		setup_source is json object and may contain entries for host, port
 	clear generator_data
 		lösche alle Blöcke, setze monitored area zurück,
                 setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator

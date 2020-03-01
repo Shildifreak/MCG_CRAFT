@@ -13,7 +13,9 @@ from functools import reduce
 import operator
 import ast
 import threading
-#from __init__ import Vector, Chunk
+import json
+import urllib.request
+import io
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -292,16 +294,20 @@ class BlockModelDict(dict):
             model = r_y(model)
         return model
         
-def load_setup(path):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_PATH, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
-    if not os.path.isabs(path): #M# do something to support urls
-        path = os.path.join(PATH,"..","..","texturepacks",path)
-    with open(os.path.join(path,"description.py"),"r") as descriptionfile:
-        description = ast.literal_eval(descriptionfile.read())
+def load_setup(host, port):
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
+    def url_for(filename):
+        path = os.path.join("/texturepacks/desktop",filename)
+        netloc = "%s:%i" % (host,port)
+        components = urllib.parse.ParseResult("http",netloc,path,"","","")
+        url = urllib.request.urlunparse(components)
+        return url
+    with urllib.request.urlopen(url_for("description.py")) as descriptionfile:
+        description = ast.literal_eval(descriptionfile.read().decode()) #specify encoding? (standart utf-8)
     TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
     TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
-    TEXTURE_PATH = os.path.join(path,"textures.png")
+    TEXTURE_URL = url_for("textures.png")
     TRANSPARENCY = {"AIR":True}
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
@@ -438,7 +444,9 @@ class Model(object):
         self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        texture = image.load(TEXTURE_PATH).get_texture() #possible to use image.load(file=filedescriptor) if necessary
+        with urllib.request.urlopen(TEXTURE_URL) as texture_stream:
+            texture_buffer = io.BytesIO(texture_stream.read())
+            texture = image.load("", file=texture_buffer).get_texture() #possible to use image.load(file=filedescriptor) if necessary
         self.textured_normal_group = TextureGroup(texture, parent = normal_group) 
         self.textured_colorkey_group = TextureGroup(texture, parent = colorkey_group)
 
@@ -1199,8 +1207,10 @@ def show_on_window(client):
             c = client.receive()
             if c:
                 if c.startswith("setup"):
-                    path = c.split(" ",1)[-1]
-                    load_setup(path)
+                    setup_src = json.loads(c.split(" ",1)[-1])
+                    port = setup_src.setdefault("port",80)
+                    host = setup_src.setdefault("host",client.socket.getpeername()[0])
+                    load_setup(host,port)
                     break
                 else:
                     print(c)

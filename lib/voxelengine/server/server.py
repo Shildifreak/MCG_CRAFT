@@ -6,11 +6,33 @@ if __name__ == "__main__":
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 import subprocess
-import collections
+import collections, functools
+import http.server
+import threading
+import pathlib, urllib.parse
+import json
 
 import voxelengine.modules.socket_connection_4.socket_connection_4 as socket_connection
+from voxelengine.modules.utils import try_port
 from voxelengine.server.players.player import Player
 
+class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
+    """This handler serves files a client might need like texturepack, or in case of webclient the client itself"""
+    def __init__(self, texturepack_path, *args, **kwargs):
+        self.texturepack_basepath = texturepack_path
+        super().__init__(*args, **kwargs)
+    def translate_path(self, path):
+        path = urllib.parse.urlparse(path).path
+        path = pathlib.Path(path).relative_to("/")
+        print(path, path.parts)
+        if not path.parts:
+            return os.path.join(PATH,"..","client","web","index.html")
+        elif path.parts[0] == "texturepacks":
+            texturepack_relpath = path.relative_to("texturepacks")
+            return os.path.join(self.texturepack_basepath, texturepack_relpath)
+        else:
+            return "404.html"
+        
 class GameServer(object):
     """
     Ein GameServer Objekt sorgt für die Kommunikation mit dem/den Klienten.
@@ -35,12 +57,11 @@ class GameServer(object):
                  wait=True,
                  name="MCG-CRAFT",
                  parole="",
-                 suggested_texturepack="basic_colors",
+                 texturepack_path=None,
                  PlayerClass=Player
                  ):
         self.wait = wait
         self.parole = parole
-        self.suggested_texturepack = suggested_texturepack
         self.PlayerClass = PlayerClass
 
         self.players = {}
@@ -50,6 +71,19 @@ class GameServer(object):
         self._on_disconnect_queue = collections.deque()
         self.socket_server = socket_connection.server(key="voxelgame"+self.parole,on_connect=self._async_on_connect,
                                                       on_disconnect=self._async_on_disconnect,name=name)
+
+        # PATH to this file
+        PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        http_port = try_port(80) or try_port(8080) or 0
+        
+        # just serve index.html from current working directory
+        Handler = functools.partial(MyHTTPHandler, texturepack_path)
+        self.httpd = http.server.HTTPServer(("", http_port), Handler)
+        self.http_thread = threading.Thread(target=self.httpd.serve_forever)
+        self.http_thread.start()
+        self.http_port = self.httpd.socket.getsockname()[1]
+        print("serving files for client on port",self.http_port)
+        
         if "-debug" in sys.argv:
             print("game ready")
 
@@ -70,6 +104,8 @@ class GameServer(object):
     def quit(self):
         """quit the game"""
         self.socket_server.close()
+        self.httpd.shutdown()
+        self.http_thread.join()
         for player in self.players.values():
             if player:
                 player.quit()
@@ -94,7 +130,8 @@ class GameServer(object):
         """place at worldspawn"""
         if "-debug" in sys.argv:
             print(addr, "connected")
-        initmessages = [("setup",self.suggested_texturepack)]
+        setup_src = {"port":self.http_port}
+        initmessages = [("setup",json.dumps(setup_src))]
         p = self.PlayerClass(initmessages)
         self.players[addr] = p
         self.new_players.add(p)

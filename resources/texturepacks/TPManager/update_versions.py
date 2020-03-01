@@ -6,7 +6,6 @@ import generate_desktop_version
 
 # find all universal version 1.0 directories
 basepath = ".."
-target_basepath = os.path.abspath(os.path.join("..",".versions"))
 paths = os.listdir(basepath)
 
 FACES = {"top","bottom","front","back","left","right"}
@@ -57,6 +56,6 @@ for relpath in paths:
 		for face in (*FACES,"inside"):
 			faces.setdefault(face, [])
 	
-	generate_desktop_version.generate_desktop_version(description, texture_directory, os.path.join(target_basepath,"desktop",relpath))
+	generate_desktop_version.generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
 	
 # create desktop and web version of those

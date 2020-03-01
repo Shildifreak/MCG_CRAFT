@@ -387,12 +387,11 @@ if __name__ == "__main__":
                 "quit"     : False,
                 "save"     : False,
                 "refresh"  : False}
-    #gui = ServerGUI(config, ("one","two","three"), ("desktop","web"), background = True)
-    gui = ClientGUI(config)
+    gui = ServerGUI(config, ("one","two","three"), ("desktop","web"), background = True)
+    #gui = ClientGUI(config)
 
     import time
     time.sleep(1)
-    #gui.set_stats("fps","16")
-    gui.show_servers([])
-
-        
+    gui.set_stats("fps","16")
+    #gui.show_servers([])
+    gui.mainloop()

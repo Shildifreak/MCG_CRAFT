@@ -489,7 +489,7 @@ def gameloop():
         settings = {"wait" : False,
                     "name" : config["name"],
                     "parole" : config["parole"],
-                    "suggested_texturepack" : os.path.join("..","..","..","resources","texturepacks",".versions","desktop",config["texturepack"]), #relative path from client
+                    "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
                     "PlayerClass" : playerFactory,
                     }
         timer = Timer(TPS = 60)
