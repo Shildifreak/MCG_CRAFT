@@ -286,10 +286,12 @@ class Player(voxelengine.Player):
         # save previous velocity and onground
         vy_vorher = pe["velocity"][1]
         onground_vorher = pe.onground()
+        position_vorher = pe["position"]
         # update position
         pe.update_position()
         # see if player hit the ground and calculate damage
-        if (not onground_vorher) and pe.onground():
+        onground_nachher = pe.onground()
+        if (not onground_vorher) and onground_nachher:
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             schaden = (-vy_vorher) -20
             # HERZEN ANPASSEN
@@ -298,6 +300,10 @@ class Player(voxelengine.Player):
                 b = pe["lives"] - 1
 
                 pe["lives"] = b
+        # reset position when shifting and leaving ground
+        if self.is_pressed("shift") and onground_vorher and not onground_nachher:
+            pe["position"] = position_vorher
+            pe["velocity"] = Vector(0,0,0)
 
     def display_item(self,name,item,position,size,align):
         w, h = size

@@ -166,3 +166,4 @@ def init(welt):
     tempel(welt,6,-6,1)
     for i in range(0,20):
         insel(welt,random.randint(-60,50),random.randint(-40,50),random.randint(-60,20),random.randint(3,15))
+    welt.blocks[(0,1,0)] = "HALM"

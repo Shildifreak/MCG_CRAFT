@@ -1085,7 +1085,7 @@ class Window(pyglet.window.Window):
         s = math.sin(math.radians(yaw))
         glRotatef(yaw, 0, 1, 0)
         glRotatef(-pitch, c, 0, s)
-        AH = 0.25
+        AH = 0.32
         dx = AH* math.sin(math.radians(pitch))*-s
         dz = AH* math.sin(math.radians(pitch))*c
         dy = AH*(math.cos(math.radians(pitch))-1)
