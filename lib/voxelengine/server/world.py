@@ -55,27 +55,30 @@ if __name__ == "__main__":
 	data["block_world"]["generator"] = {
 		"name":"Simple Terrain Generator",
 		"seed":0,
-		"path":"...",
-		"code":\
+		"path_py":"...",
+		"code_py":"spawnpoint = (0,0,0)",
+		"code_js":\
 """
-def terrain(position):
-	\"""a very simple terrain generator -> flat map with checkerboard pattern\"""
-	if position[1] == -2:
-		return "GREEN" if (position[0]+position[2]) % 2 else "CYAN"
-	return "AIR"
-def init(welt):
-	pass
-spawnpoint = (0,0,0)
+function terrain(position) {
+	// a very simple terrain generator -> flat map with checkerboard pattern
+	if (position[1] == -2) {
+		if ((position[0]+position[2])%2) {
+			return "GREEN";
+		} else {
+			return "CYAN";
+		}
+	}
+	return "AIR";
+}
 """
 	}
 
 	w = World(data)
 
-	print(w.blocks[(0,-2,0)])
+	assert w.blocks[(0,-2,0)] == "CYAN"
 	w.blocks[(0,-2,0)] = "AIR"
 	w.clock.current_gametick += 1
-	print(w.blocks[(0,-2,0)])
-	print("THIS SECOND ONE SHOULD BE AIR IF AT LEAST ONE GAMETICK HAS PASSED")
+	assert w.blocks[(0,-2,0)] == "AIR"
 
 	from voxelengine.server.entities.entity import Entity
 	e = Entity()

@@ -6,10 +6,11 @@ data = {
 	},
 	"block_world":{
 		"generator":{
-			"name":"colorland",
+			"name":"DEFAULT",
 			"seed":0,
-			"path":"...",
-			"code":"..."
+			"code_py":"",
+			"code_js":"",
+			"path_py":"",
 		},
 		"blocks":[],
 		"codec":[],

@@ -28,5 +28,5 @@ options, args = parser.parse_args()
 port = options.port
 host = options.host
 http_port = 8080
-url = "http://localhost:%i?port=%s&host=%s&parole=%s&name=%s&password=%s" %(http_port,port,host,options.parole,options.name,options.password)
+url = "http://localhost:%i/webclient/latest?port=%s&host=%s&parole=%s&name=%s&password=%s" %(http_port,port,host,options.parole,options.name,options.password)
 webbrowser.open(url) #maybe insert sleep before

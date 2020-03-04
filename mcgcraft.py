@@ -140,8 +140,9 @@ class Player(voxelengine.Player):
         self.inventory_display = InventoryDisplay(self)
 
     def create_character(self):
+        world = self.universe.get_spawn_world()
         character = resources.entityClasses["Mensch"]()
-        character.set_world(self.world,self.world.blocks.world_generator.spawnpoint)
+        character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
         character["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
@@ -486,20 +487,16 @@ def gameloop():
 
         renderlimit = True #True: fast loading, False: whole world at once
 
-        def playerFactory(*args,**kwargs): #M# find a better way for this
-            print(args, kwargs)
-            player = Player(*args,**kwargs)
-            player._set_world(w)
-            return player
-
+        u = voxelengine.Universe()
+        u.worlds.append(w)
         settings = {"wait" : False,
                     "name" : config["name"],
                     "parole" : config["parole"],
                     "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
-                    "PlayerClass" : playerFactory,
+                    "PlayerClass" : Player,
                     }
         timer = Timer(TPS = 60)
-        with voxelengine.GameServer(**settings) as g:
+        with voxelengine.GameServer(u, **settings) as g:
             print("done") # Game starting ... done
             while config["run"]:
                 if config["play"]:
@@ -515,12 +512,10 @@ def gameloop():
                 # game update
                 g.update()
                 
-                # world tick
-                w.tick()
-                
                 # player update
                 for player in g.get_players():
                     player.update()
+
 
                 # random ticks
                 for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):

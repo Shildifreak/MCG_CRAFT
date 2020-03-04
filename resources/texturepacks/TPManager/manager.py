@@ -18,8 +18,11 @@ toggle_view, rename, replace left, replace right
 #TD_PATHS = ["../test%i"%i for i in range(2)]
 #TF_PATH  = "../test0/chest.png"
 
-TD_PATHS = ["../default", "../test1"]
-TF_PATH  = "../default/textures.png"
+#TD_PATHS = ["../default", "../test1"]
+#TF_PATH  = "../default/textures.png"
+
+TD_PATHS = ["../basic_colors"]
+TF_PATH = "../basic_colors/textures.png"
 
 import pygame
 import itertools
@@ -60,10 +63,10 @@ def compare():
 				break
 	return missing, different
 
-SCALE = 4
+SCALE = 40
 mosaik = TextureFile(TF_PATH)
 tds = [TextureDirectory(path) for path in TD_PATHS]
-IMAGE_SIZE = SCALE * 16
+IMAGE_SIZE = SCALE * 1
 
 missing = set()
 different = set()

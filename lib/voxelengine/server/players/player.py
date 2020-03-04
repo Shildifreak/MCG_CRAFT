@@ -1,4 +1,4 @@
-import collections
+import collections, itertools
 import _thread as thread
 import threading
 import time
@@ -11,7 +11,8 @@ from voxelengine.server.entities.entity import Entity
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""
 	RENDERDISTANCE = 16
-	def __init__(self,initmessages=()):
+	def __init__(self,universe,initmessages=()):
+		self.universe = universe
 		self.entity = None
 		self.world = None
 		self.monitored_area = NOWHERE
@@ -44,8 +45,9 @@ class Player(object):
 		self._notice_position()
 
 	def create_character(self):
+		world = self.universe.get_spawn_world()
 		character = Entity()
-		character.set_world(self.world,self.world.blocks.world_generator.spawnpoint)
+		character.set_world(world,world.blocks.world_generator.spawnpoint)
 		return character
 
 	def is_pressed(self,key):
@@ -109,8 +111,7 @@ class Player(object):
 	### it follows a long list of private methods that make sure a player acts like one ###
 
 	def _control_request(self, entity_id, password):
-		assert self.world #M# maybe make world required for creating player
-		for entity in self.world.entities.entities:
+		for entity in itertools.chain(*(world.entities.entities for world in self.universe.worlds)):
 			if entity.get("id",object()) == entity_id:
 				if entity.get("password",object()) == password:
 					break

@@ -75,7 +75,9 @@ def generate_desktop_version(normalized_universal_description, texture_directory
 		print("MISSING TEXTURES:\n\t"+"\n\t".join(missing_textures))
 	if unused_textures:
 		print("unused_textures:\n\t"+"\n\t".join(unused_textures))
-	output_size = (16,16)
+	#get output size
+	output_size = tuple(map(max, *(texture_directory.read_texture(name).get_size() for name in texture_index if name not in missing_textures)))
+	print("TEXTURE_SIZE:", output_size)
 	height = output_size[1]*TEXTURE_COUNT
 	textures = pygame.surface.Surface((output_size[0], height), pygame.SRCALPHA)
 	textures.fill((0,0,0,0))

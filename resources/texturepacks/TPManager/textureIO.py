@@ -11,7 +11,9 @@ class TextureDirectory(object):
 	def reload(self):
 		self.texture_files = {}
 		assert os.path.isdir(self.path)
-		for dirpath, dirnames, filenames in os.walk(self.path):
+		for dirpath, dirnames, filenames in os.walk(self.path, topdown=True):
+			if ".versions" in dirnames:
+				dirnames.remove(".versions")
 			for filename in filenames:
 				if filename.endswith(".png"):
 					texture_file = TextureFile(os.path.join(dirpath, filename))

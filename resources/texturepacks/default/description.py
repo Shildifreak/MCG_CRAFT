@@ -1,4 +1,4 @@
-# A texturepack file contains all information that is game specific and important to the client
+# A texturepack contains all information that is game specific and important to the client
 
 # example
 

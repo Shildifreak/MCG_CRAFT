@@ -28,6 +28,7 @@ __all__ = []
 from voxelengine.server.blocks.block import Block
 from voxelengine.server.entities.entity import Entity
 from voxelengine.server.players.player import Player
+from voxelengine.server.universe import Universe
 from voxelengine.server.world import World
 from voxelengine.server.server import GameServer
 

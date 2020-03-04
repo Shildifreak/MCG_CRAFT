@@ -4,6 +4,7 @@ if __name__ == "__main__":
 	__package__ = "voxelengine.server"
 # PATH to this file
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+VOXELENGINE_PATH = os.path.join(PATH, "..")
 
 import subprocess
 import collections, functools
@@ -26,7 +27,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         path = pathlib.Path(path).relative_to("/")
         print(path, path.parts)
         if not path.parts:
-            return os.path.join(PATH,"..","client","web","index.html")
+            return os.path.join(VOXELENGINE_PATH, "client", "web", "login.html")
+        elif path.parts[0] == "webclient":
+            webclient_relpath = path.relative_to("webclient")
+            return os.path.join(VOXELENGINE_PATH, "client", "web", webclient_relpath)
         elif path.parts[0] == "texturepacks":
             texturepack_relpath = path.relative_to("texturepacks")
             return os.path.join(self.texturepack_basepath, texturepack_relpath)
@@ -37,29 +41,35 @@ class GameServer(object):
     """
     Ein GameServer Objekt sorgt für die Kommunikation mit dem/den Klienten.
     Bei Mehrbenutzerprogrammen muss jeder Benutzer sich mittels des
-    Programms voxelengine/client.py verbinden.
+    Programms voxelengine/client/desktop/client.py verbinden.
 
     Es ist empfehlenswert GameServer mit einem with Statement zu benutzen:
-    >>> with GameServer(*args,*kwargs) as g:
+    >>> with GameServer(*args, **kwargs) as g:
     >>>     ...
 
     args (Argumente):
-        spawnpoint : (world, (x,y,z)) where to place new players
+        universe      : the universe this server is going to run
 
     kwargs (optionale Argumente):
         wait          : wait for players to disconnect before leaving with statement
         name          : name of the server
+        parole        : some phrase people have to know to find this server (they will always be able to connect if they have the IP)
+        texturepack_path : where to find that texturepack that should be used for this server
+        PlayerClass   : a subclass of voxelengine.Player ... can be used to do initial stuff for newly joined players
+        
 
     (bei Benutzung ohne "with", am Ende unbedingt Game.quit() aufrufen)
     """
 
     def __init__(self,
+                 universe,
                  wait=True,
-                 name="MCG-CRAFT",
+                 name="VoxelengineServer",
                  parole="",
-                 texturepack_path=None,
+                 texturepack_path=os.path.join(VOXELENGINE_PATH, "texturepacks", "basic_colors",".versions"),
                  PlayerClass=Player
                  ):
+        self.universe = universe
         self.wait = wait
         self.parole = parole
         self.PlayerClass = PlayerClass
@@ -132,7 +142,7 @@ class GameServer(object):
             print(addr, "connected")
         setup_src = {"port":self.http_port}
         initmessages = [("setup",json.dumps(setup_src))]
-        p = self.PlayerClass(initmessages)
+        p = self.PlayerClass(self.universe, initmessages)
         self.players[addr] = p
         self.new_players.add(p)
 
@@ -143,9 +153,7 @@ class GameServer(object):
         player = self.players.pop(addr)
         player.quit()
 
-    def update(self):
-        """communicate with clients
-        call regularly to make sure internal updates are performed"""
+    def _communicate(self):
         while self._on_connect_queue:
             self._on_connect(self._on_connect_queue.popleft())
         while self._on_disconnect_queue:
@@ -162,8 +170,15 @@ class GameServer(object):
                 self.players[addr]._handle_input(msg)
             elif "-debug" in sys.argv:
                 print("Message from unregistered Player")
-        #time.sleep(0.001) #wichtig damit das threading Zeug klappt
-        #M# threading got improved in python3, hope that fixed this
+
+    def update(self):
+        """update server stuff and tick worlds"""
+        # communicate with clients
+        self._communicate()
+        
+        # world tick
+        for world in self.universe.worlds:
+            world.tick()
     
     def launch_client(self, client_type, username, password):
         path = os.path.join(PATH, "..", "client", client_type, "client.py")
