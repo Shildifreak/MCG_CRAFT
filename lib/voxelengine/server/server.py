@@ -25,7 +25,6 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         path = urllib.parse.urlparse(path).path
         path = pathlib.Path(path).relative_to("/")
-        print(path, path.parts)
         if not path.parts:
             return os.path.join(VOXELENGINE_PATH, "client", "web", "login.html")
         elif path.parts[0] == "webclient":
@@ -36,6 +35,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
             return os.path.join(self.texturepack_basepath, texturepack_relpath)
         else:
             return "404.html"
+    def log_message(self, format, *args):
+        if args[1] == "200":
+            return
+        super().log_message(format, *args)
         
 class GameServer(object):
     """
@@ -93,9 +96,6 @@ class GameServer(object):
         self.http_thread.start()
         self.http_port = self.httpd.socket.getsockname()[1]
         print("serving files for client on port",self.http_port)
-        
-        if "-debug" in sys.argv:
-            print("game ready")
 
     def __del__(self):
         pass
@@ -153,7 +153,8 @@ class GameServer(object):
         player = self.players.pop(addr)
         player.quit()
 
-    def _communicate(self):
+    def update(self):
+        """ communicate with clients """
         while self._on_connect_queue:
             self._on_connect(self._on_connect_queue.popleft())
         while self._on_disconnect_queue:
@@ -170,17 +171,8 @@ class GameServer(object):
                 self.players[addr]._handle_input(msg)
             elif "-debug" in sys.argv:
                 print("Message from unregistered Player")
-
-    def update(self):
-        """update server stuff and tick worlds"""
-        # communicate with clients
-        self._communicate()
-        
-        # world tick
-        for world in self.universe.worlds:
-            world.tick()
     
-    def launch_client(self, client_type, username, password):
+    def launch_client(self, client_type, username="", password=""):
         path = os.path.join(PATH, "..", "client", client_type, "client.py")
         if not os.path.exists(path):
             print("no matching call for selected client type", client_type)

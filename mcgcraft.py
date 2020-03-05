@@ -9,6 +9,7 @@ import sys, os, ast, imp, inspect
 import _thread as thread
 import math, time, random, itertools, collections
 import getpass
+import copy
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append("lib")
@@ -17,6 +18,7 @@ sys.path.append(os.path.join("resources","Welten","structures"))
 import resources
 import voxelengine
 import voxelengine.modules.appdirs as appdirs
+import voxelengine.modules.utils
 
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
@@ -199,7 +201,6 @@ class Player(voxelengine.Player):
 
         # stuff that needs entity
         if not self.entity:
-            print("mcgcraft.Player.update","that's weird, why doesn't player have entity?")
             return
         pe = self.entity
         #if not self.is_active(): # freeze player if client doesnt respond
@@ -322,7 +323,7 @@ class ValidTag(object):
         self.value = True
 
     def invalidate(self):
-        print("hey")
+        print("mcgcraft.py ValidTag.invalidate was called")
         self.value = False
 
     def __bool__(self):
@@ -344,11 +345,6 @@ class World(voxelengine.World):
     #    global blockread_counter
     #    blockread_counter += 1
     #    return super(World,self).get_block(position,*args,**kwargs)
-
-    #def set_block(self,position,block,*args,**kwargs):
-    #    if not isinstance(position,Vector):
-    #        position = Vector(position)
-    #    super(World,self).set_block(position, block,*args,**kwargs)
 
     def tick(self):
         super(World,self).tick()
@@ -439,15 +435,16 @@ def gameloop():
             time.sleep(0.1)
             continue #jump back to start of loop
 
-        print("Game starting ...", end="")
         savegamepath = config["file"]
         if os.path.exists(savegamepath):
+            print("Loading World ...", end="")
             with open(savegamepath) as savegamefile:
                 data = ast.literal_eval(savegamefile.read())
             w = World(data)
+            print("done")
         else:
             print("Preparing World ...", end="")
-            data = voxelengine.server.world_data_template.data
+            data = copy.deepcopy(voxelengine.server.world_data_template.data)
             generator_data = data["block_world"]["generator"]
             generator_data["name"] = config["worldtype"]
             generator_data["seed"] = random.random()
@@ -474,10 +471,20 @@ def gameloop():
             w.event_system.clear_events()
             dt = time.time() - t
             print("done")
-            print("blocks:", len(w.blocks.block_storage.structures), "in", dt, "s")
+            print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
 
         def save():
             print("Game saving ...", end="", flush=True)
+            print("World:")
+            import pprint
+            pprint.pprint(w, indent=4)
+            try:
+                ast.literal_eval(repr(w))
+            except Exception as e:
+                print("not parsable")
+                print(e)
+            else:
+                print("passed parsing test")
             if config["file"]:
                 w.save(config["file"])
                 print("done")
@@ -485,10 +492,9 @@ def gameloop():
                 print("skipped")
             config["save"] = False
 
-        renderlimit = True #True: fast loading, False: whole world at once
-
         u = voxelengine.Universe()
         u.worlds.append(w)
+
         settings = {"wait" : False,
                     "name" : config["name"],
                     "parole" : config["parole"],
@@ -496,8 +502,14 @@ def gameloop():
                     "PlayerClass" : Player,
                     }
         timer = Timer(TPS = 60)
+        print("Server starting ...", end="")
         with voxelengine.GameServer(u, **settings) as g:
-            print("done") # Game starting ... done
+            ui.set_stats("ip",voxelengine.modules.utils.get_ip())
+            ui.set_stats("discovery_port",g.socket_server.port)
+            ui.set_stats("game_port",g.socket_server.entry_port)
+            ui.set_stats("http_port",g.http_port)
+            print("done") # Server starting ... done
+        
             while config["run"]:
                 if config["play"]:
                     config["play"] = False
@@ -506,11 +518,14 @@ def gameloop():
                     save()
                 timer.tick()
                 zeitstats(timer)
-                #print(blockread_counter)
-                blockread_counter = 0
                 
                 # game update
                 g.update()
+
+                ui.set_stats("events",sum(map(len, w.event_system.event_queue)))
+
+                # tick worlds (only the ones with players in them?)
+                u.tick()
                 
                 # player update
                 for player in g.get_players():
@@ -530,6 +545,10 @@ def gameloop():
                 # entity update
                 for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
                     entity.update()
+                
+                # Stats
+                blockread_counter = 0
+                #ui.set_stats("block reads", blockread_counter)
                 
             save()
         print("Game stopped")

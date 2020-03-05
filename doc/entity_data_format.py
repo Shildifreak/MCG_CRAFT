@@ -1,3 +1,9 @@
+
+# !!! THE INFORMATION IN THIS FILE IS OUT OF DATE !!!
+#
+# TAKE A LOOK AT voxelengine/server/world_data_template.py instead
+
+
 # chunks are in chunk_block_files and are loaded with mmap (write through)
 # block entity data (and all other entities) are in chunk_entity_files and loaded with literal_eval into the game
 # metadata file in folder that contains stuff like which number is which item -> {1:"mcgcraft:stone",2:"mcgcraft:grass",...}

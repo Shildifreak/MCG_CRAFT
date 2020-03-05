@@ -17,3 +17,7 @@ class Universe(object):
 		world = World(data)
 		self.worlds.append(world)
 		return world
+
+	def tick(self): #M# add option to only tick worlds with players in them?
+		for world in self.worlds:
+			world.tick()

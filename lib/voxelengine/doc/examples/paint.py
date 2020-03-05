@@ -14,25 +14,26 @@ for x in range(-5,6):
             w[(x,y,-8)] = "BLACK"
 
 # Initialisierungsfunktion für den Spieler
-def playerFactory(*args,**kwargs):
-    player = voxelengine.Player(*args,**kwargs)
-    player._set_world(w)
-    player.set_focus_distance(100)
-    return player
+class Player(voxelengine.Player):
+    def __init__(self, *args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.set_focus_distance(100)
 
-with voxelengine.GameServer(u) as g:
-    g.launch_client("desktop","","")
+with voxelengine.GameServer(u, PlayerClass=Player) as g:
+    g.launch_client("desktop")
     while not g.get_players():
             g.update()
             time.sleep(0.5) #wait for players to connect
     while g.get_players():
         g.update()
-        #for player in g.get_players():
-        #    if player.was_pressed("left click"):
-        #        focused_block = player.get_focused_pos()[0]
-        #        if focused_block:
-        #            if w[focused_block] == "GREEN":
-        #                w[focused_block] = "BLACK"
-        #            else:
-        #                w[focused_block] = "GREEN"
+        u.tick()
+        for player in g.get_players():
+            if player.was_pressed("left click"):
+                print("aha")
+                focused_block = player.entity.get_focused_pos(100)[1]
+                if focused_block:
+                    if w[focused_block] == "GREEN":
+                        w[focused_block] = "BLACK"
+                    else:
+                        w[focused_block] = "GREEN"
 #w.save("picture.zip")

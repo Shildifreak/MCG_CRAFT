@@ -3,7 +3,14 @@
 # should be possible to move stuff (observer move with it) and copy stuff (observers stay where they are)
 # when something is changed that implies that all parents have to call their callbacks as well
 
+import sys, os
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath("../.."))
+    print(sys.path)
+    __package__ = "voxelengine.modules"
+
 import collections, itertools
+from voxelengine.modules.utils import Serializable
 
 def observable_from(data):
     if isinstance(data, Observable):
@@ -14,7 +21,7 @@ def observable_from(data):
         return ObservableList(data)
     return data
 
-class Observable(object):
+class Observable(Serializable):
     def __init__(self):
         self.parent = None
         self.parent_key = None
@@ -23,8 +30,8 @@ class Observable(object):
         self.sanitizers = dict()
         self.data #define self.data in __init__ of subclass! (before calling Observable.__init__)
 
-    def __repr__(self):
-        return repr(self.data)
+    def __serialize__(self):
+        return self.data
     
     def __len__(self):
         return len(self.data)

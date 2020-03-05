@@ -34,16 +34,16 @@ server -> client
 client -> server
 	tick
 	
-	rot x y
-	
-	keys bitmap
+	control entity_id password
 	
 	monitor x_min y_min z_min x_max y_max z_max m_id
 	
 	update x_min y_min z_min x_max y_max z_max m_id
 	
-	control entity_id password
-
+	rot x y
+	
+	keys bitmap
+	
 	scrolling: n
 	
 	left click
@@ -57,7 +57,23 @@ client -> server
 	inv
 
 
-laden einer Welt:
-	client				server
-		<---- clear -----
-		<---- goto ------
+Ablauf:
+
+	Local Network Server Discovery
+		client		broadcast	server:discovery_port
+			----- ping parole   ---->
+			<---- pong gameport -----
+
+	Joining a Game
+		client					server
+			----- connect ---->
+			<---- accept  -----
+			
+			<---- setup   -----
+			----- control ---->
+			<---- clear   -----
+			<---- goto    -----
+			----- monitor ---->
+			----- update  ---->
+			<---- set     -----
+			      ...

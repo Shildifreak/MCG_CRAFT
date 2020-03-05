@@ -5,8 +5,9 @@ if __name__ == "__main__":
 
 import bisect
 from voxelengine.modules.binary_dict import BinaryDict
+from voxelengine.modules.utils import Serializable
 
-class BlockStorage(object):
+class BlockStorage(Serializable):
 	NO_BLOCK_ID = -1 #use to delete blocks
 	def __init__(self, blocks, clock, retention_period = -1, reference_delete_callback = lambda block_id:None):
 		"""
@@ -17,6 +18,9 @@ class BlockStorage(object):
 		self.structures = BinaryDict(blocks)
 		#self.structures = dict(blocks) #{(x,y,z):[(t1,block_id),(t2,block_id)]} | where t1 <= t2
 		self.retention_period = retention_period
+
+	def __serialize__(self):
+		return list(self.structures.items())
 
 	def _cleanup_history(self, block_history):
 		"""check if there are entries that are expired and remove them"""
@@ -63,10 +67,13 @@ class BlockStorage(object):
 		try:
 			block_history = self.structures[position]
 		except KeyError:
+			if block_id == self.NO_BLOCK_ID:
+				return False
 			block_history = self.structures[position] = []
-		previous_block_id = block_history[-1][1] if block_history else self.NO_BLOCK_ID
-		if block_id == previous_block_id:
-			return False
+		else:
+			previous_block_id = block_history[-1][1]
+			if block_id == previous_block_id:
+				return False
 		# append, not replace even if same timestep. otherwise reference_delete_callback would have to be called
 		block_history.append((self.clock.current_gametick, block_id))
 		self._cleanup_history(block_history)
@@ -81,9 +88,6 @@ class BlockStorage(object):
 						t, block_id = history[-1]
 						if t >= since_tick:
 							yield position, block_id
-
-	def __repr__(self):
-		return repr(self.structures)
 	
 
 if __name__ == "__main__":

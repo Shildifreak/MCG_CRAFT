@@ -8,8 +8,9 @@ from voxelengine.server.blocks.block import Block
 from voxelengine.server.event_system import Event
 from voxelengine.modules.frozen_dict import freeze
 from voxelengine.modules.geometry import Vector, BinaryBox, Sphere
+from voxelengine.modules.utils import Serializable
 
-class BlockWorld(object):
+class BlockWorld(Serializable):
 	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
 	def __init__(self, world, block_world_data, event_system, clock):
 		self.event_system = event_system
@@ -22,6 +23,12 @@ class BlockWorld(object):
 		self.block_world_index = BlockWorldIndex(self.get_tags)
 		self.world_generator   = WorldGenerator(block_world_data["generator"])
 		self.world = world
+	
+	def __serialize__(self):
+		return {"generator" : self.world_generator.generator_data,
+		        "blocks"    : self.block_storage,
+		        "codec"     : self.blockdata_encoder,
+		        }
 	
 	def _block_by_id(self, block_id, position):
 		if block_id == self.block_storage.NO_BLOCK_ID:

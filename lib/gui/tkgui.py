@@ -16,10 +16,12 @@ else:
 from . import filedialog
 from .tkscroll import VerticalScrolledFrame
 
+import collections
+
 class GUI(object):
     def __init__(self, config, worldtypes = (), clienttypes = (), background = True):
-        self.queue = {}
-        self.stats = {}
+        self.queue = collections.OrderedDict()
+        self.stats = collections.OrderedDict()
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
         self.config = config
         self.worldtypes = worldtypes
@@ -50,7 +52,7 @@ class GUI(object):
     def update(self):
         self.root.update()
         while self.queue:
-            id, (func, args) = self.queue.popitem()
+            id, (func, args) = self.queue.popitem(last=False)
             func(*args)
 
     def quit(self):

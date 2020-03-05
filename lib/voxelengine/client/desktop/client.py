@@ -348,7 +348,7 @@ def iterframe():
 
 class BlockStorage(object): # make this a dict itself?
     def __init__(self):
-        self.terrain_function = None
+        self.terrain_function = lambda position:"AIR"
         self.blocks = {}
 
     @functools.lru_cache()
@@ -362,8 +362,13 @@ class BlockStorage(object): # make this a dict itself?
             self.blocks[position] = value
         self.get_block.cache_clear()
 
+    def set_terrain_function(self, terrain_function):
+        self.terrain_function = terrain_function
+        self.get_block.cache_clear()
+
     def clear(self):
         self.blocks = {}
+        self.get_block.cache_clear()
 
 class ChunkManager(object):
     def __init__(self):
@@ -504,7 +509,7 @@ class Model(object):
     def load_generator(self, generator_data):
         #print(generator_data)
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
-        self.blocks.terrain_function = self.world_generator.terrain
+        self.blocks.set_terrain_function(self.world_generator.terrain)
 
     def monitor_around(self, position):
         """returns list of messages to be send to client in order to announce new monitoring area and required updates"""

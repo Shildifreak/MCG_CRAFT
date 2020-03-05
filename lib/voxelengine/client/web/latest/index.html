@@ -57,10 +57,10 @@
 		
 		ws.onopen = function() {
 			console.log("onopen");
+			ws.send("control "+username+" "+password);
 			ws.send("monitor -10 -10 -10 10 10 10 1");
 			ws.send("update -10 -10 -10 10 10 10 0");
 			ws.send("update -0.5 15.5 -0.5 15.5 31.5 15.5 0");
-			ws.send("control "+username+" "+password);
 		}
 		
 		ws.onmessage = function(msg) {

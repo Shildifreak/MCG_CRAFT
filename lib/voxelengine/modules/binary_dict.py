@@ -39,6 +39,9 @@ class BinaryDict(object):
 		else:
 			raise KeyError(position)
 	
+	def items(self):
+		return ((position, value) for _,position,value in itertools.islice(self.data,len(self.data)-1)) #drop last element from iterator
+	
 	def __repr__(self):
 		return repr(self.data)
 	

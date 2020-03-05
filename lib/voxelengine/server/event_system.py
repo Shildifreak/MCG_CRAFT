@@ -1,4 +1,5 @@
 from collections import namedtuple, defaultdict
+from voxelengine.modules.utils import Serializable
 
 Event = namedtuple("Event", ("tag","area","data"))
 Event.__new__.__defaults__ = (None,)
@@ -15,7 +16,7 @@ class EventQueue(list):
 			return []
 		return super(EventQueue,self).pop(index)
 
-class EventSystem(object):
+class EventSystem(Serializable):
 	"""
 	example event_tags:
 		renderdistance # use for things like mob movement that should only occur when near players, or update of beacon blocks etc.
@@ -27,10 +28,10 @@ class EventSystem(object):
 	"""
 	def __init__(self, world, event_data):
 		self.world = world
-		if event_data:
-			raise NotImplementedError()
-
-		self.event_queue = EventQueue() #[[event,...],...] #event queue sorted by remaining delay
+		self.event_queue = EventQueue(event_data) #[[event,...],...] #event queue sorted by remaining delay
+	
+	def __serialize__(self):
+		return self.event_queue
 	
 	def add_event(self, delay, event):
 		"""

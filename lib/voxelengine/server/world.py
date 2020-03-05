@@ -5,36 +5,43 @@ if __name__ == "__main__":
 
 from collections import defaultdict
 import threading
+import warnings
+warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
 
 from voxelengine.server.blocks.block_world import BlockWorld
 from voxelengine.server.event_system import EventSystem
 from voxelengine.server.entities.entity_world import EntityWorld
 from voxelengine.server.players.player_world import PlayerWorld
 
+from voxelengine.modules.utils import Serializable
+
 class Clock(dict):
-	def __init__(self, *args, **kwargs):
-		super(Clock, self).__init__(*args, **kwargs)
+	def __init__(self, data):
+		super().__init__(data)
 		self.tick_event = threading.Event()
 	current_gametick = property(lambda self:self["gametick"], lambda self, value:self.__setitem__("gametick",value))
 	def tick(self):
 		self.current_gametick += 1
 		self.tick_event.set(); self.tick_event.clear()
 
-class World(object):
+class World(Serializable):
 	def __init__(self, data):
-		metadata = data["metadata"]
-		self.clock = Clock(metadata["clock"])
-		self.event_system = EventSystem(self, data["events"])
-		self.entities = EntityWorld()
-		self.blocks = BlockWorld(self, data["block_world"], self.event_system, self.clock)
-		self.players = PlayerWorld(data["players"])
+		self.data = data
+		self.clock        = data["metadata"]["clock"] = Clock(data["metadata"]["clock"])
+		self.event_system = data["events"]            = EventSystem(self, data["events"])
+		self.entities     = data["entities"]          = EntityWorld(data["entities"])
+		self.blocks       = data["block_world"]       = BlockWorld(self, data["block_world"], self.event_system, self.clock)
+		self.players                                  = PlayerWorld()
 	
+	def __serialize__(self):
+		return self.data
+
 	def __getitem__(self, *args, **kwargs):
-		#M# raise DeprecationWarning("use world.blocks[...] instead of world[...]")
+		warnings.warn(DeprecationWarning("use world.blocks[...] instead of world[...]"))
 		return self.blocks.__getitem__(*args,**kwargs)
 	
 	def __setitem__(self, *args, **kwargs):
-		#M# raise DeprecationWarning("use world.blocks[...] instead of world[...]")
+		warnings.warn(DeprecationWarning("use world.blocks[...] instead of world[...]"))
 		self.blocks.__setitem__(*args,**kwargs)
 
 	def tick(self):

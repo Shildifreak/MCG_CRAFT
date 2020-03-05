@@ -20,5 +20,5 @@ data = {
 		"entities":[],
 	},
 	"events":[],
-	"players":[],
+#	"players":[], #I don't think we have any persistent player information at this point
 }

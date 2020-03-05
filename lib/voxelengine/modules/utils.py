@@ -29,6 +29,7 @@ def select(options):
 
 
 def try_port(port):
+    """test if this local port is available, if yes return the given port number otherwise return False"""
     try:
         s = socket.socket()
         s.bind(("",port))
@@ -37,3 +38,43 @@ def try_port(port):
         return False
     finally:
         s.close()
+
+def get_ip():
+    """
+    get an IP for the system, if the system has no global IP (attached via router eg.) this will be LAN IP
+    courtesy of https://stackoverflow.com/a/28950776
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+import pprint
+class Serializable(object):
+    __slots__ = ()
+    def __serialize__(self):
+        raise NotImplementedError("to be implemented by subclass")
+    
+    def __repr__(self):
+        return repr(self.__serialize__())
+
+def _pprint_operation(self, obj, *args):
+    obj = obj.__serialize__()
+    pprint.PrettyPrinter._dispatch[obj.__class__.__repr__](self, obj, *args)
+
+pprint.PrettyPrinter._dispatch[Serializable.__repr__] = _pprint_operation
+
+
+if __name__ == "__main__":
+    class Test(Serializable):
+        def __serialize__(self):
+            return ([1]*10,[2]*10,[3]*8,4)
+
+    t = Test()
+    pprint.pprint(t)

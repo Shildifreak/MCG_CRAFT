@@ -1,9 +1,18 @@
 from voxelengine.modules.geometry import EVERYWHERE
+from voxelengine.modules.utils import Serializable
 
-class EntityWorld(object):
+class EntityWorld(Serializable):
 
-	def __init__(self):
+	def __init__(self, data):
+		self.next_id = data["next_id"]
 		self.entities = set()
+		for entity in data["entities"]:
+			self.entities.add(entity)
+	
+	def __serialize__(self):
+		return {"next_id" : self.next_id,
+		        "entities": list(self.entities)
+		        }
 
 	def find_entities(self, area=EVERYWHERE, tags=frozenset()):
 		"""entities may be different in size in regards to different tags"""

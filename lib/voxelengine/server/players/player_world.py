@@ -1,9 +1,7 @@
 class PlayerWorld(object):
 	"""For now this class is pretty trivial, but one day it will help implement dynamic loading of the world"""
 
-	def __init__(self, player_data):
-		if player_data:
-			raise NotImplementedError()
+	def __init__(self):
 		self.players = set()
 
 	def find_players(self, area, tag):
