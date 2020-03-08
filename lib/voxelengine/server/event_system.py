@@ -1,5 +1,5 @@
 from collections import namedtuple, defaultdict
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable
 
 Event = namedtuple("Event", ("tag","area","data"))
 Event.__new__.__defaults__ = (None,)
@@ -26,12 +26,13 @@ class EventSystem(Serializable):
 		explosion
 		random_tick    # get's randomly created around players
 	"""
-	def __init__(self, world, event_data):
+	def __init__(self, world, event_data_list):
 		self.world = world
-		self.event_queue = EventQueue(event_data) #[[event,...],...] #event queue sorted by remaining delay
+		event_list = [Event(event_data) for event_data in event_data_list]
+		self.event_queue = EventQueue(event_list) #[[event,...],...] #event queue sorted by remaining delay
 	
 	def __serialize__(self):
-		return self.event_queue
+		return [tuple(event) for event in self.event_queue]
 	
 	def add_event(self, delay, event):
 		"""

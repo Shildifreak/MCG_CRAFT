@@ -6,14 +6,24 @@ if __name__ == "__main__":
 from collections import defaultdict
 import threading
 import warnings
-warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
+import traceback
+import pprint
 
 from voxelengine.server.blocks.block_world import BlockWorld
-from voxelengine.server.event_system import EventSystem
+from voxelengine.server.event_system import EventSystem, Event
 from voxelengine.server.entities.entity_world import EntityWorld
 from voxelengine.server.players.player_world import PlayerWorld
 
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable, serialize, extended_literal_eval
+from voxelengine.modules.geometry import Vector, Box, Sphere
+
+warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+    log = file if hasattr(file,'write') else sys.stderr
+    traceback.print_stack(file=log)
+    log.write(warnings.formatwarning(message, category, filename, lineno, line))
+warnings.showwarning = warn_with_traceback
+
 
 class Clock(dict):
 	def __init__(self, data):
@@ -51,10 +61,17 @@ class World(Serializable):
 		self.event_system.tick()
 		self.clock.tick()
 
-
-
-
-
+	@staticmethod
+	def parse_data_from_string(string):
+		save_constructors = {"Vector":Vector,
+		                     "Box"   :Box,
+		                     "Sphere":Sphere,
+		                     "Event" :Event,
+		                     }
+		return extended_literal_eval(string, save_constructors)
+	
+	def serialize(self):
+		return serialize(self, (Vector, Box, Sphere, Event))
 
 if __name__ == "__main__":
 	from voxelengine.server.world import World

@@ -10,7 +10,7 @@ if __name__ == "__main__":
     __package__ = "voxelengine.modules"
 
 import collections, itertools
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable
 
 def observable_from(data):
     if isinstance(data, Observable):

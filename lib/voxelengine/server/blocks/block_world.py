@@ -8,15 +8,18 @@ from voxelengine.server.blocks.block import Block
 from voxelengine.server.event_system import Event
 from voxelengine.modules.frozen_dict import freeze
 from voxelengine.modules.geometry import Vector, BinaryBox, Sphere
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable
 
 class BlockWorld(Serializable):
 	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
 	def __init__(self, world, block_world_data, event_system, clock):
 		self.event_system = event_system
 		
-		self.blockdata_encoder = BlockDataEncoder(block_world_data["codec"])
-		self.block_storage     = BlockStorage(	blocks = block_world_data["blocks"],
+		block_codec_and_counter = [(freeze(block), count) for block, count in block_world_data["codec"]]
+		blocks = [(Vector(position), block_history) for position, block_history in block_world_data["blocks"]]
+
+		self.blockdata_encoder = BlockDataEncoder(block_codec_and_counter)
+		self.block_storage     = BlockStorage(	blocks = blocks,
 												clock = clock,
 												#retention_period,
 												reference_delete_callback = self.blockdata_encoder.decrement_count)

@@ -94,6 +94,9 @@ class Vector(tuple):
 
     def __str__(self):
         return " ".join(map(str,self))
+    
+    def __repr__(self):
+        return "Vector"+tuple.__repr__(self)
 
 class Area(object):
     def binary_box_cover():
@@ -235,7 +238,7 @@ class Box(Area):
         raise NotImplementedError()
     
     def __repr__(self):
-        return "Box(%s, %s)" % (self.lower_bounds, self.upper_bounds)
+        return "Box" + repr((self.lower_bounds, self.upper_bounds)) # Box(lower_bounds, upper_bounds)
         
     def __str__(self):
         return " ".join(map(str, (*self.lower_bounds, *self.upper_bounds)))
@@ -260,6 +263,9 @@ class Sphere(Area):
         return (self.center - other.center).sqr_length() - (self.radius + other.radius)**2
     def _distance_to_Ray(self, other):
         raise NotImplementedError()
+
+    def __repr__(self):
+        return "Sphere" + repr((self.center, self.radius)) #Sphere(center, radius)
 
 class Ray(Area):
     __slots__ = ("origin", "direction", "dirfrac")

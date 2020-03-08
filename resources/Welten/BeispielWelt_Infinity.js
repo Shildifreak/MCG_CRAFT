@@ -1,7 +1,7 @@
 var spawnpoint = [0,5,0];
 
 function terrain(position) {
-    if (position[1] == 0) {
+    if (position[1] <= 0) {
         return "STONE"; // random.choice(["STONE","GRASS","DIRT"])
     } else {
         return "AIR";

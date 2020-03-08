@@ -55,26 +55,7 @@ def get_ip():
         s.close()
     return IP
 
-import pprint
-class Serializable(object):
+class operator_friendly_set(set):
     __slots__ = ()
-    def __serialize__(self):
-        raise NotImplementedError("to be implemented by subclass")
-    
-    def __repr__(self):
-        return repr(self.__serialize__())
+    __add__ = set.union
 
-def _pprint_operation(self, obj, *args):
-    obj = obj.__serialize__()
-    pprint.PrettyPrinter._dispatch[obj.__class__.__repr__](self, obj, *args)
-
-pprint.PrettyPrinter._dispatch[Serializable.__repr__] = _pprint_operation
-
-
-if __name__ == "__main__":
-    class Test(Serializable):
-        def __serialize__(self):
-            return ([1]*10,[2]*10,[3]*8,4)
-
-    t = Test()
-    pprint.pprint(t)

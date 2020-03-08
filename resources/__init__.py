@@ -5,6 +5,7 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 import voxelengine
 from voxelengine.modules.shared import *
+from voxelengine.modules.utils import operator_friendly_set
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox
 
 GRAVITY = 35
@@ -57,8 +58,7 @@ class Block(voxelengine.Block):
     # helper functions
     def redstone_activated(self):
         for face in FACES:
-            nachbarblockposition = self.position + face
-            nachbarblock = self.world[nachbarblockposition]
+            nachbarblock = self.relative[face]
             if nachbarblock["p_level"]:
                 if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
                     return True
@@ -147,7 +147,7 @@ class Block(voxelengine.Block):
         - solid     .. which means they got a hitbox (see collides_with for further instruction
         - explosion .. this block got an event handler for explosions
         """
-        return {"solid", "explosion"}
+        return operator_friendly_set({"solid", "explosion"})
 
     def collides_with(self, area):
         """
@@ -166,7 +166,7 @@ class SolidBlock(Block):
         level = 0
         stronglevel = 0
         for face in FACES:
-            neighbour = self.world[self.position-face]
+            neighbour = self.relative[-face]
             if (face in neighbour["p_directions"]):
                 level = max(level, neighbour["p_level"])
                 if neighbour != "Redstone":
@@ -195,10 +195,10 @@ class Item(object):
     def use_on_block(self,character,blockpos,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         new_pos = blockpos + face
-        character.world[new_pos] = self.block_version()
+        character.world.blocks[new_pos] = self.block_version()
         #M# remove block again if it collides with placer (check for all entities here later)
         if new_pos in character.collide_blocks():
-            character.world[new_pos] = "AIR"
+            character.world.blocks[new_pos] = "AIR"
         else:
             self.item["count"] -= 1
         if self.item["count"] <= 0:

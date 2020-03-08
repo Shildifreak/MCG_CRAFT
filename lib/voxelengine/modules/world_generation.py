@@ -5,7 +5,6 @@ import warnings
 import sys, os, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(PATH)
-print("todo: make py_mini_racer importable from outside of python path")
 from voxelengine.modules.py_mini_racer import py_mini_racer
 
 warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)

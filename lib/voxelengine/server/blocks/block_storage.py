@@ -5,7 +5,7 @@ if __name__ == "__main__":
 
 import bisect
 from voxelengine.modules.binary_dict import BinaryDict
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable
 
 class BlockStorage(Serializable):
 	NO_BLOCK_ID = -1 #use to delete blocks
@@ -20,7 +20,10 @@ class BlockStorage(Serializable):
 		self.retention_period = retention_period
 
 	def __serialize__(self):
-		return list(self.structures.items())
+		for position, block_history in self.structures.items():
+			self._cleanup_history(block_history)
+			yield tuple(position), block_history
+		#return list(self.structures.items())
 
 	def _cleanup_history(self, block_history):
 		"""check if there are entries that are expired and remove them"""

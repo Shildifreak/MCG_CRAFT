@@ -10,6 +10,7 @@ import _thread as thread
 import math, time, random, itertools, collections
 import getpass
 import copy
+import pprint
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append("lib")
@@ -210,7 +211,7 @@ class Player(voxelengine.Player):
         # no shift  mine block      activate block
         # shift     use l item      use r. item
                 
-        get_block = lambda: pe.world[pos]
+        get_block = lambda: pe.world.blocks[pos]
         def get_item():
             hand_name = {"left click": "left_hand", "right click":"right_hand"}[event_name]
             item_data = pe[hand_name]
@@ -439,7 +440,7 @@ def gameloop():
         if os.path.exists(savegamepath):
             print("Loading World ...", end="")
             with open(savegamepath) as savegamefile:
-                data = ast.literal_eval(savegamefile.read())
+                data = World.parse_data_from_string(savegamefile.read())
             w = World(data)
             print("done")
         else:
@@ -474,22 +475,26 @@ def gameloop():
             print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
 
         def save():
-            print("Game saving ...", end="", flush=True)
-            print("World:")
-            import pprint
-            pprint.pprint(w, indent=4)
+            print("Preparing Savestate ... ", end="", flush=True)
+            data = w.serialize()
+            data_string = repr(data)
+            print("done")
+            print("Checking Savestate ... ", end="", flush=True)
             try:
-                ast.literal_eval(repr(w))
+                World.parse_data_from_string(data_string)
             except Exception as e:
-                print("not parsable")
+                print("failed: world data not parsable")
+                pprint.pprint(data)
                 print(e)
             else:
-                print("passed parsing test")
-            if config["file"]:
-                w.save(config["file"])
-                print("done")
-            else:
-                print("skipped")
+                print("passed")
+                print("Game saving ... ", end="", flush=True)
+                if config["file"]:
+                    with open(config["file"], "w") as savegamefile:
+                        savegamefile.write(data_string)
+                    print("done")
+                else:
+                    print("skipped: missing path")
             config["save"] = False
 
         u = voxelengine.Universe()

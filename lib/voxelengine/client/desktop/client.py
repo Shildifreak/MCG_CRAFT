@@ -356,7 +356,7 @@ class BlockStorage(object): # make this a dict itself?
         return self.blocks.get(position,None) or self.terrain_function(position)
 
     def set_block(self,position,value):
-        if value == self.get_block(position):
+        if value == self.terrain_function(position):
             self.blocks.pop(position, None) #possible that position is not in blocks when defaultblock gets set twice
         else:
             self.blocks[position] = value

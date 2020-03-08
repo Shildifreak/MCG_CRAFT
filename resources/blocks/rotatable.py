@@ -27,11 +27,11 @@ class RotatableBlockItem(Item):
         else:
             r = 0
         block = {"id":block_id,"rotation":r,"base":base}
-        character.world[new_pos] = block
+        character.world.blocks[new_pos] = block
 
 @register_block("GESICHT")
 class RotatableBlock(Block):
     def activated(self,character,face):
-        block = self.world[self.position]
-        block["rotation"] += 1
-        block["rotation"] %= 4
+        self["rotation"] += 1
+        self["rotation"] %= 4
+        self.save()

@@ -1,5 +1,7 @@
+
+from voxelengine.server.entities.entity import Entity
 from voxelengine.modules.geometry import EVERYWHERE
-from voxelengine.modules.utils import Serializable
+from voxelengine.modules.serializableCollections import Serializable
 
 class EntityWorld(Serializable):
 
@@ -7,7 +9,7 @@ class EntityWorld(Serializable):
 		self.next_id = data["next_id"]
 		self.entities = set()
 		for entity in data["entities"]:
-			self.entities.add(entity)
+			self.entities.add(Entity(entity))
 	
 	def __serialize__(self):
 		return {"next_id" : self.next_id,

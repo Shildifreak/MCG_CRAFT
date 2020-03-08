@@ -31,5 +31,5 @@ with voxelengine.GameServer(**settings) as g:
         e["position"] = (-1, math.sin(i)+1, -3)
         g.update()
         u.tick()
-        time.sleep(0.05)
+        time.sleep(0.1)
     print(w.entities)

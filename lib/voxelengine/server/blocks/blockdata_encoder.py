@@ -3,7 +3,9 @@ import bisect
 import sys
 sys.path.append("..")
 
-class BlockDataEncoder(object):
+from voxelengine.modules.serializableCollections import Serializable
+
+class BlockDataEncoder(Serializable):
 	"""doesn't care about mutability of blockdata, copy et simile has to be done somewhere else"""
 	def __init__(self, block_codec_and_counter):
 		self.block_codec, self.counter = map(list, zip(*block_codec_and_counter) if block_codec_and_counter else ((),())) #[data_0, data_1, ..., data_n] [count_0, count_1, ..., count_n]   (zip doesn't work if its empty, because it can't know number of sequences to generate)
@@ -12,6 +14,9 @@ class BlockDataEncoder(object):
 
 		self.index = {h:i for i,h in enumerate(self.block_codec)}
 		self.unused_indices = [i for i,c in enumerate(self.counter) if c <= 0] #sorted list of indices
+
+	def __serialize__(self):
+		return zip(self.block_codec, self.counter)
 
 	def get_blockdata_by_id(self, block_id):
 		return self.block_codec[block_id]
@@ -46,9 +51,6 @@ class BlockDataEncoder(object):
 			self.counter.append(0)
 		self.index[blockdata] = i
 		return i
-
-	def __repr__(self):
-		return repr(tuple(zip(self.block_codec, self.counter)))
 
 	def check_and_cleanup(self):
 		"""
