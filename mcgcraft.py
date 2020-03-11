@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 #* encoding: utf-8 *#
 
-if __name__ != "__main__":
-    raise Warning("mcgcraft.py should not be imported")
+#if __name__ != "__main__":
+#    raise Warning("mcgcraft.py should not be imported")
 
 # Imports
 import sys, os, ast, imp, inspect
@@ -13,8 +13,8 @@ import copy
 import pprint
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-sys.path.append("lib")
-sys.path.append(os.path.join("resources","Welten","structures"))
+sys.path.append(os.path.join(PATH,"lib"))
+sys.path.append(os.path.join(PATH,"resources","Welten","structures"))
 
 import resources
 import voxelengine
@@ -24,8 +24,6 @@ import voxelengine.modules.utils
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
 import voxelengine.server.world_data_template
-
-CHUNKSIZE = 4 # (in bit -> length is 2**CHUNKSIZE, so 4bit means the chunk has a size of 16x16x16 blocks)
 
 class InventoryDisplay():
     def __init__(self,player):
@@ -557,11 +555,7 @@ def gameloop():
                 
             save()
         print("Game stopped")
-    rememberconfig = config.copy()
-    for key in ("run","play","quit","save","refresh","address"):
-        rememberconfig.pop(key, None)
-    with open(configfn,"w") as configfile:
-        configfile.write(repr(rememberconfig))
+    save_config()
     print()
     print("Bye!")
     time.sleep(1)
@@ -588,18 +582,28 @@ config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
 configfn = os.path.join(configdir,"serversettings.py")
 print(configfn)
-def main():
-    global ui
+
+def load_config():
     if os.path.exists(configfn):
         with open(configfn,"r") as configfile:
             rememberedconfig = ast.literal_eval(configfile.read())
         config.update(rememberedconfig)
     elif not os.path.exists(configdir):
         os.makedirs(configdir)
-        
-    worldtypes = os.listdir(os.path.join("resources","Welten"))
+
+def save_config():
+    rememberconfig = config.copy()
+    for key in ("run","play","quit","save","refresh","address"):
+        rememberconfig.pop(key, None)
+    with open(configfn,"w") as configfile:
+        configfile.write(repr(rememberconfig))
+
+def main():
+    global ui
+    load_config()
+    worldtypes = os.listdir(os.path.join(PATH,"resources","Welten"))
     worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
-    clienttypes = os.listdir(os.path.join("lib","voxelengine","client"))
+    clienttypes = os.listdir(os.path.join(PATH,"lib","voxelengine","client"))
     try:
         from gui.tkgui import ServerGUI as UI
     except ImportError as e:

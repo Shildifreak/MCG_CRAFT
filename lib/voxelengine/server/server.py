@@ -26,10 +26,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         path = urllib.parse.urlparse(path).path
         path = pathlib.Path(path).relative_to("/")
         if not path.parts:
-            return os.path.join(VOXELENGINE_PATH, "client", "web", "login.html")
+            return os.path.join(VOXELENGINE_PATH, "client", "webtest", "login.html")
         elif path.parts[0] == "webclient":
             webclient_relpath = path.relative_to("webclient")
-            return os.path.join(VOXELENGINE_PATH, "client", "web", webclient_relpath)
+            return os.path.join(VOXELENGINE_PATH, "client", "webtest", webclient_relpath)
         elif path.parts[0] == "texturepacks":
             texturepack_relpath = path.relative_to("texturepacks")
             return os.path.join(self.texturepack_basepath, texturepack_relpath)
@@ -183,6 +183,7 @@ class GameServer(object):
                    path,
                    "--host=localhost",
                    "--port=%i" %port,
+                   "--http_port=%i" %self.http_port,
                    "--parole=%s" %self.parole,
                    "--name=%s" %username,
                    "--password=%s" %password,

@@ -12,6 +12,10 @@ parser.add_option("-P",
               help="only consider servers on this PORT", metavar="PORT", type="int",
               action="store")
 parser.add_option(
+              "--http_port", dest="http_port",
+              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int", default=80,
+              action="store")
+parser.add_option(
               "--parole", dest="parole",
               help="find servers with this parole", metavar="PAROLE", default="",
               action="store")
@@ -27,5 +31,6 @@ options, args = parser.parse_args()
 
 port = options.port
 host = options.host
-url = "http://mcgcraft.de/webclient/latest?port=%s&host=%s&parole=%s&name=%s&password=%s" %(port,host,options.parole,options.name,options.password)
+http_port = options.http_port
+url = "http://localhost:%i/webclient/latest?port=%s&host=%s&parole=%s&name=%s&password=%s" %(http_port,port,host,options.parole,options.name,options.password)
 webbrowser.open(url) #maybe insert sleep before
