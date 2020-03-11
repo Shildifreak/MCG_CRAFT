@@ -12,6 +12,10 @@ parser.add_option("-P",
               help="only consider servers on this PORT", metavar="PORT", type="int",
               action="store")
 parser.add_option(
+              "--http_port", dest="http_port",
+              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int", default=80,
+              action="store")
+parser.add_option(
               "--parole", dest="parole",
               help="find servers with this parole", metavar="PAROLE", default="",
               action="store")
