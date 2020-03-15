@@ -71,7 +71,7 @@ if not defined:
 			root.withdraw()
 			filename = dialog_function(filetypes = [("MCGCraft Savegames","*.mc.*"),("Any files","*")],
 									   initialdir = path,
-									   defaultextension=".mc.zip",
+									   defaultextension=".mc.txt",
 									   title=title)
 			root.destroy()
 			return filename if filename else False

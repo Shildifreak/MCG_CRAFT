@@ -2,6 +2,7 @@ import collections, itertools
 import _thread as thread
 import threading
 import time
+import json
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -236,7 +237,7 @@ class Player(object):
 		generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
 							"seed"   : self.world.blocks.world_generator.generator_data["seed"],
 							"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
-		self.outbox.add("clear",generator_data)
+		self.outbox.add("clear",json.dumps(generator_data))
 
 	def _set_entity(self,entity):
 		priority = 1 if entity == self.entity else 0

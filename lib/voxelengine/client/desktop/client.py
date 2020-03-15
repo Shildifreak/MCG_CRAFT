@@ -889,7 +889,7 @@ class Window(pyglet.window.Window):
                     break
                 #print("client.py:", c)
                 if c.startswith("clear"):
-                    generator_data = ast.literal_eval(c[6:])
+                    generator_data = json.loads(c[6:])
                     self.model._clear(generator_data)
                     if self.model.monitor_after_clear: #M# this is a hack
                         for msg in self.model.monitor_around(self.position):

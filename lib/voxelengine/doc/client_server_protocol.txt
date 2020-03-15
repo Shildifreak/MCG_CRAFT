@@ -40,7 +40,7 @@ client -> server
 	
 	update x_min y_min z_min x_max y_max z_max m_id
 	
-	rot x y
+	rot yaw pitch
 	
 	keys bitmap
 	

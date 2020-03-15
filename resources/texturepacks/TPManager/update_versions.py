@@ -1,7 +1,8 @@
 import os, ast
 
 import textureIO
-import generate_desktop_version
+from generate_desktop_version import generate_desktop_version
+from generate_web_version     import generate_web_version
 
 
 # find all universal version 1.0 directories
@@ -56,6 +57,7 @@ for relpath in paths:
 		for face in (*FACES,"inside"):
 			faces.setdefault(face, [])
 	
-	generate_desktop_version.generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
+	#generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
+	generate_web_version    (description, texture_directory, os.path.abspath(os.path.join(path,".versions","web")))
 	
 # create desktop and web version of those

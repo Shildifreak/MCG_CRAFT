@@ -89,27 +89,33 @@ class GUI(object):
         def setfile(fn, autocorrect=False):
             if fn == self.config["file"]:
                 return
-            if not fn.endswith(".mc.zip") and autocorrect:
-                fn += ".mc.zip"
+            if not fn.endswith(".mc.txt") and autocorrect:
+                fn += ".mc.txt"
             fileentry.delete(0, Tkinter.END)
             fileentry.insert(0,fn)
             fileentry.xview_moveto(1)
             self.config["file"] = fn
-        def file_focus_out(fn):
             if fn:
-                setfile(fn)
-            fileentry.isempty = fileentry.get() == ""
-            if fileentry.isempty:
+                fileentry.configure(fg=defaultfg)
+        def setfile_from_entry(*_):
+            fn = fileentry.get()
+            setfile(fn)
+        def file_focus_out(_):
+            setfile_from_entry()
+            if not self.config["file"]:
                 fileentry.insert(0,"Welt nicht speichern")
                 fileentry.configure(fg="grey")
+            print(self.config["file"])
         def file_focus_in(event):
-            if fileentry.isempty:
+            if not self.config["file"]:
                 fileentry.delete(0, Tkinter.END)
                 fileentry.configure(fg=defaultfg)
         self.add_label("Speicherort")
-        fileentry = self.add_entry(self.config["file"], file_focus_out)
+        fileentry = self.add_entry(self.config["file"], lambda _:None)
         defaultfg = fileentry["fg"]
         fileentry.xview_moveto(1)
+        fileentry.bind("<Return>",setfile_from_entry)
+        fileentry.bind("<FocusOut>",file_focus_out)
         fileentry.bind("<FocusIn>",file_focus_in)
         file_focus_out(None)
         
