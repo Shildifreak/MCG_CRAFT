@@ -181,7 +181,7 @@ class Player(object):
 		elif cmd == "keys" and len(args) == 1:
 			action_states = int(args[0])
 			for i,a in enumerate(ACTIONS):
-				new_state = bool(action_states & (1<<(i+1)))
+				new_state = bool(action_states & (1<<(i)))
 				if new_state and not self.is_pressed(a):
 					self.was_pressed_set.add(a)
 				if not new_state and self.is_pressed(a):
@@ -217,7 +217,8 @@ class Player(object):
 			self._control_request(entity_id, password)
 
 		else:
-			self.was_pressed_set.add(msg)
+			print("Player._handle_input:unexpected message from client:",msg)
+			#self.was_pressed_set.add(msg)
 
 	def _notice_position(self):
 		"""set position of camera/player"""

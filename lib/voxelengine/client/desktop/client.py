@@ -46,25 +46,27 @@ focus_distance = 0
 
 # Mapping of keys to events
 KEYMAP = [
-    (key._1    ,"inv1"  ),
-    (key._2    ,"inv2"  ),
-    (key._3    ,"inv3"  ),
-    (key._4    ,"inv4"  ),
-    (key._5    ,"inv5"  ),
-    (key._6    ,"inv6"  ),
-    (key._7    ,"inv7"  ),
-    (key._8    ,"inv8"  ),
-    (key._9    ,"inv9"  ),
-    (key._0    ,"inv0"  ),
-    (key.W     ,"for"   ),
-    (key.S     ,"back"  ),
-    (key.A     ,"left"  ),
-    (key.D     ,"right" ),
-    (key.SPACE ,"jump"  ),
-    (key.TAB   ,"fly"   ),
-    (key.E     ,"inv"   ),
-    (key.LSHIFT,"shift" ),
-    (key.LCTRL ,"sprint"),
+    (("key"  , key._1     ),"inv1"      ),
+    (("key"  , key._2     ),"inv2"      ),
+    (("key"  , key._3     ),"inv3"      ),
+    (("key"  , key._4     ),"inv4"      ),
+    (("key"  , key._5     ),"inv5"      ),
+    (("key"  , key._6     ),"inv6"      ),
+    (("key"  , key._7     ),"inv7"      ),
+    (("key"  , key._8     ),"inv8"      ),
+    (("key"  , key._9     ),"inv9"      ),
+    (("key"  , key._0     ),"inv0"      ),
+    (("key"  , key.W      ),"for"       ),
+    (("key"  , key.S      ),"back"      ),
+    (("key"  , key.A      ),"left"      ),
+    (("key"  , key.D      ),"right"     ),
+    (("key"  , key.SPACE  ),"jump"      ),
+    (("key"  , key.TAB    ),"fly"       ),
+    (("key"  , key.E      ),"inv"       ),
+    (("key"  , key.LSHIFT ),"shift"     ),
+    (("key"  , key.LCTRL  ),"sprint"    ),
+    (("mouse", mouse.LEFT ),"left_hand" ),
+    (("mouse", mouse.RIGHT),"right_hand"),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -844,6 +846,8 @@ class Window(pyglet.window.Window):
         # key handler for convinient polling
         self.keystates = key.KeyStateHandler()
         self.push_handlers(self.keystates)
+        # and just a variable for the mouse that is updated by event_handlers below
+        self.mousestates = collections.defaultdict(bool)
 
         # some function to tell about events
         if not client:
@@ -966,17 +970,18 @@ class Window(pyglet.window.Window):
             Number representing any modifying keys that were pressed when the
             mouse button was clicked.
         """
-        if (button == mouse.RIGHT) or \
-            ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
-            # ON OSX, control + left click = right click.
-            event = "right click"
-        elif button == pyglet.window.mouse.LEFT:
-            event = "left click"
-        else:
-            return
         if self.exclusive:
-            self.client.send(event)
+            self.mousestates[button] = True
+            self.send_input_change(("mouse",button))
         else:
+            if (button == mouse.RIGHT) or \
+                ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
+                # ON OSX, control + left click = right click.
+                event = "right click"
+            elif button == pyglet.window.mouse.LEFT:
+                event = "left click"
+            else:
+                return
             focused = None
             z = float("-inf")
             for _,element_data,corners in self.model.hud_elements.values():
@@ -992,6 +997,14 @@ class Window(pyglet.window.Window):
                     self.client.send("inv")
                     self.hud_open = False
                 self.set_exclusive_mouse(True)
+    
+    def on_mouse_release(self, x, y, button, modifiers):
+        self.mousestates[button] = False
+        self.send_input_change(("mouse",button))
+    
+    def on_mouse_leave(self, x, y):
+        self.mousestates.clear()
+        self.send_input_change(True)
                 
     def on_mouse_motion(self, x, y, dx, dy):
         """
@@ -1013,7 +1026,20 @@ class Window(pyglet.window.Window):
             self.rotation = (x, y)
             self.client.send("rot %s %s" %self.rotation)
 
-    def send_key_change(self, symbol, modifiers, state):
+    def send_input_change(self, event):
+        used_events = set([i[0] for i in KEYMAP])
+        if (event in used_events) or (event == True):
+            eventstates = 0
+            for (event_type, symbol), action in KEYMAP:
+                if event_type == "key":
+                    if self.keystates[symbol]:
+                        eventstates |= 1<<(ACTIONS.index(action))
+                if event_type == "mouse":
+                    if self.mousestates[symbol]:
+                        eventstates |= 1<<(ACTIONS.index(action))
+            self.client.send("keys "+str(eventstates))
+
+    def on_key_press(self, symbol, modifiers):
         """
         Called when the player presses a key. See pyglet docs for key
         mappings.
@@ -1025,16 +1051,7 @@ class Window(pyglet.window.Window):
         modifiers : int
             Number representing any modifying keys that were pressed.
         """
-        
-        used_keys = set([i[0] for i in KEYMAP])
-        eventstates = int(bool(modifiers & key.MOD_CTRL))
-        if symbol in used_keys:
-            for k,e in KEYMAP:
-                if self.keystates[k]:
-                    eventstates |= 1<<(ACTIONS.index(e)+1)
-            self.client.send("keys "+str(eventstates))
 
-    def on_key_press(self, symbol, modifiers):
         if symbol == key.ESCAPE:
             self.set_exclusive_mouse(False)
         else:
@@ -1046,10 +1063,10 @@ class Window(pyglet.window.Window):
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
                 self.block_shaders.append(self.block_shaders.pop(0))
-            self.send_key_change(symbol, modifiers, True)
+            self.send_input_change(("key", symbol))
                 
     def on_key_release(self, symbol, modifiers):
-        self.send_key_change(symbol, modifiers, False)
+        self.send_input_change(("key", symbol))
 
     def on_resize(self, width, height):
         """

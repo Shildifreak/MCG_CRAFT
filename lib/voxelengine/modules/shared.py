@@ -13,7 +13,7 @@ from voxelengine.modules.geometry import Vector
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8","inv9","inv0",
 #               2      4      8     16     32     64    128    256    512   1024
-           "for" ,"back","left","right","jump","fly","inv","shift","sprint"]
+           "for" ,"back","left","right","jump","fly","inv","shift","sprint","left_hand","right_hand"]
 #           2048    4096   8192   16384  32768  65536  ...    ...      ...
 
 # the dimension of the game (used to avoid magic numbers in code)
