@@ -12,9 +12,9 @@ from voxelengine.modules.geometry import Vector
 
 # list of possible events, order of bytes to transmit
 ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8","inv9","inv0",
-#               2      4      8     16     32     64    128    256    512   1024
+#               0      1      2      3      4      5      6      7      8      9
            "for" ,"back","left","right","jump","fly","inv","shift","sprint","left_hand","right_hand"]
-#           2048    4096   8192   16384  32768  65536  ...    ...      ...
+#             10      11     12      13     14    15    16      17       18          19           20
 
 # the dimension of the game (used to avoid magic numbers in code)
 DIMENSION = 3 # but please don't change it, it won't work, there are a lot of places where variables for x,y,z are hardcoded

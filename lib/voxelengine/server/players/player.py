@@ -217,8 +217,7 @@ class Player(object):
 			self._control_request(entity_id, password)
 
 		else:
-			print("Player._handle_input:unexpected message from client:",msg)
-			#self.was_pressed_set.add(msg)
+			self.was_pressed_set.add(msg)
 
 	def _notice_position(self):
 		"""set position of camera/player"""
