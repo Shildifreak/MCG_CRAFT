@@ -1026,6 +1026,9 @@ class Window(pyglet.window.Window):
             self.rotation = (x, y)
             self.client.send("rot %s %s" %self.rotation)
 
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self.on_mouse_motion(x, y, dx, dy)
+
     def send_input_change(self, event):
         used_events = set([i[0] for i in KEYMAP])
         if (event in used_events) or (event == True):
