@@ -25,6 +25,7 @@ sys.path.append(os.path.join(PATH,"..","..",".."))
 import pyglet
 from pyglet import image
 #pyglet.options["debug_gl"] = False
+pyglet.options['shadow_window'] = False
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
@@ -90,10 +91,10 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
-vertex_shader_code = """
-#version 330
+vertex_shader_code = b"""
+#version 130
 
-varying out vec3 color;
+varying vec4 color;
 
 void main()
 {
@@ -104,29 +105,53 @@ void main()
 }
 """
 
-fancy_fragment_shader_code = """
-#version 330
+default_fragment_shader_code = b"""
+#version 130
 
-varying in vec3 color;
+varying vec4 color;
 uniform sampler2D color_texture;
 
 void main (void)
 {
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
     //float test = dot(normal, vec3(0.0f,1.0f,0.0f));
-    gl_FragColor = tex_color * (0.5 + 0.5 * vec4(color, 0));
+    gl_FragColor = tex_color * (0.75 + 0.5 * vec4(color));
 }
 """
 
-plain_fragment_shader_code = """
-#version 330
+texture_only_fragment_shader_code = b"""
+#version 130
 
-varying in vec3 color;
+varying vec4 color;
 uniform sampler2D color_texture;
 
 void main (void)
 {
     gl_FragColor = texture2D(color_texture, gl_TexCoord[0].st);
+}
+"""
+
+light_only_fragment_shader_code = b"""
+#version 130
+
+varying vec4 color;
+uniform sampler2D color_texture;
+
+void main (void)
+{
+    gl_FragColor = color;
+}
+"""
+
+empty_fragment_shader_code = b"""
+#version 130
+
+varying vec4 color;
+uniform sampler2D color_texture;
+
+void main (void)
+{
+    gl_FragColor = vec4(0.5);
 }
 """
 
@@ -576,8 +601,7 @@ class Model(object):
         i = iter(vertex_data)
         color_corrections = []
         for vertex in zip(i,i,i):
-            cc = self.ambient_occlusion(vertex) + self.sunlight(vertex, face)
-            cc = (0.5 + 0.5 * cc)
+            cc = 0.7*self.ambient_occlusion(vertex) + 0.3*self.sunlight(vertex, face)
             color_corrections.extend((cc,cc,cc))
         return color_corrections
 
@@ -808,6 +832,15 @@ class Window(pyglet.window.Window):
         self.reticle = None
         # (has to be called before standart init which sometimes calls on_resize)
 
+#        display = pyglet.canvas.get_display()
+#        screen = display.get_default_screen()
+#
+#        template = pyglet.gl.Config(depth_size=8)
+#        template.major_version = 3
+#        config = screen.get_best_config(template)
+#        context = config.create_context(None)
+#        kwargs.setdefault("context",context)
+
         pyglet.window.Window.__init__(self,*args, **kwargs)
         #super(Window, self).__init__(*args, **kwargs)
 
@@ -816,7 +849,15 @@ class Window(pyglet.window.Window):
         self.hud_open = False
         self.debug_info_visible = False
 
-        #self.block_shaders = [fancy_block_shader, plain_block_shader]
+        glEnable(GL_NORMALIZE)
+        default_block_shader      = Shader([vertex_shader_code], [     default_fragment_shader_code])
+        texture_only_block_shader = Shader([vertex_shader_code], [texture_only_fragment_shader_code])
+        light_only_block_shader   = Shader([vertex_shader_code], [  light_only_fragment_shader_code])
+        empty_fragment_shader     = Shader([vertex_shader_code], [       empty_fragment_shader_code])
+        self.block_shaders = [[empty_fragment_shader, texture_only_block_shader],
+                              [light_only_block_shader,    default_block_shader]]
+        self.enable_fragment_texture = True
+        self.enable_fragment_light   = True
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -1065,7 +1106,9 @@ class Window(pyglet.window.Window):
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
-                self.block_shaders.append(self.block_shaders.pop(0))
+                self.enable_fragment_texture = not self.enable_fragment_texture
+            if symbol == key.F5:
+                self.enable_fragment_light = not self.enable_fragment_light
             self.send_input_change(("key", symbol))
                 
     def on_key_release(self, symbol, modifiers):
@@ -1132,9 +1175,10 @@ class Window(pyglet.window.Window):
         self.clear()
         self.set_3d()
         glColor3d(1, 1, 1)
-        #self.block_shaders[0].bind()
+        block_shader = self.block_shaders[self.enable_fragment_light][self.enable_fragment_texture]
+        block_shader.bind()
         self.model.batch.draw()
-        #self.block_shaders[0].unbind()
+        block_shader.unbind()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
@@ -1206,12 +1250,6 @@ def setup_fog():
     glFogf(GL_FOG_START, 20.0)
     glFogf(GL_FOG_END, 60.0)
 
-def setup_shaders():
-    global fancy_block_shader, plain_block_shader
-    glEnable(GL_NORMALIZE)
-    fancy_block_shader = Shader([vertex_shader_code], [fancy_fragment_shader_code])
-    plain_block_shader = Shader([vertex_shader_code], [plain_fragment_shader_code])
-
 def setup():
     """ Basic OpenGL configuration.
 
@@ -1259,7 +1297,6 @@ def show_on_window(client):
             if options.password:
                 print("Ignoring user set password because no name was given.")
         client.send("control %s %s"%(entity_id, password))
-        #setup_shaders()
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True, client=client, fullscreen=False)
         # Hide the mouse cursor and prevent the mouse from leaving the window.

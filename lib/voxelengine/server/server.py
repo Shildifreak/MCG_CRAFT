@@ -22,6 +22,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, texturepack_path, *args, **kwargs):
         self.texturepack_basepath = texturepack_path
         super().__init__(*args, **kwargs)
+    def end_headers(self):
+        print("using end headers")
+        self.send_header('Access-Control-Allow-Origin', 'http://mcgcraft.de')
+        super().end_headers()
     def translate_path(self, path):
         path = urllib.parse.urlparse(path).path
         path = pathlib.Path(path).relative_to("/")
