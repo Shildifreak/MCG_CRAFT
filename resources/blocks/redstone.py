@@ -42,7 +42,7 @@ class Repeater(Block):
         d = self.get_front_facing_vector()
         self["p_directions"] = (d,)
         
-        source = self.world[self.position - d]
+        source = self.world.blocks[self.position - d]
         if "strong powered" or ("weak powered" and "correct direction"):
             "do stuff"
         # tbc.

@@ -137,6 +137,13 @@ class ObservableList(Observable):
         self.data.insert(index,self._adopted_value(value))
         self.trigger(None)
 
+    def replace(self,index,value):
+        prev_value = self[index]
+        if isinstance(prev_value, Observable):
+            prev_value.parent = None
+        self[index] = value #should cause trigger
+        return prev_value
+
     def pop(self,index):
         value = self.data.pop(index)
         if isinstance(value, Observable):

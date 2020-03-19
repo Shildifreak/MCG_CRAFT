@@ -6,25 +6,21 @@ class Rocket(Block):
     delay = 10
 
     def handle_event_block_update(self,event):
-        self.world.events.add("rocket_move",Point(self.position),delay)
+        rocket_move_event = Event("rocket_move",Point(self.position))
+        self.world.event_system.add_event(self.delay, rocket_move_event)
         
     def handle_event_rocket_move(self,event):
         v = self.get_front_facing_vector()
-        if self.world[self.position+v] == "AIR":
-            self.world[self.position+v] = {"id":"ROCKET","rotation":self["rotation"],"base":self["base"]}
-            self.world[self.position] = "AIR"
-            # add move request with callbacks here instead
-            self.world.events.add("rocket_move",Point(self.position),delay)
+        if self.world.blocks[self.position+v] == "AIR":
+            self.world.request_move_block(self.position, self.position+v, lambda worked: self.explode if not worked else None)
         else:
-            # schedule explode event here
-            tntrange = random.randint(3,7)
-            self.world[self.position] = "AIR"
-            for dx in range(-tntrange,tntrange+1):
-                for dy in range(-tntrange,tntrange+1):
-                    for dz in range(-tntrange,tntrange+1):
-                        tp = self.position+(dx,dy,dz)
-                        dp = type(self.position)((dx,dy,dz))
-                        self.world[tp].exploded(dp.length()/tntrange)
+            self.explode()
+    
+    def explode(self):
+        self.world.blocks[self.position] = "AIR"
+        power = random.randint(3,7)
+        explosion_event = Event("explosion",Sphere(self.position,power))
+        self.world.event_system.add_event(0, explosion_event)
     
     def get_tags(self):
-        return super(Redstone,self).get_tags().union({"block_update"})
+        return super().get_tags() + {"block_update", "rocket_move"}

@@ -108,28 +108,40 @@ class InventoryDisplay():
         args = event.rsplit("(",1)[1].split(")",1)[0].split(",")
         if len(args) == 3:
             k, col, row = map(int,args)
-            inventory = self.inventory if k==0 else self.foreign_inventory
-            index = self._calculate_index(k,row,col)
-            self.swap(inventory,index,hand)
+            if k == 0:
+                self.player.entity[hand] = self._calculate_index(k,row,col)
         else:
             k, direction = map(int,args)
             inventory = self.inventory if k==0 else self.foreign_inventory
             self.current_pages[k] = max(0,self.current_pages[k] + direction)
             self.display()
-            
     
-    def swap(self,inventory,index,hand):
-        x, y = self.player.entity[hand], inventory[index]
-        #hier prüfen ob x in inventory rein darf
-        if not inventory.may_contain(x):
+    def handle_drag(self,event):
+        button, dragged, from_element, to_element = event.split(" ")
+        if from_element.startswith("inventory") and to_element.startswith("inventory"):
+            from_args = from_element.rsplit("(",1)[1].split(")",1)[0].split(",")
+            to_args = to_element.rsplit("(",1)[1].split(")",1)[0].split(",")
+            if len(from_args) == 3 and len(to_args) == 3:
+                from_k, from_col, from_row = map(int, from_args)
+                to_k, to_col, to_row = map(int, to_args)
+                from_inventory = self.inventory if from_k==0 else self.foreign_inventory
+                to_inventory = self.inventory if to_k==0 else self.foreign_inventory
+                from_index = self._calculate_index(from_k, from_row, from_col)
+                to_index = self._calculate_index(to_k, to_row, to_col)
+                if False: #check if they could stack
+                    pass #add them together
+                else: #swap
+                    self.swap(from_inventory, from_index, to_inventory, to_index)
+    
+    def swap(self,inventory1,index1,inventory2,index2):
+        # prüfen ob die Items in das jeweils andere Inventar hineindürfen
+        if (not inventory1.may_contain(inventory2[index2])) or \
+           (not inventory2.may_contain(inventory1[index1])):
             return
-        #
-        x.parent = None
-        y.parent = None
-        self.player.entity[hand], inventory[index] = y, x    
-
-
-
+        # ersetzen mit AIR um den index in der Liste nicht zu verändern (wichtig falls zwei Dinge aus dem selben inventar getauscht werden sollen)
+        x = inventory1.replace(index1, {"id":"AIR"})
+        y = inventory2.replace(index2, x)
+        inventory1.replace(index1, y)
 
 class Player(voxelengine.Player):
     RENDERDISTANCE = 10
@@ -146,11 +158,11 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
+        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
-        character["left_hand"] = {"id":"STONE","count":100}
-        character["right_hand"] = {"id":"SAND","count":100}
+        character["left_hand"] = 0
+        character["right_hand"] = 1
 
         # inventory stuff
         for i in range(60):
@@ -161,14 +173,18 @@ class Player(voxelengine.Player):
         if self.entity:
             self.entity.unregister_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.unregister_item_callback(self._update_left_hand_image,"left_hand")
+            self.entity.unregister_item_callback(self._update_left_hand_image,"inventory")
             self.entity.unregister_item_callback(self._update_right_hand_image,"right_hand")
+            self.entity.unregister_item_callback(self._update_right_hand_image,"inventory")
             self.entity.unregister_item_callback(self._update_lives,"lives")
         super().control(entity)
         if self.entity:
             self.inventory_display.register(self.entity["inventory"])
             self.entity.register_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.register_item_callback(self._update_left_hand_image,"left_hand")
+            self.entity.register_item_callback(self._update_left_hand_image,"inventory")
             self.entity.register_item_callback(self._update_right_hand_image,"right_hand")
+            self.entity.register_item_callback(self._update_right_hand_image,"inventory")
             self.entity.register_item_callback(self._update_lives,"lives")
 
     def _open_inventory_callback(self, boolean):
@@ -177,9 +193,11 @@ class Player(voxelengine.Player):
             self.entity.foreign_inventory = None
         else:
             self.inventory_display.close()
-    def _update_left_hand_image(self, item):
+    def _update_left_hand_image(self, _):
+        item = self.entity["inventory"][self.entity["left_hand"]]
         self.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
-    def _update_right_hand_image(self, item):
+    def _update_right_hand_image(self, _):
+        item = self.entity["inventory"][self.entity["right_hand"]]
         self.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
     def _update_lives(self, lives):
         #todo: fix!
@@ -189,7 +207,10 @@ class Player(voxelengine.Player):
             self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
 
     def update(self):
-        # stuff that doesn't need entity
+        if not self.entity:
+            return
+        pe = self.entity
+
         if self.was_pressed("fly"):
             self.flying = not self.flying
         if self.was_pressed("inv"):
@@ -197,11 +218,22 @@ class Player(voxelengine.Player):
         for pressed in self.was_pressed_set:
             if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
                 self.inventory_display.handle_click(pressed)
+            if pressed.startswith("left dragged inventory") or pressed.startswith("right dragged inventory"):
+                self.inventory_display.handle_drag(pressed)
+            if pressed.startswith("inv") and pressed != "inv":
+                inv_slot = int(pressed[3:])
+                hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+                pe[hand] = inv_slot
+            if pressed.startswith("scrolling"):
+                inv_inc_float = -float(pressed[10:])
+                hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+                threshold = 0.1
+                inv_inc = (inv_inc_float >= threshold) - (inv_inc_float <= -threshold) #sign with -1,0,1 and threshold for 0
+                inv_slot = pe[hand] + inv_inc
+                inv_slot %= 7
+                pe[hand] = inv_slot
+                
 
-        # stuff that needs entity
-        if not self.entity:
-            return
-        pe = self.entity
         #if not self.is_active(): # freeze player if client doesnt respond
         #    return
 
@@ -212,7 +244,8 @@ class Player(voxelengine.Player):
         get_block = lambda: pe.world.blocks[pos]
         def get_item():
             hand_name = {"left_hand": "left_hand", "right_hand":"right_hand"}[event_name]
-            item_data = pe[hand_name]
+            item_index = pe[hand_name]
+            item_data = pe["inventory"][item_index]
             return resources.itemClasses[item_data["id"]](item_data)
 
         for event_name in ("left_hand", "right_hand"):
@@ -322,9 +355,10 @@ class Player(voxelengine.Player):
             self.del_hud(name+suffix)
 
 class ValidTag(object):
-    __slots__ = "value"
-    def __init__(self):
+    __slots__ = ("value", "callback")
+    def __init__(self, callback=None):
         self.value = True
+        self.callback = callback
 
     def invalidate(self):
         print("mcgcraft.py ValidTag.invalidate was called")
@@ -333,7 +367,7 @@ class ValidTag(object):
     def __bool__(self):
         return self.value
 
-Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag","callback","exclusive"])
+Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag","exclusive"])
 
 #blockread_counter = 0
 class World(voxelengine.World):
@@ -364,11 +398,11 @@ class World(voxelengine.World):
 
     def handle_block_requests(self):
         # translate move_requests
-        for position_from, position_to in self.move_requests:
-            valid_tag = ValidTag()
+        for position_from, position_to, callback in self.move_requests:
+            valid_tag = ValidTag(callback)
             block = self.blocks[position_from]
-            self.set_requests[position_from].append(Request("AIR",0,valid_tag,None,True))
-            self.set_requests[position_to  ].append(Request(block,0,valid_tag,None,True))
+            self.set_requests[position_from].append(Request("AIR",0,valid_tag,True))
+            self.set_requests[position_to  ].append(Request(block,0,valid_tag,True))
         self.move_requests = []
 
         # handle set_requests
@@ -385,19 +419,22 @@ class World(voxelengine.World):
                     if request.exclusive:
                         request.valid_tag.invalidate()
         
-        for position, requests in  self.set_requests.items():
+        valid_tags = set()
+        for position, requests in self.set_requests.items():
             for request in requests:
                 if request.valid_tag:
                     self.blocks[position] = request.block
-                if request.callback:
-                    request.callback(request.valid_tag)
+                valid_tags.add(request.valid_tag)
+        for valid_tag in valid_tags:
+            if valid_tag.callback:
+                valid_tag.callback(bool(valid_tag))
         self.set_requests.clear()
     
-    def request_move_block(self, position_from, position_to):
-        self.move_requests.append((position_from, position_to))
+    def request_move_block(self, position_from, position_to, callback=None):
+        self.move_requests.append((position_from, position_to, callback))
 
-    def request_set_block(self, position, blockname, priority, valid_tag, callback, exclusive):
-        self.set_requests[position].append(Request(blockname, priority, valid_tag, callback, exclusive))
+    def request_set_block(self, position, blockname, priority, valid_tag, exclusive):
+        self.set_requests[position].append(Request(blockname, priority, valid_tag, exclusive))
 
 class UI(object):
     def __init__(self, config, worldtypes):

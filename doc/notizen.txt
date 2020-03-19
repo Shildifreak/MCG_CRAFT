@@ -8,9 +8,9 @@
 Bugs:
 	tnt crashes client
 	entities werden nicht ordentlich entfernt wenn server gestoppt wird
+	Blöcke können kein Inventar haben weil Observable nicht serialisierbar sind
 	yalready done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
-	examples in voxelengine funktionieren nicht
 
 Verbesserungskram:
 	restrict write access in block methods to own block

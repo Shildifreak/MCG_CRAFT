@@ -889,6 +889,7 @@ class Window(pyglet.window.Window):
         self.push_handlers(self.keystates)
         # and just a variable for the mouse that is updated by event_handlers below
         self.mousestates = collections.defaultdict(bool)
+        self.focused_on_mouse_press = None
 
         # some function to tell about events
         if not client:
@@ -992,8 +993,19 @@ class Window(pyglet.window.Window):
             self.client.send("tick %s" % m)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        self.client.send("scrolling: "+str(scroll_y))
+        self.client.send("scrolling "+str(scroll_y))
         
+    def get_focused(self, x, y):
+        focused = None
+        z = float("-inf")
+        for _,element_data,corners in self.model.hud_elements.values():
+            if corners[0] < x < corners[6]:
+                if corners[1] < y < corners[7]:
+                    if corners[2] > z:
+                        focused = element_data[0]
+                        z = corners[2]
+        return focused
+
     def on_mouse_press(self, x, y, button, modifiers):
         """
         Called when a mouse button is pressed. See pyglet docs for button
@@ -1015,25 +1027,8 @@ class Window(pyglet.window.Window):
             self.mousestates[button] = True
             self.send_input_change(("mouse",button))
         else:
-            if (button == mouse.RIGHT) or \
-                ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
-                # ON OSX, control + left click = right click.
-                event = "right click"
-            elif button == pyglet.window.mouse.LEFT:
-                event = "left click"
-            else:
-                return
-            focused = None
-            z = float("-inf")
-            for _,element_data,corners in self.model.hud_elements.values():
-                if corners[0] < x < corners[6]:
-                    if corners[1] < y < corners[7]:
-                        if corners[2] > z:
-                            focused = element_data[0]
-                            z = corners[2]
-            if focused:
-                self.client.send(event+"ed "+focused)
-            else:
+            self.focused_on_mouse_press = self.get_focused(x,y)
+            if self.focused_on_mouse_press == None:
                 if self.hud_open:
                     self.client.send("inv")
                     self.hud_open = False
@@ -1042,6 +1037,25 @@ class Window(pyglet.window.Window):
     def on_mouse_release(self, x, y, button, modifiers):
         self.mousestates[button] = False
         self.send_input_change(("mouse",button))
+        
+        if not self.exclusive:
+            if (button == mouse.RIGHT) or \
+                ((button == mouse.LEFT) and (modifiers & key.MOD_CTRL)):
+                # ON OSX, control + left click = right click.
+                button_name = "right"
+            elif button == pyglet.window.mouse.LEFT:
+                button_name = "left"
+            else:
+                button_name = None
+            if button_name:
+                focused_on_mouse_release = self.get_focused(x,y)
+                if self.focused_on_mouse_press == focused_on_mouse_release:
+                    self.client.send("%s clicked %s" %
+                        (button_name,self.focused_on_mouse_press))
+                else:
+                    self.client.send("%s dragged %s %s" % 
+                        (button_name,self.focused_on_mouse_press, focused_on_mouse_release))
+            self.focused_on_mouse_press = None
     
     def on_mouse_leave(self, x, y):
         self.mousestates.clear()

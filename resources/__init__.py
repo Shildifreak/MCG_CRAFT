@@ -6,7 +6,8 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 import voxelengine
 from voxelengine.modules.shared import *
 from voxelengine.modules.utils import operator_friendly_set
-from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox
+from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box
+from voxelengine.server.event_system import Event
 
 GRAVITY = 35
 AIRSLIDING = 1
@@ -133,12 +134,13 @@ class Block(voxelengine.Block):
         self.blockworld[self.position] = "AIR"
         
 
-    def handle_event_explosion(self,event):
-        position = Vector(event.args)
-        distance = (position - self.position).length()
-        if distance < 1:
+    def handle_event_explosion(self,events):
+        for event in events: #M# could add up power of events or something
+            #if isinstance(event.area, Sphere):
+            #    position, power = event.area.center, event.area.radius
+            #    distance = (position - self.position).length()
             if random.random() > self.blast_resistance:
-                self.world[self.position] = "AIR"
+                self.world.blocks[self.position] = "AIR"
 
     def get_tags(self):
         """
@@ -181,7 +183,7 @@ class SolidBlock(Block):
 # Default Item and Block (also usefull for inheritance)
 
 class Item(object):
-    # Init function, don't care to much about this
+    # Init function, don't care too much about this
     def __init__(self,item):
         self.item = item
         self.tags = item.setdefault("tags",{})
@@ -202,7 +204,8 @@ class Item(object):
         else:
             self.item["count"] -= 1
         if self.item["count"] <= 0:
-            self.item.parent[self.item.parent_key] = {"id": "AIR"}
+            parent_key = self.item.parent.index(self.item)
+            self.item.parent[parent_key] = {"id": "AIR"}
             
 
     def use_on_entity(self,character,entity):

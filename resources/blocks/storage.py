@@ -18,4 +18,4 @@ class ChestItem(Item):
         inventory = ObservableDict()
         for i in range(28):
             inventory[i] = {"id":"AIR"}
-        character.world[new_pos] = {"id":block_id,"rotation":r,"inventory":inventory}
+        character.world.blocks[new_pos] = {"id":block_id,"rotation":r,"inventory":inventory}
