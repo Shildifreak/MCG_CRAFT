@@ -21,6 +21,7 @@ import io
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"..","..","modules"))
 sys.path.append(os.path.join(PATH,"..","..",".."))
+sys.path.append(os.path.join(PATH,".."))
 
 import pyglet
 from pyglet import image
@@ -30,6 +31,7 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
+import client_utils
 import socket_connection_5.socket_connection as socket_connection
 import world_generation
 from shared import *
@@ -1287,15 +1289,15 @@ def setup():
 def show_on_window(client):
     window = None
     try:
-        if options.name:
-            entity_id = options.name
-            password = options.password
-            if not options.password:
+        if args.name:
+            entity_id = args.name
+            password = args.password
+            if not args.password:
                 print("Consider setting a password when using a name.")
         else:
             entity_id = random.getrandbits(32)
             password = random.getrandbits(32)
-            if options.password:
+            if args.password:
                 print("Ignoring user set password because no name was given.")
         client.send("control %s %s"%(entity_id, password))
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
@@ -1313,23 +1315,6 @@ def show_on_window(client):
     finally:
         if window:
             window.on_close()
-
-def get_servers():
-    if options.host and options.http_port:
-        netloc = "%s:%i" % (options.host,options.http_port)
-        components = urllib.parse.ParseResult("http",netloc,"info.json","","","")
-        url = urllib.request.urlunparse(components)
-        with urllib.request.urlopen(url) as infofile:
-            serverinfo = json.loads(infofile.read().decode()) #specify encoding? (standart utf-8)
-        return [serverinfo]
-    servers = socket_connection.search_servers(key="voxelgame"+options.parole)
-    servers = [json.loads(server) for server in servers]
-    print(servers)
-    if options.host:
-        servers[:] = [server for server in servers if server["host"] == options.host]
-    if options.http_port:
-        servers[:] = [server for server in servers if server["http_port"] == options.http_port]
-    return servers
     
 def run(serverinfo):
     load_setup(serverinfo["host"], serverinfo["http_port"])
@@ -1341,40 +1326,10 @@ def run(serverinfo):
         print("Client closed due to disconnect.")
 
 def main():
-    servers = get_servers()
-    if len(servers) == 0:
-        print("No Server found.")
-        time.sleep(1)
-        return
-    elif len(servers) == 1:
-        server = servers[0]
-    else:
-        print("SELECT SERVER")
-        server = servers[select([server["name"] for server in servers])[0]]
-    run(server)
+    serverinfo = client_utils.get_serverinfo(args)
+    if serverinfo:
+        run(serverinfo)
 
-from optparse import OptionParser
-parser = OptionParser()
-parser.add_option("-H",
-              "--host", dest="host",
-              help="only consider servers on this HOST", metavar="HOST",
-              action="store")
-parser.add_option(
-              "--http_port", dest="http_port",
-              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int",
-              action="store")
-parser.add_option(
-              "--parole", dest="parole",
-              help="find servers with this parole", metavar="PAROLE", default="",
-              action="store")
-parser.add_option("-N",
-              "--name", dest="name",
-              help="use this name for playing on the server", metavar="NAME",
-              action="store")
-parser.add_option(
-              "--password", dest="password",
-              help="set a password to prevent others from connecting with your name", metavar="PASSWORD",
-              action="store")
-options, args = parser.parse_args()
+args = client_utils.parser.parse_args()
 if __name__ == '__main__':
     main()

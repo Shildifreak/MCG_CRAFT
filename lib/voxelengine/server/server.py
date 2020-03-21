@@ -53,7 +53,7 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
             host = self.headers.get('Host')
             print(host)
             self.send_response(301)
-            self.send_header("Location", "http://mcgcraft.de/webclient/latest/?server=%s"%host)
+            self.send_header("Location", "http://mcgcraft.de/webclient/latest/login?server=%s"%host)
             self.end_headers()
         elif path.parts[0] == "info.json":
             self.send_response(200)
@@ -222,8 +222,7 @@ class GameServer(object):
         python = "python" if sys.platform == "win32" else "python3"
         command = [python,
                    path,
-                   "--host=%s" %self.host,
-                   "--http_port=%i" %self.http_port,
+                   "%s:%i" % (self.host, self.http_port),
                    "--name=%s" %username,
                    "--password=%s" %password,
                   ]

@@ -1,31 +1,16 @@
-import os, inspect, threading, time
+import sys, os, inspect, threading, time
 import http.server, webbrowser
 
-from optparse import OptionParser
-parser = OptionParser()
-parser.add_option("-H",
-              "--host", dest="host",
-              help="only consider servers on this HOST", metavar="HOST",
-              action="store")
-parser.add_option(
-              "--http_port", dest="http_port",
-              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int", default=80,
-              action="store")
-parser.add_option(
-              "--parole", dest="parole",
-              help="find servers with this parole", metavar="PAROLE", default="",
-              action="store")
-parser.add_option("-N",
-              "--name", dest="name",
-              help="use this name for playing on the server", metavar="NAME",
-              action="store")
-parser.add_option(
-              "--password", dest="password",
-              help="set a password to prevent others from connecting with your name", metavar="PASSWORD",
-              action="store")
-options, args = parser.parse_args()
+PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+sys.path.append(os.path.join(PATH,".."))
 
-http_port = options.http_port
-host = options.host
-url = "http://mcgcraft.de/webclient/latest?server=%s:%i&name=%s&password=%s" %(host,http_port,options.name,options.password)
+import client_utils
+args = client_utils.parser.parse_args()
+if not args.server_location:
+    serverinfo = client_utils.get_serverinfo(args)
+    args.server_location = "%s:%i" % (serverinfo["host"],
+                                      serverinfo["http_port"])
+
+url = "http://mcgcraft.de/webclient/latest"
+url += "?server=%s&name=%s&password=%s" %(args.server_location,args.name,args.password)
 webbrowser.open(url)
