@@ -549,9 +549,9 @@ def gameloop():
         timer = Timer(TPS = 60)
         print("Server starting ...", end="")
         with voxelengine.GameServer(u, **settings) as g:
-            ui.set_stats("ip",voxelengine.modules.utils.get_ip())
-            ui.set_stats("discovery_port",g.socket_server.port)
-            ui.set_stats("game_port",g.socket_server.entry_port)
+            ui.set_stats("host",g.host)
+            ui.set_stats("discovery_port",g.info_server.port)
+            ui.set_stats("game_port",g.game_port)
             ui.set_stats("http_port",g.http_port)
             print("done") # Server starting ... done
         

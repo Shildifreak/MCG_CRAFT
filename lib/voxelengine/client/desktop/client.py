@@ -30,7 +30,7 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
-import socket_connection_4.socket_connection_4 as socket_connection
+import socket_connection_5.socket_connection as socket_connection
 import world_generation
 from shared import *
 from shader import Shader
@@ -1287,19 +1287,6 @@ def setup():
 def show_on_window(client):
     window = None
     try:
-        # receive texturedata from game
-        while True:
-            c = client.receive()
-            if c:
-                if c.startswith("setup"):
-                    setup_src = json.loads(c.split(" ",1)[-1])
-                    port = setup_src.setdefault("port",80)
-                    host = setup_src.setdefault("host",client.socket.getpeername()[0])
-                    load_setup(host,port)
-                    break
-                else:
-                    print(c)
-                    raise ValueError("got unexpected message while waiting for setup")
         if options.name:
             entity_id = options.name
             password = options.password
@@ -1328,18 +1315,25 @@ def show_on_window(client):
             window.on_close()
 
 def get_servers():
-    if options.host and options.port:
-        return [((options.host, options.port),"Direct Connection")]
+    if options.host and options.http_port:
+        netloc = "%s:%i" % (options.host,options.http_port)
+        components = urllib.parse.ParseResult("http",netloc,"info.json","","","")
+        url = urllib.request.urlunparse(components)
+        with urllib.request.urlopen(url) as infofile:
+            serverinfo = json.loads(infofile.read().decode()) #specify encoding? (standart utf-8)
+        return [serverinfo]
     servers = socket_connection.search_servers(key="voxelgame"+options.parole)
+    servers = [json.loads(server) for server in servers]
     print(servers)
     if options.host:
-        servers[:] = [server for server in servers if server[0][0] == options.host]
-    if options.port:
-        servers[:] = [server for server in servers if server[0][1] == options.port]
+        servers[:] = [server for server in servers if server["host"] == options.host]
+    if options.http_port:
+        servers[:] = [server for server in servers if server["http_port"] == options.http_port]
     return servers
     
-def run(addr):
-    print(addr)
+def run(serverinfo):
+    load_setup(serverinfo["host"], serverinfo["http_port"])
+    addr = (serverinfo["host"], serverinfo["game_port"])
     try:
         with socket_connection.client(addr) as socket_client:
             show_on_window(socket_client)
@@ -1348,17 +1342,16 @@ def run(addr):
 
 def main():
     servers = get_servers()
-    print(servers)
     if len(servers) == 0:
         print("No Server found.")
         time.sleep(1)
         return
     elif len(servers) == 1:
-        addr = servers[0][0]
+        server = servers[0]
     else:
         print("SELECT SERVER")
-        addr = servers[select([i[1] for i in servers])[0]][0]
-    run(addr)
+        server = servers[select([server["name"] for server in servers])[0]]
+    run(server)
 
 from optparse import OptionParser
 parser = OptionParser()
@@ -1366,13 +1359,9 @@ parser.add_option("-H",
               "--host", dest="host",
               help="only consider servers on this HOST", metavar="HOST",
               action="store")
-parser.add_option("-P",
-              "--port", dest="port",
-              help="only consider servers on this PORT", metavar="PORT", type="int",
-              action="store")
 parser.add_option(
               "--http_port", dest="http_port",
-              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int", default=80,
+              help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int",
               action="store")
 parser.add_option(
               "--parole", dest="parole",

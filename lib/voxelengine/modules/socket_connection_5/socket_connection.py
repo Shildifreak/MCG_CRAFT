@@ -14,7 +14,7 @@ import sys, os, inspect
 if __name__ == "__main__":
 	sys.path.append(os.path.abspath("../../.."))
 	__package__ = "voxelengine.modules.socket_connection_4"
-from voxelengine.modules.socket_connection_4.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
+from voxelengine.modules.socket_connection_5.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
 
 if sys.version < "3":
     import thread
@@ -90,35 +90,15 @@ class client(template):
         self.socket.close()
 
 class server(template):
-    def __init__(self, port=40000, name="NONAME", key="",
-                     on_connect=None, on_disconnect=None, nameserveraddr=None, nameserver_refresh_interval=10):
+    def __init__(self, on_connect=None, on_disconnect=None):
         # save parameters
-        self.port = port
-        self.name = name
-        self.key = key
         self.on_connect = on_connect or (lambda addr:None)
         self.on_disconnect = on_disconnect or (lambda addr:None)
-        self.nameserveraddr = nameserveraddr
-        self.nameserver_refresh_interval = nameserver_refresh_interval
-
-        random.seed()
-        self.uid = random.getrandbits(32)
 
         # declare some attributes
         self.clients = symmetric_addr_socket_mapping() #addr:socket
         self.new_connected_clients = [] # msg_socket, addr
         self.closed = False
-
-        # Socket for replying to Broadcasts
-        self.info_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.info_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            socket.SO_REUSEPORT
-        except AttributeError:
-            pass
-        else:
-            self.info_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        self.info_socket.bind(("", self.port))
 
         # Socket for creating client sockets
         self.entry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,29 +106,8 @@ class server(template):
         self.entry_socket.listen(5)
         self.entry_port = self.entry_socket.getsockname()[1]
 
-        # Start threads
-        thread.start_new_thread(self._info_thread,())
+        # Start thread
         thread.start_new_thread(self._entry_thread,())
-        if self.nameserveraddr:
-            thread.start_new_thread(self._register_thread,())
-
-
-    def _info_thread(self):
-        port = str(self.entry_socket.getsockname()[1])
-        while not self.closed:
-            try:
-                if select.select([self.info_socket],[],[],1)[0]:
-                    msg, addr = self.info_socket.recvfrom(PACKAGESIZE)
-                    if self.closed:
-                        break
-                    print (repr(msg.decode()),repr("PING "+self.key))
-                    if msg.decode() == "PING "+self.key:
-                        print("ponging")
-                        self.info_socket.sendto(("PONG %s %s %s" %(port,self.uid,self.name)).encode(),addr)
-                        print("gepongt")
-            except Exception as e:
-                print (e, "in _info_thread")
-        self.info_socket.close()
     
     def _entry_thread(self):
         while not self.closed:
@@ -165,24 +124,6 @@ class server(template):
                 raise e
                 print (e, "in _entry_thread")
         self.entry_socket.close()
-
-    def _register_thread(self):
-        while not self.closed:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect(self.nameserveraddr)
-                s.send("register %s %s" %(self.port,self.key))
-                s.close()
-            except Exception as e:
-                print (e, "in _register_thread")
-            time.sleep(self.nameserver_refresh_interval)
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(self.nameserveraddr)
-            s.send("unregister %s %s" %(self.port,self.key))
-            s.close()
-        except Exception as e:
-            print (e, "in _register_thread")
 
     def send(self,addr,*msgs):
         self.update()
@@ -231,51 +172,110 @@ class server(template):
             client_socket.close() #M# todo: method does not exist!
             self.on_disconnect(addr)
 
+class beacon():
+    def __init__(self, info_data, key="", port=40000, 
+                 nameserveraddr=None, nameserver_refresh_interval=10):
+        self.port = port
+        self.key = key
+        self.info_data = info_data
+        self.nameserveraddr = nameserveraddr
+        self.nameserver_refresh_interval = nameserver_refresh_interval
+
+        random.seed()
+        self.uid = random.getrandbits(32)
+        self.closed = False
+
+        # Socket for replying to Broadcasts
+        self.info_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.info_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            socket.SO_REUSEPORT
+        except AttributeError:
+            pass
+        else:
+            self.info_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.info_socket.bind(("", self.port))
+
+        # Start threads
+        thread.start_new_thread(self._info_thread,())
+        if self.nameserveraddr:
+            thread.start_new_thread(self._register_thread,())
+    
+    def close(self):
+        self.closed = True
+
+    def _info_thread(self):
+        while not self.closed:
+            try:
+                if select.select([self.info_socket],[],[],1)[0]:
+                    msg, addr = self.info_socket.recvfrom(PACKAGESIZE)
+                    if self.closed:
+                        break
+                    print (repr(msg.decode()),repr("PING "+self.key))
+                    if msg.decode() == "PING "+self.key:
+                        print("ponging")
+                        self.info_socket.sendto(("PONG %s %s" %(self.uid,self.info_data)).encode(),addr)
+                        print("gepongt")
+            except Exception as e:
+                print (e, "in _info_thread")
+        self.info_socket.close()
+
+    def _register_thread(self):
+        while not self.closed:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect(self.nameserveraddr)
+                s.send(("register %s %s %s" %(self.uid, self.key, self.info_data)).encode())
+                s.close()
+            except Exception as e:
+                print (e, "in _register_thread")
+            time.sleep(self.nameserver_refresh_interval)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(self.nameserveraddr)
+            s.send("unregister %s" %(self.uid))
+            s.close()
+        except Exception as e:
+            print (e, "in _register_thread")
 
 class nameserver(template):
     def __init__(self, port, timetolive = 20):
         """listen on port, entrys expire after timetolive (should be longer than nameserver_refresh_interval of servers)"""
         self.timetolive = timetolive
-        self.known_servers = {} #(key,addr):timestamp
+        self.known_servers = {} #(uid):(timestamp,key,data)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("",port))
         self.socket.listen(5)
 
     def update(self):
-        for key,timestamp in self.known_servers.items():
+        for uid,(timestamp,_,_) in self.known_servers.items():
             if time.time()-timestamp > self.timetolive:
-                self.known_servers.pop(key)
+                self.known_servers.pop(uid)
 
     def handle(self,msg,addr):
         """
         msg of one of the forms:
         list key
-        register port key
-        unregister port key
+        register uid key data
+        unregister uid
         """
         if msg.startswith("list"):
             parts = msg.split(" ",1)
             if len(parts) == 2:
                 _,req_key = parts
-                return repr([addr for key,addr in self.known_servers.keys() if key == req_key])
-            return None
+                return repr([(uid, data) for uid,(timestamp,key,addr) in self.known_servers.items() if key == req_key])
 
-        if msg.startswith("register") or msg.startswith("unregister"):
-            parts = msg.split(" ",2)
-            if len(parts) == 3:
-                _,port,key = parts
-                try:
-                    port = int(port)
-                except TypeError:
-                    return None
-                serveraddr = (addr[0],port)
-                dict_key = (key,serveraddr)
-                if msg.startswith("register"):
-                    self.known_servers[dict_key] = time.time()
-                else:
-                    if dict_key in self.known_servers:
-                        self.known_servers.pop(dict_key)
-            return None
+        if msg.startswith("register"):
+            parts = msg.split(" ",3)
+            if len(parts) == 4:
+                _,uid,key,data = parts
+                self.known_servers[uid] = (time.time(), key, data)
+
+        if msg.startswith("unregister"):
+            parts = msg.split(" ",1)
+            if len(parts) == 2:
+                _,uid = parts
+                self.known_servers.pop(uid, None)
 
     def loop(self,waittime=1):
         while True:
@@ -301,7 +301,7 @@ class server_searcher(template):
         self.key = key
         self.nameserveraddr = nameserveraddr
         
-        self.servers = [] # addr,port,uid,name,timestamp
+        self.servers = [] # uid,data,timestamp
         self.uids = set()
         self.closed = False
         
@@ -334,8 +334,10 @@ class server_searcher(template):
                 print ("strange answer from name server")
                 print (msg)
             else:
-                for addr in serveraddrs:
-                    self._ping_task(addr)
+                for uid, data in serveraddrs:
+                    if uid not in self.uids:
+                        self.servers.append((uid, data, time.time()))
+                        self.uids.add(uid)
         except Exception as e:
             print (e, "nameserver nicht erreichbar")
         finally:
@@ -352,25 +354,21 @@ class server_searcher(template):
         while not self.closed:
             try:
                 if select.select([self.socket], [], [], 1)[0]:
-                    data, addr = self.socket.recvfrom(PACKAGESIZE)
-                    pong, port, uid, name = (data.split(b" ",3)+[None,None,None])[:4]
-                    ip = addr[0]
-                    if pong != b"PONG":
-                        continue
-                    try:
-                        port = int(port)
-                    except ValueError:
-                        print ("non integer port",data)
-                        continue
-                    if uid in self.uids:
-                        continue
-                    self.servers.append((addr,port,uid,name,time.time()))
-                    self.uids.add(uid)
+                    msg, addr = self.socket.recvfrom(PACKAGESIZE)
+                    msgparts = msg.split(b" ",2)
+                    if len(msgparts) == 3:
+                        pong, uid, data = msgparts
+                        if pong != b"PONG":
+                            continue
+                        if uid in self.uids:
+                            continue
+                        self.servers.append((uid, data, time.time()))
+                        self.uids.add(uid)
             except Exception as e:
                 print ("Receive thread of server_searcher stopped ungracefully",e)
 
     def get_servers(self):
-        return [((addr[0],port),name) for addr,port,uid,name,timestamp in self.servers]
+        return [data for uid,data,timestamp in self.servers]
         
     def close(self):
         self.closed = True

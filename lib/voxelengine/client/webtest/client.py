@@ -7,10 +7,6 @@ parser.add_option("-H",
               "--host", dest="host",
               help="only consider servers on this HOST", metavar="HOST",
               action="store")
-parser.add_option("-P",
-              "--port", dest="port",
-              help="only consider servers on this PORT", metavar="PORT", type="int",
-              action="store")
 parser.add_option(
               "--http_port", dest="http_port",
               help="server hosts http fileserver at this port", metavar="HTTP_PORT", type="int", default=80,
@@ -29,8 +25,7 @@ parser.add_option(
               action="store")
 options, args = parser.parse_args()
 
-port = options.port
-host = options.host
 http_port = options.http_port
-url = "http://localhost:%i/webclient/latest?port=%s&host=%s&parole=%s&name=%s&password=%s" %(http_port,port,host,options.parole,options.name,options.password)
-webbrowser.open(url) #maybe insert sleep before
+host = options.host
+url = "http://localhost:%i/webclient/latest?server=%s:%i&name=%s&password=%s" %(http_port,host,http_port,options.name,options.password)
+webbrowser.open(url)

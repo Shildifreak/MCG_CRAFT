@@ -43,7 +43,7 @@ def CodecSwitcher(socket, InitialCodec = None):
             if b"Upgrade: websocket" in buffer_content:
                 return WebsocketServerCodec(socket_buffer)
             raise RuntimeError("No suitable codec found")
-        if len(buffer_content) > 3 and not buffer_content.startswith("GET"):
+        if len(buffer_content) > 3 and not buffer_content.startswith(b"GET"):
             return CustomCodec(socket_buffer)
     return CustomCodec(socket_buffer)
 
