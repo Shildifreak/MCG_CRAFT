@@ -133,7 +133,7 @@ class GameServer(object):
         self.http_thread = threading.Thread(target=self.http_server.serve_forever)
         self.http_thread.start()
         self.http_port = self.http_server.socket.getsockname()[1]
-        print("serving files for client on port",self.http_port)
+        print("http://%s:%s"%(self.host,self.http_port))
         #
         serverinfo.update({
             "host": self.host,
@@ -218,7 +218,6 @@ class GameServer(object):
         if not os.path.exists(path):
             print("no matching call for selected client type", client_type)
             return
-        port = self.game_server.get_entry_port()
         python = "python" if sys.platform == "win32" else "python3"
         command = [python,
                    path,

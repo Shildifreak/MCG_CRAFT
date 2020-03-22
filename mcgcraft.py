@@ -5,12 +5,15 @@
 #    raise Warning("mcgcraft.py should not be imported")
 
 # Imports
-import sys, os, ast, imp, inspect
-import _thread as thread
+import sys, os, ast, imp, inspect, select
+import threading, _thread, signal
 import math, time, random, itertools, collections
 import getpass
 import copy
 import pprint
+import json
+import argparse
+import socket
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"lib"))
@@ -18,9 +21,8 @@ sys.path.append(os.path.join(PATH,"resources","Welten","structures"))
 
 import resources
 import voxelengine
-import voxelengine.modules.appdirs as appdirs
-import voxelengine.modules.utils
 
+from gui.config import Config, default_serverconfig
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
 import voxelengine.server.world_data_template
@@ -375,7 +377,6 @@ class World(voxelengine.World):
         super(World,self).__init__(*args,**kwargs)
         self.blocks.BlockClass = resources.Block
         
-        self.changed_blocks = []
         self.set_requests = collections.defaultdict(list) # position: [Request,...]
         self.move_requests = [] # (position_from, position_to)
         
@@ -436,13 +437,6 @@ class World(voxelengine.World):
     def request_set_block(self, position, blockname, priority, valid_tag, exclusive):
         self.set_requests[position].append(Request(blockname, priority, valid_tag, exclusive))
 
-class UI(object):
-    def __init__(self, config, worldtypes):
-        config["worldtype"] = select(worldtypes)[1]
-        config["run"] = True
-    def set_stats(self, name, value):
-        print(name, value)
-
 class Timer(object):
     def __init__(self, TPS):
         self.TPS = TPS # desired TPS
@@ -461,204 +455,215 @@ def zeitstats(timer, tps_history = [0]*200):
     tps = round(1/timer.dt,2)
     tps_history.append(tps)
     tps_history.pop(0)
-    ui.set_stats("TPS",tps)
-    ui.set_stats("min TPS", min(tps_history))
-    ui.set_stats("max TPS", max(tps_history))
+    stats.set("TPS",tps)
+    stats.set("min TPS", min(tps_history))
+    stats.set("max TPS", max(tps_history))
     
-    ui.set_stats("mspt", "%s / %s" %(int(1000*timer.dt_work), int(1000/timer.TPS)))
-    ui.set_stats("sleep", int(1000*timer.dt_idle))
+    stats.set("mspt", "%s / %s" %(int(1000*timer.dt_work), int(1000/timer.TPS)))
+    stats.set("sleep", int(1000*timer.dt_idle))
 
-def gameloop():
+def run():
     global w, g
-    while not config["quit"]:
-        #wait for config being ready to start
-        if not config["run"]:
-            time.sleep(0.1)
-            continue #jump back to start of loop
-
-        savegamepath = config["file"]
-        if os.path.exists(savegamepath):
-            print("Loading World ...", end="")
-            with open(savegamepath) as savegamefile:
-                data = World.parse_data_from_string(savegamefile.read())
-            w = World(data)
-            print("done")
+    savegamepath = config["file"]
+    if os.path.exists(savegamepath):
+        print("== Loading World ==")
+        with open(savegamepath) as savegamefile:
+            data = World.parse_data_from_string(savegamefile.read())
+        w = World(data)
+    else:
+        print("== Preparing World ==")
+        data = copy.deepcopy(voxelengine.server.world_data_template.data)
+        generator_data = data["block_world"]["generator"]
+        generator_data["name"] = config["worldtype"]
+        generator_data["seed"] = random.random()
+        generator_data["path"] = os.path.join(PATH,"resources","Welten",config["worldtype"])
+        generator_data["path_py"] = generator_data["path"] + ".py"
+        generator_data["path_js"] = generator_data["path"] + ".js"
+        if os.path.isfile(generator_data["path_py"]):
+            with open(generator_data["path_py"]) as generator_file_py:
+                generator_data["code_py"] = generator_file_py.read()
         else:
-            print("Preparing World ...", end="")
-            data = copy.deepcopy(voxelengine.server.world_data_template.data)
-            generator_data = data["block_world"]["generator"]
-            generator_data["name"] = config["worldtype"]
-            generator_data["seed"] = random.random()
-            generator_data["path"] = os.path.join(PATH,"resources","Welten",config["worldtype"])
-            generator_data["path_py"] = generator_data["path"] + ".py"
-            generator_data["path_js"] = generator_data["path"] + ".js"
-            if os.path.isfile(generator_data["path_py"]):
-                with open(generator_data["path_py"]) as generator_file_py:
-                    generator_data["code_py"] = generator_file_py.read()
+                generator_data["code_py"] = ""
+        if os.path.isfile(generator_data["path_js"]):
+            with open(generator_data["path_js"]) as generator_file_js:
+                generator_data["code_js"] = generator_file_js.read()
+        else:
+                generator_data["code_js"] = ""
+        print("== Creating World ==", flush=True)
+        w = World(data)
+        print("== Initialising world ==", flush=True)
+        t = time.time()
+        w.blocks.world_generator.init(w)
+        w.event_system.clear_events()
+        dt = time.time() - t
+        print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
+
+    def save():
+        print("Preparing Savestate", flush=True)
+        data = w.serialize()
+        data_string = repr(data)
+        print("Checking Savestate ... ", end="", flush=True)
+        try:
+            World.parse_data_from_string(data_string)
+        except Exception as e:
+            print("failed: world data not parsable")
+            pprint.pprint(data)
+            print(e)
+        else:
+            print("passed")
+            print("Game saving ... ", end="", flush=True)
+            if config["file"]:
+                with open(config["file"], "w") as savegamefile:
+                    savegamefile.write(data_string)
+                print("done")
             else:
-                    generator_data["code_py"] = ""
-            if os.path.isfile(generator_data["path_js"]):
-                with open(generator_data["path_js"]) as generator_file_js:
-                    generator_data["code_js"] = generator_file_js.read()
-            else:
-                    generator_data["code_js"] = ""
-            print("done")
-            print("Creating World ... ", end="", flush=True)
-            w = World(data)
-            print("done")
-            print("Initialising world ... ", end="", flush=True)
-            t = time.time()
-            w.blocks.world_generator.init(w)
-            w.event_system.clear_events()
-            dt = time.time() - t
-            print("done")
-            print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
+                print("skipped: missing path")
+        config["save"] = False
 
-        def save():
-            print("Preparing Savestate ... ", end="", flush=True)
-            data = w.serialize()
-            data_string = repr(data)
-            print("done")
-            print("Checking Savestate ... ", end="", flush=True)
-            try:
-                World.parse_data_from_string(data_string)
-            except Exception as e:
-                print("failed: world data not parsable")
-                pprint.pprint(data)
-                print(e)
-            else:
-                print("passed")
-                print("Game saving ... ", end="", flush=True)
-                if config["file"]:
-                    with open(config["file"], "w") as savegamefile:
-                        savegamefile.write(data_string)
-                    print("done")
-                else:
-                    print("skipped: missing path")
-            config["save"] = False
+    u = voxelengine.Universe()
+    u.worlds.append(w)
 
-        u = voxelengine.Universe()
-        u.worlds.append(w)
-
-        settings = {"wait" : False,
-                    "name" : config["name"],
-                    "parole" : config["parole"],
-                    "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
-                    "PlayerClass" : Player,
-                    }
-        timer = Timer(TPS = 60)
-        print("Server starting ...", end="")
-        with voxelengine.GameServer(u, **settings) as g:
-            ui.set_stats("host",g.host)
-            ui.set_stats("discovery_port",g.info_server.port)
-            ui.set_stats("game_port",g.game_port)
-            ui.set_stats("http_port",g.http_port)
-            print("done") # Server starting ... done
-        
-            while config["run"]:
-                if config["play"]:
-                    config["play"] = False
-                    g.launch_client(config["clienttype"], config["username"], config["password"])
-                if config["save"]:
-                    save()
-                timer.tick()
-                zeitstats(timer)
-                
-                # game update
-                g.update()
-
-                ui.set_stats("events",sum(map(len, w.event_system.event_queue)))
-
-                # tick worlds (only the ones with players in them?)
-                u.tick()
-                
-                # player update
-                for player in g.get_players():
-                    player.update()
-
-
-                # random ticks
-                for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
-                    w.random_ticks_at(random_tick_source["position"])
-
-                #M# mob spawning
-                if config["mobspawning"]:
-                    for entity_class in resources.entityClasses.values():
-                        if len(entity_class.instances) < entity_class.LIMIT:
-                            entity_class.try_to_spawn(w)
- 
-                # entity update
-                for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
-                    entity.update()
-                
-                # Stats
-                blockread_counter = 0
-                #ui.set_stats("block reads", blockread_counter)
-                
-            save()
-        print("Game stopped")
-    save_config()
-    print()
-    print("Bye!")
-    time.sleep(1)
+    settings = {"wait" : False,
+                "name" : config["name"],
+                "parole" : config["parole"],
+                "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
+                "PlayerClass" : Player,
+                }
+    timer = Timer(TPS = 60)
+    print("== Server starting ==")
+    with voxelengine.GameServer(u, **settings) as g:
+        stats.set("host",g.host)
+        stats.set("discovery_port",g.info_server.port)
+        stats.set("game_port",g.game_port)
+        stats.set("http_port",g.http_port)
+        print("== Server running ==") # Server starting ... done
     
-config = {  "name"       : "%ss MCGCraft Server" %getpass.getuser(),
-            "file"       : "",
-            "worldtype"  : "Colorland",
-            "mobspawning": True,
-            "whitelist"  : "127.0.0.1",
-            "parole"     : "",
-            "username" : "",
-            "password" : "",
-            "clienttype" : "desktop",
-            "texturepack": "default",
-            "port"       : "",
-            "run"        : False,
-            "play"       : False,
-            "quit"       : False,
-            "save"       : False,
+        quitFlag = False
+        while not quitFlag:
+            # handle commands from stdin
+            for command in get_inputs():
+                if command == "quit":
+                    quitFlag = True
+                elif command == "save":
+                    save()
+                elif command == "reload":
+                    load_config()
+                elif command == "stats":
+                    print(stats)
+                elif command.startswith("play"):
+                    play,*args = command.split(" ")
+                    if 1 <= len(args) <= 3:
+                        g.launch_client(*args)
+                    else:
+                        print("use like this: play clienttype [username] [password]")
+                else:
+                    print("valid commands include: quit, save, reload, stats")
             
-            "auto_create_entities_for_players":True,
-         }
+            # game server update - communicate with clients
+            g.update()
 
-configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-configfn = os.path.join(configdir,"serversettings.py")
-print(configfn)
+            # player update
+            for player in g.get_players():
+                player.update()
+
+            #M# mob spawning
+            if config["mobspawning"]:
+                for entity_class in resources.entityClasses.values():
+                    if len(entity_class.instances) < entity_class.LIMIT:
+                        entity_class.try_to_spawn(w)
+
+            # entity update
+            for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
+                entity.update()
+
+            # random ticks
+            for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
+                w.random_ticks_at(random_tick_source["position"])
+
+            # tick worlds (only the ones with players in them?)
+            stats.set("events",sum(map(len, w.event_system.event_queue)))
+            u.tick()
+            
+            # Stats
+            timer.tick()
+            zeitstats(timer)
+            blockread_counter = 0
+            #stats.set("block reads", blockread_counter)
+            
+        save()
+    print("Game stopped")
+    time.sleep(1)
+    print("Bye!")
 
 def load_config():
-    if os.path.exists(configfn):
-        with open(configfn,"r") as configfile:
-            rememberedconfig = ast.literal_eval(configfile.read())
-        config.update(rememberedconfig)
-    elif not os.path.exists(configdir):
-        os.makedirs(configdir)
+    global config
+    config = Config(args.configfile, default_serverconfig)
+    for key in config:
+        value = getattr(args,key,None)
+        if value:
+            if not isinstance(config[key], str):
+                value = ast.literal_eval(value)
+            print("setting",key,"to",value)
+            config[key] = value
 
-def save_config():
-    rememberconfig = config.copy()
-    for key in ("run","play","quit","save","refresh","address"):
-        rememberconfig.pop(key, None)
-    with open(configfn,"w") as configfile:
-        configfile.write(repr(rememberconfig))
+def parse_args():
+    global args
+    parser = argparse.ArgumentParser(description="This is a voxelengine client")
+    parser.add_argument("configfile",
+                  help="path to a server config file", metavar="CONFIGFILE",
+                  nargs='?', #make configfile optional
+                  action="store")
+    parser.add_argument("--stats-port", dest="stats_port",
+                  help="send server status updates to this port on localhost",type=int,
+                  action="store")
+    for key in default_serverconfig:
+        parser.add_argument("--"+key, dest=key, help="defaults to %s"%repr(default_serverconfig[key]))
+    args = parser.parse_args()
+
+class StatsHandler(object):
+    def __init__(self):
+        self.stats = {}
+        self.sinks = []
+    def __str__(self):
+        ls = tuple(len("%s: %s"%item) for item in self.stats.items())
+        maxl = min(80, max(ls))
+        template = lambda l:"%s: "+" "*(maxl-l)+"%s"
+        return "\n".join(template(l)%item for (l, item) in zip(ls, self.stats.items()))
+    def set(self, name, value):
+        self.stats[name] = value
+        data = json.dumps((name, value))
+        for sink in self.sinks:
+            sink(data)
+    def add_sink(self, sink):
+        self.sinks.append(sink)
+    def add_socket_sink(self, address):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.connect(address)
+        self.sinks.append(lambda msg: self.socket.send(msg.encode()+b"\n"))
+    def add_file_sink(self, f):
+        self.add_sink(lambda msg:f.write(msg))
+
+stats = StatsHandler()
+#stats.add_file_sink(sys.stdout)
+
+def get_inputs():
+    while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        line = sys.stdin.readline()
+        if line:
+            yield line.rstrip()
+        else: # an empty line means stdin has been closed
+            yield "quit"
 
 def main():
-    global ui
+    parse_args()
+    if args.stats_port:
+        stats.add_socket_sink(("localhost",args.stats_port))
     load_config()
-    worldtypes = os.listdir(os.path.join(PATH,"resources","Welten"))
-    worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
-    clienttypes = os.listdir(os.path.join(PATH,"lib","voxelengine","client"))
-    try:
-        from gui.tkgui import ServerGUI as UI
-    except ImportError as e:
-        print("GUI not working cause of:\n",e)
-    ui = UI(config, worldtypes, clienttypes)
+    run()
 
-    if False: #M# sys.flags.interactive or False:
-        thread.start_new_thread(gameloop,())
-        if not sys.flags.interactive:
-            import code
-            code.interact(local=locals())
-    else:
-        gameloop()
-        
 if __name__ == "__main__":
     main()
+
+
+
+#usage: mcgcraft-server --send-stats-to localhost:56789 

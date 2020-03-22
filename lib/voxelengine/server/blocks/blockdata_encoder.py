@@ -10,8 +10,6 @@ class BlockDataEncoder(Serializable):
 	def __init__(self, block_codec_and_counter):
 		self.block_codec, self.counter = map(list, zip(*block_codec_and_counter) if block_codec_and_counter else ((),())) #[data_0, data_1, ..., data_n] [count_0, count_1, ..., count_n]   (zip doesn't work if its empty, because it can't know number of sequences to generate)
 
-		print(self.block_codec, self.counter)
-
 		self.index = {h:i for i,h in enumerate(self.block_codec)}
 		self.unused_indices = [i for i,c in enumerate(self.counter) if c <= 0] #sorted list of indices
 

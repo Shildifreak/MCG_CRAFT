@@ -73,7 +73,7 @@ KEYMAP = [
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-configfn = os.path.join(configdir,"clientsettings.py")
+configfn = os.path.join(configdir,"desktopclientsettings.py")
 print(configfn)
 if os.path.exists(configfn):
     with open(configfn) as configfile:
