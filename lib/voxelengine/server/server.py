@@ -34,10 +34,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
             raise ValueError("There should be a redirection here")
         elif path.parts[0] == "webclient":
             webclient_relpath = path.relative_to("webclient")
-            return os.path.join(VOXELENGINE_PATH, "client", "webtest", webclient_relpath)
+            return os.path.join(VOXELENGINE_PATH, "client", "webtest", str(webclient_relpath))
         elif path.parts[0] == "texturepacks":
             texturepack_relpath = path.relative_to("texturepacks")
-            return os.path.join(self.texturepack_basepath, texturepack_relpath)
+            return os.path.join(self.texturepack_basepath, str(texturepack_relpath))
         else:
             return "404.html"
     def log_message(self, format, *args):
