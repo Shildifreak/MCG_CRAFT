@@ -126,7 +126,6 @@ class server(template):
         self.entry_socket.close()
 
     def send(self,addr,*msgs):
-        self.update()
         client_socket = self.clients.get_socket(addr)
         if client_socket:
             try:
@@ -137,7 +136,6 @@ class server(template):
             raise ValueError("no connection to %s available")
 
     def receive(self):
-        self.update()
         disconnected_clients = []
         for client_socket in self.clients.sockets():
             addr = self.clients.get_addr(client_socket)

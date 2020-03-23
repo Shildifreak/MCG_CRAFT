@@ -198,6 +198,7 @@ class GameServer(object):
 
     def update(self):
         """ communicate with clients """
+        self.game_server.update()
         while self._on_disconnect_queue:
             self._on_disconnect(self._on_disconnect_queue.popleft())
         for addr,player in self.players.items():
