@@ -50,10 +50,10 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         path = pathlib.Path(path).relative_to("/")
         if not path.parts:
             #redirection
-            host = self.headers.get('Host')
-            print(host)
+            host = self.serverinfo["host"]
+            port = self.serverinfo["port"]
             self.send_response(301)
-            self.send_header("Location", "http://mcgcraft.de/webclient/latest/login?server=%s"%host)
+            self.send_header("Location", "http://mcgcraft.de/webclient/latest/login?server=%s:%i"%(host,port))
             self.end_headers()
         elif path.parts[0] == "info.json":
             self.send_response(200)
