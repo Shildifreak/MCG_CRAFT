@@ -73,7 +73,18 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_GET()
     
-
+class MyHTTPServer(http.server.HTTPServer):
+    def handle_error(self, request, client_address):
+        try:
+            # surpress socket/ssl related errors
+            cls, e = sys.exc_info()[:2]
+            if issubclass(cls, ConnectionError):#or issubclass(cls, ssl.SSLError):
+                print(e, "while answering request from", client_address)
+            else:
+                super().handle_error(request, client_address)
+        except:
+            # if unhandled exception occurs make sure to take main thread with you
+            voxelengine.modules.utils.interrupt_main()
 
 class GameServer(object):
     """
@@ -133,7 +144,7 @@ class GameServer(object):
         http_port = try_ports(http_port)
         if http_port is False:
             raise ConnectionError("Couldn't open any of the given http_port options.")
-        self.http_server = http.server.HTTPServer(("", http_port), Handler)
+        self.http_server = MyHTTPServer(("", http_port), Handler)
         self.http_thread = threading.Thread(target=self.http_server.serve_forever)
         self.http_thread.start()
         self.http_port = self.http_server.socket.getsockname()[1]

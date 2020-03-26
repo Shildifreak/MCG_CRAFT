@@ -2,6 +2,7 @@ import sys
 assert sys.version >= "3" # in lower version calling input() is dangerous
 import itertools, collections, math
 import socket
+import signal, _thread, threading
 
 def floatrange(a,b):
     """
@@ -26,6 +27,14 @@ def select(options):
             print("Please enter one of the above NUMBERS to select:", end=" ")
         except IndexError:
             print("Please enter ONE OF THE ABOVE numbers to select:", end=" ")
+
+
+def interrupt_main():
+    if hasattr(signal, "pthread_kill"):
+        pid = threading.main_thread().ident
+        signal.pthread_kill(pid, signal.SIGINT)
+    else:
+        _thread.interrupt_main()
 
 
 def try_port(port):
