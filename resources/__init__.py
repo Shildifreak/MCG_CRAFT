@@ -115,6 +115,9 @@ class Block(voxelengine.Block):
     def get_right_facing_vector(self):
         return self.block_to_world_vector(Vector((1,0,0)))
         
+    def get_bounding_box(self):
+        return BinaryBox(0, self.position).bounding_box()
+    
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_update(self,directions):
         """directions indicates where update(s) came from... usefull for observer etc."""
@@ -194,15 +197,24 @@ class Item(object):
         """use the output of this function when trying to place the item into the world as a block"""
         return self.item["id"]
     
+    def block_version_on_place(self, character, blockpos, face):
+        return self.block_version()
+    
     def use_on_block(self,character,blockpos,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         new_pos = blockpos + face
-        character.world.blocks[new_pos] = self.block_version()
-        #M# remove block again if it collides with placer (check for all entities here later)
-        if new_pos in character.collide_blocks():
-            character.world.blocks[new_pos] = "AIR"
-        else:
-            self.item["count"] -= 1
+
+        # check if block would collide with player
+        blockdata = self.block_version_on_place(character,blockpos,face)
+        block = Block(blockdata, position=new_pos, blockworld=character.world.blocks)
+        if "solid" in block.get_tags():
+            for entity in character.world.entities.find_entities(block.get_bounding_box()):
+                if block.collides_with( entity.HITBOX + entity["position"] ):
+                    return
+
+        # place block in world and decrease item count
+        block.save()
+        self.item["count"] -= 1
         if self.item["count"] <= 0:
             parent_key = self.item.parent.index(self.item)
             self.item.parent[parent_key] = {"id": "AIR"}

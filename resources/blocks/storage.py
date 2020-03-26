@@ -11,11 +11,10 @@ class ChestBlock(Block):
 
 @register_item("CHEST")
 class ChestItem(Item):
-    def use_on_block(self,character,blockpos,face):
-        new_pos = blockpos + face
+    def block_version_on_place(self,character,blockpos,face):
         block_id = self.item["id"]
         r = int((character["rotation"][0] + 45) // 90) % 4
         inventory = ObservableDict()
         for i in range(28):
             inventory[i] = {"id":"AIR"}
-        character.world.blocks[new_pos] = {"id":block_id,"rotation":r,"inventory":inventory}
+        return {"id":block_id,"rotation":r,"inventory":inventory}

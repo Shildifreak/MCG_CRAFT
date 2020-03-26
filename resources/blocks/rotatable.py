@@ -9,8 +9,7 @@ from resources import *
 @register_item("Repeater")
 @register_item("ROCKET")
 class RotatableBlockItem(Item):
-    def use_on_block(self,character,blockpos,face):
-        new_pos = blockpos + face
+    def block_version_on_place(self,character,blockpos,face):
         block_id = self.item["id"]
         faces = {( 0, 1, 0):"t",
                  ( 0,-1, 0):"b",
@@ -26,8 +25,7 @@ class RotatableBlockItem(Item):
             r = int((-character["rotation"][0] + 45) // 90) % 4            
         else:
             r = 0
-        block = {"id":block_id,"rotation":r,"base":base}
-        character.world.blocks[new_pos] = block
+        return {"id":block_id,"rotation":r,"base":base}
 
 @register_block("GESICHT")
 class RotatableBlock(Block):

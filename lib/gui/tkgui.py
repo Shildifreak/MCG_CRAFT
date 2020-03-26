@@ -326,7 +326,6 @@ class GUI(object):
         # Address direct input
         def setaddress(address):
             self.clientconfig["address"] = address
-            print("written address to config")
         self.add_label("Address")
         self.addressentry = self.add_entry(self.clientconfig["address"], setaddress)
     
@@ -385,6 +384,7 @@ class GUI(object):
             def func(addr = addr):
                 self.addressentry.delete(0,Tkinter.END)
                 self.addressentry.insert(0,addr)
+                self.clientconfig["address"] = addr
             add_button(server["name"], func)
         if not servers:
             add_button("no server found", lambda:None)
