@@ -528,6 +528,8 @@ def run():
                 "parole" : config["parole"],
                 "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
                 "PlayerClass" : Player,
+                "host" : config["host"],
+                "http_port" : config["http_port"],
                 }
     timer = Timer(TPS = 60)
     print("== Server starting ==")
@@ -603,7 +605,6 @@ def load_config():
         if value:
             if not isinstance(config[key], str):
                 value = ast.literal_eval(value)
-            print("setting",key,"to",value)
             config[key] = value
 
 def parse_args():

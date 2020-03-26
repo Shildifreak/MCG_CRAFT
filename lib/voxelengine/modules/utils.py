@@ -1,6 +1,6 @@
 import sys
 assert sys.version >= "3" # in lower version calling input() is dangerous
-import itertools, math
+import itertools, collections, math
 import socket
 
 def floatrange(a,b):
@@ -38,6 +38,16 @@ def try_port(port):
         return False
     finally:
         s.close()
+
+def try_ports(ports):
+    """test single port or list of ports and return first one available, if none is available return False"""
+    if not isinstance(ports, collections.Iterable):
+        ports = (ports,)
+    for port in ports:
+        port = try_port(port)
+        if port is not False:
+            break
+    return port
 
 def get_ip():
     """

@@ -15,7 +15,7 @@ import json
 
 import voxelengine.modules.socket_connection_5.socket_connection as socket_connection
 import voxelengine.modules.utils
-from voxelengine.modules.utils import try_port
+from voxelengine.modules.utils import try_ports
 from voxelengine.server.players.player import Player
 
 class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
@@ -95,6 +95,7 @@ class GameServer(object):
         texturepack_path : where to find that texturepack that should be used for this server
         PlayerClass   : a subclass of voxelengine.Player ... can be used to do initial stuff for newly joined players
         host          : defaults to your IP, only set this if have trouble with automatic detect due to firewall settings or a human readable hostname that resolves to your server and that you want to use
+        http_port     : port or list, if list automatically uses first in list that's free, 0 means any free port
 
     (bei Benutzung ohne "with", am Ende unbedingt Game.quit() aufrufen)
     """
@@ -106,7 +107,8 @@ class GameServer(object):
                  parole="",
                  texturepack_path=os.path.join(VOXELENGINE_PATH, "texturepacks", "basic_colors",".versions"),
                  PlayerClass=Player,
-                 host=None
+                 host="",
+                 http_port=0,
                  ):
         self.universe = universe
         self.wait = wait
@@ -128,7 +130,9 @@ class GameServer(object):
         self.game_port = self.game_server.get_entry_port()
         # Serve texturepack and serverinfo using http
         Handler = functools.partial(MyHTTPHandler, texturepack_path, serverinfo)
-        http_port = try_port(80) or try_port(8080) or 0
+        http_port = try_ports(http_port)
+        if http_port is False:
+            raise ConnectionError("Couldn't open any of the given http_port options.")
         self.http_server = http.server.HTTPServer(("", http_port), Handler)
         self.http_thread = threading.Thread(target=self.http_server.serve_forever)
         self.http_thread.start()
