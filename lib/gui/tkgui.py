@@ -292,6 +292,15 @@ class GUI(object):
         self.row += 1
 
         playbutton.focus()
+        
+    def addwidgets_play(self):
+        # Play
+        def play():
+            self.root.focus()
+            self.callback("play")
+        playbutton = Tkinter.Button(self.root, text = "Play", command = play)
+        playbutton.grid(column = 1, columnspan = 3, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        self.row += 1
     
     def addwidgets_statsframe(self):
         self.statsframe = Tkinter.LabelFrame(self.root, text="Stats")
@@ -313,6 +322,13 @@ class GUI(object):
         refreshbutton.grid(column = 2, columnspan = 2, row = self.row, sticky = Tkinter.W+Tkinter.E)
 
         self.row += 2
+
+        # Address direct input
+        def setaddress(address):
+            self.clientconfig["address"] = address
+            print("written address to config")
+        self.add_label("Address")
+        self.addressentry = self.add_entry(self.clientconfig["address"], setaddress)
     
     def add_entry(self, content, callback):
         def apply_changes(event):
@@ -367,7 +383,8 @@ class GUI(object):
             print(server)
             addr = "%s:%i" % (server["host"], server["http_port"])
             def func(addr = addr):
-                self.callback("address",addr)
+                self.addressentry.delete(0,Tkinter.END)
+                self.addressentry.insert(0,addr)
             add_button(server["name"], func)
         if not servers:
             add_button("no server found", lambda:None)
@@ -394,6 +411,7 @@ class ClientGUI(GUI):
         self.addwidgets_client_parole()
         self.addwidgets_username_password()
         self.addwidgets_clienttype()
+        self.addwidgets_play()
 
 if __name__ == "__main__":
     serverconfig = {
@@ -410,12 +428,13 @@ if __name__ == "__main__":
                 "password" : "",
                 "clienttype": "desktop",
                 "parole"   : "",
+                "address"  : "",
     }
-    gui = ServerGUI(serverconfig, clientconfig, ("one","two","three"), ("desktop","web"), background = True)
-    #gui = ClientGUI(config)
+    #gui = ServerGUI(serverconfig, clientconfig, ("one","two","three"), ("desktop","web"), background = True)
+    gui = ClientGUI(None, clientconfig, None, ("desktop","web"))
 
-    import time
-    time.sleep(1)
-    gui.set_stats("fps","16")
+    #import time
+    #time.sleep(1)
+    #gui.set_stats("fps","16")
     #gui.show_servers([])
     gui.mainloop()

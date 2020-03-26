@@ -32,7 +32,7 @@ def run_gui():
         with socket_connection.server_searcher(key = "voxelgame"+parole) as s:
             events.clear()
             while clientconfig["parole"] == parole and not events["refresh"]:
-                if events["quit"] or events["address"]:
+                if events["quit"] or events["play"]:
                     return
                 gui.update()
                 new_servers = list(map(json.loads, s.get_servers()))
@@ -44,8 +44,8 @@ gui.quit()
 
 clientconfig.save()
 
-if events["address"]:
-    address = events["address"]
+if events["play"] and clientconfig["address"]:
+    address = clientconfig["address"]
     client_type = clientconfig["clienttype"]
     name = clientconfig["username"]
     password = clientconfig["password"]

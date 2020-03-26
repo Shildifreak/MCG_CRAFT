@@ -63,6 +63,8 @@ default_clientconfig = {
             "username"   : "",
             "password"   : "",
             "clienttype" : "desktop",
+            "parole"     : "",
+            "address"    : "",
 }
 
 serverconfig = Config(serverconfigfn, default_serverconfig)
