@@ -653,7 +653,7 @@ def get_inputs():
         if line:
             yield line.rstrip()
         else: # an empty line means EOF
-            #yield "quit" #if we were sure that this is from terminal then we would want to quit here, but if stdin is from named pipe then this may just mean that theres currently no new data
+            yield "quit"
             return
 
 def main():
