@@ -140,6 +140,9 @@ class InventoryDisplay():
         if (not inventory1.may_contain(inventory2[index2])) or \
            (not inventory2.may_contain(inventory1[index1])):
             return
+        # prüfen dass die items nicht dasselbe sind, weil sonst das Vertauschen das Item löscht
+        if inventory1 == inventory2 and index1 == index2:
+            return
         # ersetzen mit AIR um den index in der Liste nicht zu verändern (wichtig falls zwei Dinge aus dem selben inventar getauscht werden sollen)
         x = inventory1.replace(index1, {"id":"AIR"})
         y = inventory2.replace(index2, x)
@@ -438,15 +441,15 @@ class World(voxelengine.World):
         self.set_requests[position].append(Request(blockname, priority, valid_tag, exclusive))
 
 class Timer(object):
-    def __init__(self, TPS):
-        self.TPS = TPS # desired TPS
+    def __init__(self):
         self.t = time.time() # timestamp of last tick
         self.dt = None # length of last tick
         self.dt_work = None
         self.dt_idle = None
-    def tick(self):
+    def tick(self, TPS):
+        mspt = 1.0/TPS
         self.dt_work = time.time() - self.t #time since last tick
-        self.dt_idle = max(0, 1.0/self.TPS - self.dt_work)
+        self.dt_idle = max(0, mspt - self.dt_work)
         time.sleep(self.dt_idle)
         self.dt = time.time() - self.t
         self.t += self.dt
@@ -459,7 +462,8 @@ def zeitstats(timer, tps_history = [0]*200):
     stats.set("min TPS", min(tps_history))
     stats.set("max TPS", max(tps_history))
     
-    stats.set("mspt", "%s / %s" %(int(1000*timer.dt_work), int(1000/timer.TPS)))
+    stats.set("mspt", int(round(1000*timer.dt_idle+1000*timer.dt_work)))
+    stats.set("work",  int(1000*timer.dt_work))
     stats.set("sleep", int(1000*timer.dt_idle))
 
 def run():
@@ -531,7 +535,7 @@ def run():
                 "host" : config["host"],
                 "http_port" : config["http_port"],
                 }
-    timer = Timer(TPS = 60)
+    timer = Timer()
     print("== Server starting ==")
     with voxelengine.GameServer(u, **settings) as g:
         stats.set("host",g.host)
@@ -564,6 +568,12 @@ def run():
             # game server update - communicate with clients
             g.update()
 
+            # to idle or not to idle
+            TPS = config["tps"] if g.get_players() else config["idle_tps"]
+            if TPS == 0:
+                time.sleep(1)
+                continue
+
             # player update
             for player in g.get_players():
                 player.update()
@@ -587,7 +597,7 @@ def run():
             u.tick()
             
             # Stats
-            timer.tick()
+            timer.tick(TPS)
             zeitstats(timer)
             blockread_counter = 0
             #stats.set("block reads", blockread_counter)

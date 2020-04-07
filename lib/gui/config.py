@@ -56,8 +56,10 @@ default_serverconfig = {
             
             "auto_create_entities_for_players" : True,
             "autosaveintervall" : None,
-            "host" : "",
+            "host"      : "",
             "http_port" : [80, 8080, 0],
+            "tps"       : 60,
+            "idle_tps"  : 0,
 }
 default_clientconfig = {
             "username"   : "",

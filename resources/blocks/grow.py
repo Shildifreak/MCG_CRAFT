@@ -6,8 +6,8 @@ import tree
 class Dirt(Block):
     blast_resistance = 0
     def handle_event_random_tick(self):
-        if self.world[self.position + (0,1,0)] == "AIR":
-            self.world[self.position] = "GRASS"
+        if self.world.blocks[self.position + (0,1,0)] == "AIR":
+            self.world.blocks[self.position] = "GRASS"
 
     def get_tags(self):
         return super(Dirt,self).get_tags().union({"random_tick"})
