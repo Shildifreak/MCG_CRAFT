@@ -9,6 +9,7 @@ VOXELENGINE_PATH = os.path.join(PATH, "..")
 import subprocess
 import collections, functools
 import http.server
+import socketserver
 import threading
 import pathlib, urllib.parse
 import json
@@ -73,7 +74,8 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_GET()
     
-class MyHTTPServer(http.server.HTTPServer):
+class MyHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
     def handle_error(self, request, client_address):
         try:
             # surpress socket/ssl related errors
