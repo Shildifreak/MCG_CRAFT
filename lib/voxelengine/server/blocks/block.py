@@ -17,7 +17,7 @@ class Block(dict):
 
 	def __eq__(self,other):
 		if isinstance(other,dict):
-			return dict.__eq(self,other)
+			return dict.__eq__(self,other)
 		elif isinstance(other,str):
 			return self["id"] == other
 		else:

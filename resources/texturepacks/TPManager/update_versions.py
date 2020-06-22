@@ -57,7 +57,7 @@ for relpath in paths:
 		for face in (*FACES,"inside"):
 			faces.setdefault(face, [])
 	
-	#generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
+	generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
 	generate_web_version    (description, texture_directory, os.path.abspath(os.path.join(path,".versions","web")))
 	
 # create desktop and web version of those

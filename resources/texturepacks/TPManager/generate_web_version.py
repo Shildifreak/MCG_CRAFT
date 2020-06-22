@@ -42,12 +42,12 @@ def generate_description(texture_index, normalized_universal_description):
 	
 	for blockname, blockdata in normalized_universal_description["BLOCKS"].items():
 		
-		xFaces = (texture_index[blockdata["faces"]["left"  ]] << 16) + \
-		         (texture_index[blockdata["faces"]["right" ]] <<  0)
-		yFaces = (texture_index[blockdata["faces"]["bottom"]] << 16) + \
-		         (texture_index[blockdata["faces"]["top"   ]] <<  0)
-		zFaces = (texture_index[blockdata["faces"]["back"  ]] << 16) + \
-		         (texture_index[blockdata["faces"]["front" ]] <<  0)
+		xFaces = (texture_index[blockdata["faces"]["left"  ]] << 16 << 4) + \
+		         (texture_index[blockdata["faces"]["right" ]] <<  0 << 4)
+		yFaces = (texture_index[blockdata["faces"]["bottom"]] << 16 << 4) + \
+		         (texture_index[blockdata["faces"]["top"   ]] <<  0 << 4)
+		zFaces = (texture_index[blockdata["faces"]["back"  ]] << 16 << 4) + \
+		         (texture_index[blockdata["faces"]["front" ]] <<  0 << 4)
 		fogColor = blockdata["fog_color"]
 		fogColor = (fogColor[0] << 24) + (fogColor[1] << 16) + (fogColor[2] << 8) + (fogColor[3] << 0)
 		blockDataArrayLine = [xFaces,yFaces,zFaces,fogColor]

@@ -61,6 +61,18 @@ class WorldGenerator(object):
 		else:
 			return (0,0,0)
 
+	def client_terrain(self, position):
+		block = self.terrain(position)
+		if isinstance(block, str):
+			return block
+		else:
+			orientation = block.get("base","")+str(block.get("rotation",""))
+			blockmodel = block["id"]+block.get("state","")
+			if orientation:
+				return blockmodel+":"+orientation
+			else:
+				return blockmodel
+
 	def terrain(self, position):
 		return self.js_context.call("terrain", position)
 	

@@ -163,11 +163,11 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"}]
+        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"},{"id":"GESICHT"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
         character["left_hand"] = 0
-        character["right_hand"] = 1
+        character["right_hand"] = 16
 
         # inventory stuff
         for i in range(60):

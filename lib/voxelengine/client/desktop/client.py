@@ -538,7 +538,7 @@ class Model(object):
     def load_generator(self, generator_data):
         #print(generator_data)
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
-        self.blocks.set_terrain_function(self.world_generator.terrain)
+        self.blocks.set_terrain_function(self.world_generator.client_terrain)
 
     def monitor_around(self, position):
         """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
