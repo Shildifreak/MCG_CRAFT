@@ -8,6 +8,7 @@
 import sys, os, ast, imp, inspect, select
 import threading, _thread, signal
 import math, time, random, itertools, collections
+import queue
 import getpass
 import copy
 import pprint
@@ -657,14 +658,29 @@ class StatsHandler(object):
 stats = StatsHandler()
 #stats.add_file_sink(sys.stdout)
 
-def get_inputs():
-    while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        line = sys.stdin.readline()
-        if line:
-            yield line.rstrip()
-        else: # an empty line means EOF
-            yield "quit"
-            return
+if os.name == "nt": #Windows
+    input_queue = queue.Queue()
+    def add_input():
+        while True:
+            input_queue.put(input())
+
+    input_thread = threading.Thread(target=add_input, args=())
+    input_thread.daemon = True
+    input_thread.start()
+
+    def get_inputs():
+        while not input_queue.empty():
+            yield input_queue.get()
+
+else: #Linux
+    def get_inputs():
+        while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            line = sys.stdin.readline()
+            if line:
+                yield line.rstrip()
+            else: # an empty line means EOF
+                yield "quit"
+                return
 
 def main():
     parse_args()

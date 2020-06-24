@@ -17,6 +17,7 @@ def callback(script):
 b = tk.Button(root, command=callback("startGame"),    text="Start Game"   ); b.pack(fill=tk.X); b.focus_set()
 tk.Button(    root, command=callback("joinGame"),     text="Join Game"    ).pack(fill=tk.X)
 tk.Button(    root, command=callback("editControls"), text="Edit Controls").pack(fill=tk.X)
+tk.Button(    root, command=callback("update"),       text="Update").pack(fill=tk.X)
 
 root.mainloop()
 
