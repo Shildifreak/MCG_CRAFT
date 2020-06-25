@@ -679,6 +679,11 @@ class Model(object):
         self.del_entity(entity_id)
         if model_id == "0":
             return
+        model_id, *model_maps = model_id.split(":",1)
+        if model_maps:
+            model_maps = ast.literal_eval(model_maps[0])
+        else:
+            model_maps = {}
         vertex_lists=[]
         model = ENTITY_MODELS[model_id]
         # transformationsmatrix bekommen
@@ -710,8 +715,7 @@ class Model(object):
         for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,texture in model[modelpart]:
                 x, y, z = offset if modelpart in ("head","legl","legr") else relpos
-                if texture == "<<random>>":
-                    texture = BLOCKNAMES[entity_id%len(BLOCKNAMES)] #make sure to select from list that doesn't change, cause otherwise players skins will change
+                texture = model_maps.get(texture, texture) #replace texture if in model_maps
                 blockmodel = BLOCKMODELS[texture] # using blockmodels here seems strange :(
                 for face in range(len(FACES)):
                     texture_data = blockmodel[face][1]
@@ -723,11 +727,13 @@ class Model(object):
                     if modelpart == "legr":
                         vertex_data = self._transform(legr_matrix,relpos,vertex_data)
                     vertex_data = self._transform(body_matrix,position,vertex_data)
+                    color_data = (0.5,)*len(vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     vertex_lists.append(self.batch.add(4, GL_QUADS, self.textured_normal_group,
                         ('v3f/static', vertex_data),
-                        ('t2f/static', texture_data)))
+                        ('t2f/static', texture_data),
+                        ('c3f/static', color_data)))
                     #M# make only one vertex list per entity!
         self.entities[entity_id] = vertex_lists
 
