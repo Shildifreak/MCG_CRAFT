@@ -90,12 +90,9 @@ def generate_desktop_version(normalized_universal_description, texture_directory
 			t = pygame.transform.scale(t, output_size)
 		textures.blit(t, (0, height - output_size[1]*(index+1)))
 
-	if input("writing output to %s. Write Y to confirm: " % target_path) != "Y":
-		print("task aborted by user request")
-	else:
-		with open(os.path.join(target_path, "description.py"), "w") as description_file:
-			pprint(description, description_file, width = 200)
-		pygame.image.save(textures, os.path.join(target_path, "textures.png"))
+	with open(os.path.join(target_path, "description.py"), "w") as description_file:
+		pprint(description, description_file, width = 200)
+	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 
 

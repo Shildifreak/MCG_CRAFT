@@ -23,12 +23,9 @@ def generate_web_version(normalized_universal_description, texture_directory, ta
 	description = generate_description(texture_index, normalized_universal_description)
 	textures = generate_textures_file(texture_index, texture_directory)
 	
-	if input("writing output to %s. Write Y to confirm: " % target_path) != "Y":
-		print("task aborted by user request")
-	else:
-		with open(os.path.join(target_path, "description.json"), "w") as description_file:
-			json.dump(description, description_file)
-		pygame.image.save(textures, os.path.join(target_path, "textures.png"))
+	with open(os.path.join(target_path, "description.json"), "w") as description_file:
+		json.dump(description, description_file)
+	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
 	description = {"blockDataArray":[],"blockIdByName":{}}

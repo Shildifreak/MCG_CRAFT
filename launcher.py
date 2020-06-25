@@ -14,10 +14,11 @@ def callback(script):
 		selected_script = script
 	return select_script
 
-b = tk.Button(root, command=callback("startGame"),    text="Start Game"   ); b.pack(fill=tk.X); b.focus_set()
-tk.Button(    root, command=callback("joinGame"),     text="Join Game"    ).pack(fill=tk.X)
-tk.Button(    root, command=callback("editControls"), text="Edit Controls").pack(fill=tk.X)
-tk.Button(    root, command=callback("update"),       text="Update").pack(fill=tk.X)
+b = tk.Button(root, command=callback("startGame"),           text="Start Game"       ); b.pack(fill=tk.X); b.focus_set()
+tk.Button(    root, command=callback("joinGame"),            text="Join Game"           ).pack(fill=tk.X)
+tk.Button(    root, command=callback("editControls"),        text="Edit Controls"       ).pack(fill=tk.X)
+tk.Button(    root, command=callback("compileTexturepacks"), text="Compile Texturepacks").pack(fill=tk.X)
+tk.Button(    root, command=callback("update"),              text="Update"              ).pack(fill=tk.X)
 
 root.mainloop()
 

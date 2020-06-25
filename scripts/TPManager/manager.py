@@ -18,8 +18,12 @@ toggle_view, rename, replace left, replace right
 #TD_PATHS = ["../test%i"%i for i in range(2)]
 #TF_PATH  = "../test0/chest.png"
 
-TD_PATHS = ["../default", "../test1"]
-TF_PATH  = "../default/textures.png"
+import os
+BASE_PATH = os.path.join("..","..","resources","texturepacks")
+
+TD_PATHS = [os.path.join(BASE_PATH, "default"),
+            os.path.join(BASE_PATH, "test2")]
+TF_PATH  = os.path.join(TD_PATHS[1], "textures.png")
 
 #TD_PATHS = ["../basic_colors"]
 #TF_PATH = "../basic_colors/textures.png"

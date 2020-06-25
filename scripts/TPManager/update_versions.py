@@ -6,7 +6,7 @@ from generate_web_version     import generate_web_version
 
 
 # find all universal version 1.0 directories
-basepath = ".."
+basepath = os.path.join("..","..","resources","texturepacks")
 paths = os.listdir(basepath)
 
 FACES = {"top","bottom","front","back","left","right"}
@@ -57,7 +57,15 @@ for relpath in paths:
 		for face in (*FACES,"inside"):
 			faces.setdefault(face, [])
 	
-	generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
-	generate_web_version    (description, texture_directory, os.path.abspath(os.path.join(path,".versions","web")))
+	print("\nGenerating Desktop Version for Texturepack",relpath)
+	try:
+		generate_desktop_version(description, texture_directory, os.path.abspath(os.path.join(path,".versions","desktop")))
+	except Exception as e:
+		print(e)
+	print("\nGenerating Web Version for Texturepack",relpath)
+	try:
+		generate_web_version    (description, texture_directory, os.path.abspath(os.path.join(path,".versions","web")))
+	except Exception as e:
+		print(e)
 	
 # create desktop and web version of those
