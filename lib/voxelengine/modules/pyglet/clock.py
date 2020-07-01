@@ -143,6 +143,7 @@ from __future__ import division
 from builtins import range
 from builtins import object
 
+import sys
 import time
 import ctypes
 from operator import attrgetter
@@ -163,7 +164,10 @@ if compat_platform in ('win32', 'cygwin'):
         def sleep(self, microseconds):
             time.sleep(microseconds * 1e-6)
 
-    _default_time_function = time.clock
+    if sys.version >= "3.3":
+        _default_time_function = time.perf_counter
+    else:
+        _default_time_function = time.clock
 
 else:
     _c = pyglet.lib.load_library('c')
@@ -173,7 +177,10 @@ else:
         def sleep(self, microseconds):
             _c.usleep(int(microseconds))
 
-    _default_time_function = time.time
+    if sys.version >= "3.3":
+        _default_time_function = time.perf_counter
+    else:
+        _default_time_function = time.time
 
 
 class _ScheduledItem(object):
