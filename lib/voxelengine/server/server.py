@@ -243,7 +243,7 @@ class GameServer(object):
                    "--name=%s" %username,
                    "--password=%s" %password,
                   ]
-        subprocess.Popen(command)
+        subprocess.Popen(command, stdin=subprocess.DEVNULL)
 
 if __name__ == "__main__":
     from voxelengine.server.world import World

@@ -39,7 +39,7 @@ class Config(dict):
 
     def save(self):
         """save to file"""
-        if not os.path.exists(self.fn):
+        if not os.path.exists(os.path.dirname(self.fn)):
             os.makedirs(os.path.dirname(self.fn))
         with open(self.fn,"w") as configfile:
             configfile.write(repr(self))
