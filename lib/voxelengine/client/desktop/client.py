@@ -70,6 +70,7 @@ KEYMAP = [
     (("key"  , key.LCTRL  ),"sprint"    ),
     (("mouse", mouse.LEFT ),"left_hand" ),
     (("mouse", mouse.RIGHT),"right_hand"),
+    (("key"  , key.F      ),"emote"     ),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")

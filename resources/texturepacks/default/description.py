@@ -95,7 +95,9 @@
     "Lapiserz"                 : {"faces":{"all": "lapis_erz"      }}, #umbenennen zu LAPISERZ?
 
     # Gesichter
-    "GESICHT"                  : {"icon":"gesicht_front",      "faces":{"top":"gesicht_top",         "bottom":"gesicht_bottom",      "front":"gesicht_front",      "back":"gesicht_back",      "left":"gesicht_left",      "right":"gesicht_right"     }},
+    "GESICHT"                  : {"icon":"gesicht_front",            "faces":{"top":"gesicht_top",         "bottom":"gesicht_bottom",      "front":"gesicht_front",             "back":"gesicht_back",      "left":"gesicht_left",      "right":"gesicht_right"     }},
+    "GESICHT_SMILE"            : {"icon":"gesicht_front_smile",      "faces":{"top":"gesicht_top",         "bottom":"gesicht_bottom",      "front":"gesicht_front_smile",       "back":"gesicht_back",      "left":"gesicht_left",      "right":"gesicht_right"     }},
+    "GESICHT_HOLLOW_EYES"      : {"icon":"gesicht_front_hollow_eyes","faces":{"top":"gesicht_top",         "bottom":"gesicht_bottom",      "front":"gesicht_front_hollow_eyes", "back":"gesicht_back",      "left":"gesicht_left",      "right":"gesicht_right"     }},
     "Damengesicht"             : {"icon":"damengesicht_front", "faces":{"top":"damengesicht_bottom", "bottom":"damengesicht_bottom", "front":"damengesicht_front", "back":"damengesicht_back", "left":"damengesicht_left", "right":"damengesicht_right"}},
     "CREEPER"                  : {"icon":"creeper_face", "faces":{"front":"creeper_face", "other":"creeper"    }},
     "Zombie"                   : {"icon": "zombie_face", "faces":{"front": "zombie_face", "other":"dunkelgrau" }},

@@ -611,6 +611,14 @@
         "testblock_zn": [
             13,
             0
+        ],
+        "gesicht_front_smile": [
+            2,
+            0
+        ],
+        "gesicht_front_hollow_eyes": [
+            3,
+            0
         ]
     }
 }

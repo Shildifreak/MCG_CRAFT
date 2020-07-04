@@ -23,7 +23,7 @@ BASE_PATH = os.path.join("..","..","resources","texturepacks")
 
 TD_PATHS = [os.path.join(BASE_PATH, "default"),
             os.path.join(BASE_PATH, "test2")]
-TF_PATH  = os.path.join(TD_PATHS[1], "textures.png")
+TF_PATH  = os.path.join(TD_PATHS[0], "textures.png")
 
 #TD_PATHS = ["../basic_colors"]
 #TF_PATH = "../basic_colors/textures.png"

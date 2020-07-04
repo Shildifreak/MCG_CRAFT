@@ -20,9 +20,9 @@ server -> client
 		zeige/update Entity
 	delentity id
 		lösche Entity
-	sethud id texture x y z rotation size align
+	sethud id texture x y z rotation w h align
 		zeige HUD Element
-	delhud
+	delhud id
 		lösche HUD Element
 	focushud
 		bringe Client in Mausmodus

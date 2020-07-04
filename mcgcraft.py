@@ -221,6 +221,8 @@ class Player(voxelengine.Player):
             self.flying = not self.flying
         if self.was_pressed("inv"):
             self.inventory_display.toggle()
+        if self.was_pressed("emote") or self.was_released("emote"):
+            pe.update_texture(show_emote=self.is_pressed("emote"))
         for pressed in self.was_pressed_set:
             if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
                 self.inventory_display.handle_click(pressed)
@@ -230,6 +232,7 @@ class Player(voxelengine.Player):
                 inv_slot = int(pressed[3:])
                 hand = "left_hand" if self.is_pressed("shift") else "right_hand"
                 pe[hand] = inv_slot
+                pe.select_emote(inv_slot)
             if pressed.startswith("scrolling"):
                 inv_inc_float = -float(pressed[10:])
                 hand = "left_hand" if self.is_pressed("shift") else "right_hand"
