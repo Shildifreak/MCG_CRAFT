@@ -28,7 +28,7 @@ def generate_web_version(normalized_universal_description, texture_directory, ta
 	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
-	description = {"blockDataArray":[],"blockIdByName":{}}
+	description = {"blockDataArray":[],"blockIdByName":{},"icons":{}}
 
 	#	    -x   x      -y   y      -z   z     r g b a
 	#	0x00040004, 0x00050003, 0x00040004, 0x00000000, # Grass
@@ -37,6 +37,7 @@ def generate_description(texture_index, normalized_universal_description):
 	description["blockIdByName"]["AIR"] = 0
 	description["blockDataArray"].extend([0,0,0,0])
 	
+	# BLOCKS
 	for blockname, blockdata in normalized_universal_description["BLOCKS"].items():
 		
 		xFaces = (texture_index[blockdata["faces"]["left"  ]] << 16 << 4) + \
@@ -52,9 +53,20 @@ def generate_description(texture_index, normalized_universal_description):
 		index = len(description["blockDataArray"])//4
 		description["blockIdByName"][blockname] = index
 		description["blockDataArray"].extend(blockDataArrayLine)
+		
+		icon = blockdata["icon"]
+		description["icons"][blockname] = texture_index[icon]
 	
-	# no items for now
-	# no block models for now
+	# ITEMS
+	for itemname, itemdata in normalized_universal_description["ITEMS"].items():
+		icon = itemdata["icon"]
+		description["icons"][itemname] = texture_index[icon]
+		
+	# no block models for now, but icons
+	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
+		icon = blockmodeldata["icon"]
+		description["icons"][blockmodelname] = texture_index[icon]
+
 	# no entity models for now
 
 	description["TEXTURE_DIMENSIONS"] = (1, texture_index.texture_size())

@@ -143,8 +143,8 @@
     "CHEST"                    : {"faces":{"top":"chest_top","bottom":"chest_bottom","front":"chest_front","other":"chest_side"}, "icon":"chest_front"},
     "DOORTOP"                  : {"faces":{"top":"door_closed_surface","bottom":"door_closed_surface", "other":"door_closed_upper_half"}},
     "DOORBOTTOM"               : {"faces":{"top":"door_closed_surface","bottom":"door_closed_surface", "other":"door_closed_lower_half"}},
-    "DOORTOPOPEN"              : {"faces":{"top":"door_open_surface",  "bottom":"door_open_surface",   "other":"door_open_upper_half"}, "transparent":True},
-    "DOORBOTTOMOPEN"           : {"faces":{"top":"door_open_surface",  "bottom":"door_open_surface",   "other":"door_open_lower_half"}, "transparent":True},
+    "DOORTOPOPEN"              : {"faces":{"top":"door_open_surface",  "bottom":"transparent",   "other":"door_open_upper_half"}, "transparent":True},
+    "DOORBOTTOMOPEN"           : {"faces":{"top":"transparent",  "bottom":"door_open_surface",   "other":"door_open_lower_half"}, "transparent":True},
     "DOORSTEP"                 : {"faces":{"all":"door_closed_surface"}}, # entfernen?
     "BARRIER"                  : {"faces":{"all":"transparent"}, "transparent":True},
     "WAND"                     : {"faces":{"all":"grun"}},

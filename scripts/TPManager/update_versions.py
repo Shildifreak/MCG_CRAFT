@@ -26,7 +26,7 @@ for relpath in paths:
 	description.setdefault("BLOCKS", {})
 	for blockname, block in description["BLOCKS"].items():
 		block.setdefault("transparent", False)
-		block.setdefault("fog_color", (255, 255, 255, 255))
+		block.setdefault("fog_color", (255, 255, 255, 0))
 		block.setdefault("refraction_index", 1)
 		block.setdefault("color_filter", ((1, 0, 0, 0),
 										  (0, 1, 0, 0),
