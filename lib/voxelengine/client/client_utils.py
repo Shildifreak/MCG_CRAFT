@@ -6,7 +6,7 @@ import os, sys, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"..",".."))
 
-import voxelengine.modules.socket_connection_5.socket_connection as socket_connection
+import voxelengine.modules.socket_connection_6.socket_connection as socket_connection
 
 
 parser = argparse.ArgumentParser(description="This is a voxelengine client")

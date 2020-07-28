@@ -60,6 +60,8 @@ default_serverconfig = {
             "http_port" : [80, 8080, 0],
             "tps"       : 60,
             "idle_tps"  : 0,
+            "nameserver": "index.mcgcraft.de",
+            "public"    : False,
 }
 default_clientconfig = {
             "username"   : "",

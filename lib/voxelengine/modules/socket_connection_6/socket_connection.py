@@ -1,10 +1,10 @@
-# TODO: nameserver to python3 (unicode encode decode stuff)
 
 import socket
 import select
 import zlib
 import ast
 import sys
+import urllib.request
 
 import time
 import random
@@ -13,8 +13,8 @@ import itertools
 import sys, os, inspect
 if __name__ == "__main__":
 	sys.path.append(os.path.abspath("../../.."))
-	__package__ = "voxelengine.modules.socket_connection_4"
-from voxelengine.modules.socket_connection_5.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
+	__package__ = "voxelengine.modules.socket_connection_6"
+from voxelengine.modules.socket_connection_6.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
 
 if sys.version < "3":
     import thread
@@ -221,77 +221,13 @@ class beacon():
     def _register_thread(self):
         while not self.closed:
             try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect(self.nameserveraddr)
-                s.send(("register %s %s %s" %(self.uid, self.key, self.info_data)).encode())
-                s.close()
+                p = urllib.parse.urlencode({"key"  : self.key,
+                                            "value": self.info_data})
+                with urllib.request.urlopen("http://" + self.nameserveraddr + "/register.py?" + p) as f:
+                    print(f.read())
             except Exception as e:
                 print (e, "in _register_thread")
             time.sleep(self.nameserver_refresh_interval)
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(self.nameserveraddr)
-            s.send("unregister %s" %(self.uid))
-            s.close()
-        except Exception as e:
-            print (e, "in _register_thread")
-
-class nameserver(template):
-    def __init__(self, port, timetolive = 20):
-        """listen on port, entrys expire after timetolive (should be longer than nameserver_refresh_interval of servers)"""
-        self.timetolive = timetolive
-        self.known_servers = {} #(uid):(timestamp,key,data)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(("",port))
-        self.socket.listen(5)
-
-    def update(self):
-        for uid,(timestamp,_,_) in self.known_servers.items():
-            if time.time()-timestamp > self.timetolive:
-                self.known_servers.pop(uid)
-
-    def handle(self,msg,addr):
-        """
-        msg of one of the forms:
-        list key
-        register uid key data
-        unregister uid
-        """
-        if msg.startswith("list"):
-            parts = msg.split(" ",1)
-            if len(parts) == 2:
-                _,req_key = parts
-                return repr([(uid, data) for uid,(timestamp,key,addr) in self.known_servers.items() if key == req_key])
-
-        if msg.startswith("register"):
-            parts = msg.split(" ",3)
-            if len(parts) == 4:
-                _,uid,key,data = parts
-                self.known_servers[uid] = (time.time(), key, data)
-
-        if msg.startswith("unregister"):
-            parts = msg.split(" ",1)
-            if len(parts) == 2:
-                _,uid = parts
-                self.known_servers.pop(uid, None)
-
-    def loop(self,waittime=1):
-        while True:
-            client, addr = self.socket.accept()
-            try:
-                msg = client.recv(PACKAGESIZE)
-                print (self.known_servers)
-                self.update()
-                print (self.known_servers)
-                answer = self.handle(msg,addr)
-                print (self.known_servers)
-                if answer:
-                    client.sendto(answer,addr)
-            finally:
-                client.close()
-
-    def close(self):
-        self.socket.close()
 
 class server_searcher(template):
     def __init__(self,port=40000,key="",nameserveraddr=None):

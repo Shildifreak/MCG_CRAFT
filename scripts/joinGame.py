@@ -12,7 +12,7 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LIBPATH = os.path.join(PATH, "..", "lib")
 sys.path.append(LIBPATH)
 
-import voxelengine.modules.socket_connection_5.socket_connection as socket_connection
+import voxelengine.modules.socket_connection_6.socket_connection as socket_connection
 from gui.tkgui import ClientGUI
 from gui.config import clientconfig
 from voxelengine.modules import appdirs

@@ -32,7 +32,7 @@ from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
 import client_utils
-import socket_connection_5.socket_connection as socket_connection
+import socket_connection_6.socket_connection as socket_connection
 import world_generation
 from shared import *
 from shader import Shader

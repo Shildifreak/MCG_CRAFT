@@ -538,6 +538,7 @@ def run():
                 "PlayerClass" : Player,
                 "host" : config["host"],
                 "http_port" : config["http_port"],
+                "nameserveraddr" : config["nameserver"] if config["public"] else None,
                 }
     timer = Timer()
     print("== Server starting ==")

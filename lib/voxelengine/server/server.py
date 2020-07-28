@@ -14,7 +14,7 @@ import threading
 import pathlib, urllib.parse
 import json
 
-import voxelengine.modules.socket_connection_5.socket_connection as socket_connection
+import voxelengine.modules.socket_connection_6.socket_connection as socket_connection
 import voxelengine.modules.utils
 from voxelengine.modules.utils import try_ports
 from voxelengine.server.players.player import Player
@@ -122,6 +122,7 @@ class GameServer(object):
                  PlayerClass=Player,
                  host="",
                  http_port=0,
+                 nameserveraddr=None,
                  ):
         self.universe = universe
         self.wait = wait
@@ -159,7 +160,8 @@ class GameServer(object):
             })
         # 
         self.info_server = socket_connection.beacon(key="voxelgame"+parole,
-                                                    info_data=json.dumps(serverinfo))
+                                                    info_data=json.dumps(serverinfo),
+                                                    nameserveraddr=nameserveraddr)
 
     def __del__(self):
         pass
