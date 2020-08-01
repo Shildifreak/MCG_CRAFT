@@ -69,6 +69,7 @@ default_clientconfig = {
             "clienttype" : "desktop",
             "parole"     : "",
             "address"    : "",
+            "nameserver" : "index.mcgcraft.de",
 }
 
 serverconfig = Config(serverconfigfn, default_serverconfig)

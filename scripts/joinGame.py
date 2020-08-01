@@ -29,7 +29,8 @@ def run_gui():
     servers = None
     while True:
         parole = clientconfig["parole"]
-        with socket_connection.server_searcher(key = "voxelgame"+parole) as s:
+        with socket_connection.server_searcher(key = "voxelgame"+parole,
+                                               nameserveraddr = clientconfig["nameserver"]) as s:
             events.clear()
             while clientconfig["parole"] == parole and not events["refresh"]:
                 if events["quit"] or events["play"]:

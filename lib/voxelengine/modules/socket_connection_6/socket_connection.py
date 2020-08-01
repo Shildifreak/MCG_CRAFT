@@ -1,10 +1,9 @@
 
 import socket
 import select
-import zlib
-import ast
 import sys
 import urllib.request
+import json
 
 import time
 import random
@@ -221,7 +220,8 @@ class beacon():
     def _register_thread(self):
         while not self.closed:
             try:
-                p = urllib.parse.urlencode({"key"  : self.key,
+                p = urllib.parse.urlencode({"uid"  : self.uid,
+                                            "key"  : self.key,
                                             "value": self.info_data})
                 with urllib.request.urlopen("http://" + self.nameserveraddr + "/register.py?" + p) as f:
                     print(f.read())
@@ -253,29 +253,16 @@ class server_searcher(template):
 
     def _nameserver_task(self):
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(self.nameserveraddr)
-            s.send("list "+self.key)
-            msg = ""
-            while select.select([s],[],[],1)[0]:
-                part = s.recv(PACKAGESIZE)
-                if part == "":
-                    break
-                msg += part
-            try:
-                serveraddrs = ast.literal_eval(msg)
-            except:
-                print ("strange answer from name server")
-                print (msg)
-            else:
-                for uid, data in serveraddrs:
-                    if uid not in self.uids:
-                        self.servers.append((uid, data, time.time()))
-                        self.uids.add(uid)
+            p = urllib.parse.urlencode({"key"  : self.key,})
+            with urllib.request.urlopen("http://" + self.nameserveraddr + "/list.py?" + p) as f:
+                serverlistjson = f.read()
+            serverlist = json.loads(serverlistjson)
+            for uid, data in serverlist:
+                if uid not in self.uids:
+                    self.servers.append((uid, data, time.time()))
+                    self.uids.add(uid)
         except Exception as e:
-            print (e, "nameserver nicht erreichbar")
-        finally:
-            s.close()
+            print (e, "no or invalid response from nameserver")
 
     def _ping_task(self,addr):
         print ("pinging",addr)
@@ -292,6 +279,7 @@ class server_searcher(template):
                     msgparts = msg.split(b" ",2)
                     if len(msgparts) == 3:
                         pong, uid, data = msgparts
+                        uid = int(uid)
                         if pong != b"PONG":
                             continue
                         if uid in self.uids:
