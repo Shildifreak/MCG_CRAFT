@@ -17,6 +17,9 @@ print()
 import cgi
 form = cgi.FieldStorage()
 
+if "uid" not in form:
+	print("missing parameter 'uid'")
+	exit(0)
 if "key" not in form:
 	print("missing parameter 'key'")
 	exit(0)
@@ -26,6 +29,7 @@ if "value" not in form:
 
 ip = os.environ["REMOTE_ADDR"] #this variable should be set by caller of cgi script
 
+uid   = form["uid"].value
 key   = form["key"].value
 value = form["value"].value
 
@@ -34,9 +38,9 @@ serverinfo = json.loads(value)
 if not str(serverinfo["http_port"]).isdigit():
 	print("port is not a natural number (%s)" % port)
 	exit(0)
-if ip != socket.gethostbyname(serverinfo["host"]):
-	print("hostname does not resolve to request origin (%s)" % ip)
-	exit(0)
+#if ip != socket.gethostbyname(serverinfo["host"]):
+#	print("hostname does not resolve to request origin (%s)" % ip)
+#	exit(0)
 
 
 import sqlite3
@@ -48,7 +52,7 @@ if False:
 	c.execute('''DROP TABLE server''')
 	# Create table
 	c.execute('''CREATE TABLE server
-				 (key text, value text, time real, PRIMARY KEY (key, value))''')
+				 (uid integer, key text, value text, time real, PRIMARY KEY (uid))''')
 
 if False:
 	# drop entries older than one minute
@@ -56,7 +60,7 @@ if False:
 	             WHERE time < ?''', (time.time()-60,))
 
 # Insert a row of data
-c.execute("REPLACE INTO server VALUES (?,?,?)", (key,value,time.time()))
+c.execute("REPLACE INTO server VALUES (?,?,?,?)", (uid,key,value,time.time()))
 
 # Save (commit) the changes
 conn.commit()
