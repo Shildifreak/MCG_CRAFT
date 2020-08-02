@@ -38,9 +38,9 @@ serverinfo = json.loads(value)
 if not str(serverinfo["http_port"]).isdigit():
 	print("port is not a natural number (%s)" % port)
 	exit(0)
-#if ip != socket.gethostbyname(serverinfo["host"]):
-#	print("hostname does not resolve to request origin (%s)" % ip)
-#	exit(0)
+if ip != socket.gethostbyname(serverinfo["host"]):
+	print("hostname does not resolve to request origin (%s)" % ip)
+	exit(0)
 
 
 import sqlite3
