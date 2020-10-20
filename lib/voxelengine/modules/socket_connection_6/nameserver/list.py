@@ -28,7 +28,7 @@ c.execute('''
 SELECT * FROM server
 WHERE time > ? AND key = ?
 ''',(time.time()-TTL, key))
-output = json.dumps(tuple(value for key, value, timestamp in c.fetchall()))
+output = json.dumps(tuple((uid,value) for uid, key, value, timestamp in c.fetchall()))
 conn.close()
 
 print("Content-Type: text/json")
