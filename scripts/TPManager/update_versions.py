@@ -55,7 +55,15 @@ for relpath in paths:
 		blockmodel.setdefault("transparent", True)
 		faces = blockmodel.setdefault("faces", {})
 		for face in (*FACES,"inside"):
-			faces.setdefault(face, [])
+			facedata = faces.get(face, [])
+			new_facedata = []
+			for corners, texture in facedata:
+				if isinstance(texture, str):
+					texture = (texture,)
+				texture = texture + ("missing_texture", 0, 0, 1, 1)[len(texture):]
+				new_facedata.append((corners, texture))
+			faces[face] = new_facedata
+			
 	
 	print("\nGenerating Desktop Version for Texturepack",relpath)
 	try:
@@ -66,6 +74,8 @@ for relpath in paths:
 	try:
 		generate_web_version    (description, texture_directory, os.path.abspath(os.path.join(path,".versions","web")))
 	except Exception as e:
-		print(e)
+		import traceback
+		traceback.print_exception(e,e,e.__traceback__)
+
 	
 # create desktop and web version of those
