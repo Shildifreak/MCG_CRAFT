@@ -1,6 +1,7 @@
 import imp
 import random
 import warnings
+import functools
 
 import sys, os, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -61,6 +62,7 @@ class WorldGenerator(object):
 		else:
 			return (0,0,0)
 
+	@functools.lru_cache(10000)
 	def client_terrain(self, position):
 		block = self.terrain(position)
 		if isinstance(block, str):
@@ -78,6 +80,24 @@ class WorldGenerator(object):
 	
 	def terrain_hint(self, binary_box, tag):
 		return self.js_context.call("terrain_hint", binary_box, tag)
+
+
+	def preload(self, positions):
+		values = self.js_context.call("((positions)=>positions.map(terrain))", positions)
+		
+		# get stuff into cache
+		original_terrain_func = self.terrain
+		self.terrain = lambda position: value
+		for position, value in zip(positions, values):
+			self.client_terrain(position)
+		self.terrain = original_terrain_func
+
+terrain_mapped_js = """
+function terrain_mapped(positions) {
+	return positions.map(terrain);
+}
+"""
+
 
 default_terrain_hint_js = """
 if (typeof terrain_hint === "undefined") {

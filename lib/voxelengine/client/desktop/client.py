@@ -446,29 +446,23 @@ class SetQueue(collections.OrderedDict):
 class InitChunkQueue(object):
     def __init__(self):
         self.chunks = collections.OrderedDict()
-        self.current_chunk = None
-        self.positions = None
-        self.current_position = None
+        self.positions = []
+        self.terrain_preload = lambda positions: None
     def _refill(self):
         if self.chunks:
-            self.current_chunk = self.chunks.popitem(last=False)[0]
-            self.positions = iterchunk()
-            self.current_position = next(self.positions)
+            chunk = self.chunks.popitem(last=False)[0]
+            self.positions = [(chunk << CHUNKBASE) + offset for offset in CHUNKPOSITIONS]
+            self.terrain_preload(self.positions)
         else:
-            self.current_chunk = None
+            raise Exception("can't call _refill with empty chunks")
     def add(self, value):
         self.chunks[value] = None
-        if not self.current_chunk:
-            self._refill()
     def is_empty(self):
-        return self.current_chunk == None
+        return not (self.chunks or self.positions)
     def pop(self):
-        value = (self.current_chunk << CHUNKBASE) + self.current_position
-        try:
-            self.current_position = next(self.positions)
-        except StopIteration:
+        if not self.positions:
             self._refill()
-        return value
+        return self.positions.pop()
 
 class Model(object):
 
@@ -540,9 +534,10 @@ class Model(object):
         #print(generator_data)
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
         self.blocks.set_terrain_function(self.world_generator.client_terrain)
+        self.init_chunk_queue.terrain_preload = self.world_generator.preload
 
     def monitor_around(self, position):
-        """returns list of messages to be send to client in order to announce new monitoring area and required updates"""
+        """returns list of messages to be send to server in order to announce new monitoring area and required updates"""
         if not hasattr(self, "world_generator"):
             print("received goto before clear, fix message_buffer asap!")
             self.monitor_after_clear = True
