@@ -28,7 +28,7 @@ def generate_web_version(normalized_universal_description, texture_directory, ta
 	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
-	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":[],"blockModelIndices":{}}
+	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]},"blockModelIndices":{}}
 
 	#	    -x   x      -y   y      -z   z     r g b a
 	#	0x00040004, 0x00050003, 0x00040004, 0x00000000, # Grass
@@ -67,20 +67,21 @@ def generate_description(texture_index, normalized_universal_description):
 		icon = blockmodeldata["icon"]
 		description["icons"][blockmodelname] = texture_index[icon]
 
-		blockModelIndexBegin = len(description["blockModelData"])
 		for _, faces in blockmodeldata["faces"].items():
 			for face in faces:
 				vs, (texture_name, x, y, w, h) = face
-				t = texture_index[texture_name]
-				ts = ((t, x, y), (t, x+w, y), (t, x+w, y+h), (t, x, y+h))
+				z = texture_index[texture_name]
+				ts = ((x, y, z), (x+w, y, z), (x+w, y+h, z), (x, y+h, z))
+				vs = tuple(tuple(coord-0.5 for coord in vertex) for vertex in vs)
 				ds = [(*vn, *tn) for vn, tn in zip(vs, ts)]
 				triangles = [*ds[0], *ds[1], *ds[2], *ds[2], *ds[3], *ds[0]]
-				print(triangles)
-				description["blockModelData"].extend(triangles)
-		blockModelIndexEnd = len(description["blockModelData"])
-		description["blockModelIndices"][blockmodelname] = (blockModelIndexBegin, blockModelIndexEnd)
+				description["blockModelData"]["vertexBuffer"].extend(triangles)
+		blockModelIndexNext = len(description["blockModelData"]["vertexBuffer"])
+		description["blockModelData"]["offsets"].append(blockModelIndexNext)
+		description["blockModelIndices"][blockmodelname] = len(description["blockModelIndices"])
 				
-	# no entity models for now
+	# just copy entity models for now
+	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]
 
 	description["TEXTURE_DIMENSIONS"] = (1, texture_index.texture_size())
 	
