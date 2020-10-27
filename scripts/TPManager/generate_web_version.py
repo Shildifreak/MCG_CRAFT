@@ -28,7 +28,7 @@ def generate_web_version(normalized_universal_description, texture_directory, ta
 	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
-	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]},"blockModelIndices":{}}
+	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]}}
 
 	#	    -x   x      -y   y      -z   z     r g b a
 	#	0x00040004, 0x00050003, 0x00040004, 0x00000000, # Grass
@@ -62,8 +62,10 @@ def generate_description(texture_index, normalized_universal_description):
 		icon = itemdata["icon"]
 		description["icons"][itemname] = texture_index[icon]
 		
-	# no block models for now, but icons
+	# BLOCK MODELS
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
+		if blockmodelname in description["blockIdByName"]:
+			continue
 		icon = blockmodeldata["icon"]
 		description["icons"][blockmodelname] = texture_index[icon]
 
@@ -76,9 +78,10 @@ def generate_description(texture_index, normalized_universal_description):
 				ds = [(*vn, *tn) for vn, tn in zip(vs, ts)]
 				triangles = [*ds[0], *ds[1], *ds[2], *ds[2], *ds[3], *ds[0]]
 				description["blockModelData"]["vertexBuffer"].extend(triangles)
+		blockId = len(description["blockDataArray"])//4 + len(description["blockModelData"]["offsets"]) - 1
 		blockModelIndexNext = len(description["blockModelData"]["vertexBuffer"])
 		description["blockModelData"]["offsets"].append(blockModelIndexNext)
-		description["blockModelIndices"][blockmodelname] = len(description["blockModelIndices"])
+		description["blockIdByName"][blockmodelname] = blockId
 				
 	# just copy entity models for now
 	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]
