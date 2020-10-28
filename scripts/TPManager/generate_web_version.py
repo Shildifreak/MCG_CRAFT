@@ -36,9 +36,14 @@ def generate_description(texture_index, normalized_universal_description):
 	assert texture_index["transparent"] == 0
 	description["blockIdByName"]["AIR"] = 0
 	description["blockDataArray"].extend([0,0,0,0])
+	description["blockModelData"]["offsets"].append(0)
 	
 	# BLOCKS
-	for blockname, blockdata in normalized_universal_description["BLOCKS"].items():
+	blocknames = list(normalized_universal_description["BLOCKS"].keys())
+	assert "AIR" not in blocknames
+	for index_minus_one, blockname in enumerate(blocknames):
+		index = index_minus_one + 1 #offset on index is due to AIR being index 0
+		blockdata = normalized_universal_description["BLOCKS"][blockname]
 		
 		xFaces = (texture_index[blockdata["faces"]["left"  ]] << 16 << 4) + \
 		         (texture_index[blockdata["faces"]["right" ]] <<  0 << 4)
@@ -50,7 +55,6 @@ def generate_description(texture_index, normalized_universal_description):
 		fogColor = (fogColor[0] << 24) + (fogColor[1] << 16) + (fogColor[2] << 8) + (fogColor[3] << 0)
 		blockDataArrayLine = [xFaces,yFaces,zFaces,fogColor]
 		
-		index = len(description["blockDataArray"])//4
 		description["blockIdByName"][blockname] = index
 		description["blockDataArray"].extend(blockDataArrayLine)
 		
@@ -63,9 +67,11 @@ def generate_description(texture_index, normalized_universal_description):
 		description["icons"][itemname] = texture_index[icon]
 		
 	# BLOCK MODELS
-	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
-		if blockmodelname in description["blockIdByName"]:
-			continue
+	blockmodelnames = blocknames + [n for n in normalized_universal_description["BLOCK_MODELS"].keys() if n not in blocknames] #same order as blocknames
+	assert "AIR" not in blockmodelnames
+	for index_minus_one, blockmodelname in enumerate(blockmodelnames):
+		index = index_minus_one + 1 #offset on index is due to AIR being index 0
+		blockmodeldata = normalized_universal_description["BLOCK_MODELS"][blockmodelname] #normalized universal description should also have a blockmodel for every normal block
 		icon = blockmodeldata["icon"]
 		description["icons"][blockmodelname] = texture_index[icon]
 
@@ -78,10 +84,9 @@ def generate_description(texture_index, normalized_universal_description):
 				ds = [(*vn, *tn) for vn, tn in zip(vs, ts)]
 				triangles = [*ds[0], *ds[1], *ds[2], *ds[2], *ds[3], *ds[0]]
 				description["blockModelData"]["vertexBuffer"].extend(triangles)
-		blockId = len(description["blockDataArray"])//4 + len(description["blockModelData"]["offsets"]) - 1
 		blockModelIndexNext = len(description["blockModelData"]["vertexBuffer"])
 		description["blockModelData"]["offsets"].append(blockModelIndexNext)
-		description["blockIdByName"][blockmodelname] = blockId
+		assert index == description["blockIdByName"].setdefault(blockmodelname, index)
 				
 	# just copy entity models for now
 	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]

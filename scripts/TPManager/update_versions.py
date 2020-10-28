@@ -46,6 +46,25 @@ for relpath in paths:
 		block.setdefault("icon", images["top"])
 		if "missing_texture" in (block["icon"],*images.values()):
 			print("missing some texture in", blockname)
+		# add blockmodel for blocks that don't have one
+		if blockname not in description["BLOCK_MODELS"]:
+			d = 0.01 if block["transparent"] else 0
+			O, I = d, 1-d
+			blockmodel = {"icon" : block["icon"],
+			              "transparent": block["transparent"],
+			              "faces": {"top"   : [(((O,I,I),(I,I,I),(I,I,O),(O,I,O)),images["top"   ])],
+                                    "bottom": [(((I,O,I),(O,O,I),(O,O,O),(I,O,O)),images["bottom"])],
+                                    "front" : [(((O,O,I),(I,O,I),(I,I,I),(O,I,I)),images["front" ])],
+                                    "back"  : [(((I,O,O),(O,O,O),(O,I,O),(I,I,O)),images["back"  ])],
+                                    "left"  : [(((O,O,O),(O,O,I),(O,I,I),(O,I,O)),images["left"  ])],
+                                    "right" : [(((I,O,I),(I,O,O),(I,I,O),(I,I,I)),images["right" ])],
+                                    "inside": [],
+			                       }
+			             }
+			if block["transparent"]:
+				for face in FACES:
+					blockmodel["faces"]["inside"].extend(blockmodel["faces"].pop(face))
+			description["BLOCK_MODELS"][blockname] = blockmodel
 	
 	description.setdefault("BLOCK_MODELS", {})
 	for blockmodelname, blockmodel in description["BLOCK_MODELS"].items():
