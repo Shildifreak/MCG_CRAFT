@@ -84,8 +84,8 @@ def generate_description(texture_index, normalized_universal_description):
 				ds = [(*vn, *tn) for vn, tn in zip(vs, ts)]
 				triangles = [*ds[0], *ds[1], *ds[2], *ds[2], *ds[3], *ds[0]]
 				description["blockModelData"]["vertexBuffer"].extend(triangles)
-		blockModelIndexNext = len(description["blockModelData"]["vertexBuffer"])
-		description["blockModelData"]["offsets"].append(blockModelIndexNext)
+		offsetNext = len(description["blockModelData"]["vertexBuffer"]) // 6
+		description["blockModelData"]["offsets"].append(offsetNext)
 		assert index == description["blockIdByName"].setdefault(blockmodelname, index)
 				
 	# just copy entity models for now
