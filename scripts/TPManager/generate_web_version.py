@@ -28,7 +28,7 @@ def generate_web_version(normalized_universal_description, texture_directory, ta
 	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
-	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]}}
+	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]},"translucency":[]}
 
 	#	    -x   x      -y   y      -z   z     r g b a
 	#	0x00040004, 0x00050003, 0x00040004, 0x00000000, # Grass
@@ -37,6 +37,7 @@ def generate_description(texture_index, normalized_universal_description):
 	description["blockIdByName"]["AIR"] = 0
 	description["blockDataArray"].extend([0,0,0,0])
 	description["blockModelData"]["offsets"].append(0)
+	description["translucency"].append(255)
 	
 	# BLOCKS
 	blocknames = list(normalized_universal_description["BLOCKS"].keys())
@@ -86,6 +87,7 @@ def generate_description(texture_index, normalized_universal_description):
 				description["blockModelData"]["vertexBuffer"].extend(triangles)
 		offsetNext = len(description["blockModelData"]["vertexBuffer"]) // 6
 		description["blockModelData"]["offsets"].append(offsetNext)
+		description["translucency"].append(255*blockmodeldata["transparent"])
 		assert index == description["blockIdByName"].setdefault(blockmodelname, index)
 				
 	# just copy entity models for now

@@ -31,6 +31,16 @@ class BinaryDict(object):
 	def __delitem__(self, position):
 		self.pop(position)
 		
+	def setdefault(self, position, default):
+		key = binary_zip(*position)
+		i = bisect.bisect_right(self.data, (key,))
+		k, p, v = self.data[i]
+		if k == key:
+			return v
+		else:
+			self.data.insert(i, (key, position, default))
+			return default
+	
 	def pop(self, position):
 		key = binary_zip(*position)
 		i = bisect.bisect_right(self.data, (key,))
@@ -80,6 +90,20 @@ def binary_zip(x,y,z):
 	by = bin(y)[:1:-1]
 	bz = bin(z)[:1:-1]
 	bs = "".join(itertools.chain.from_iterable(itertools.zip_longest(bz,by,bx,fillvalue="0")))[::-1]
+	ints_zipped = int(bs,2)
+	return signs, ints_zipped
+
+def binary_zip4(x,y,z):
+	xs, ys, zs = x<0, y<0, z<0
+	signs = (xs<<2) + (ys<<1) + zs
+	x ^= -xs
+	y ^= -ys
+	z ^= -zs
+	l = max(x.bit_length(),y.bit_length(),z.bit_length())
+	bx = bin(x)[2:].zfill(l)
+	by = bin(y)[2:].zfill(l)
+	bz = bin(z)[2:].zfill(l)
+	bs = "".join(itertools.chain.from_iterable(zip(bz,by,bx)))
 	ints_zipped = int(bs,2)
 	return signs, ints_zipped
 
@@ -134,6 +158,7 @@ if __name__ == "__main__":
 	print( timeit.timeit(wrapper(binary_zip, iter(samples)), number=n) )
 	print( timeit.timeit(wrapper(binary_zip2,iter(samples)), number=n) )
 	print( timeit.timeit(wrapper(binary_zip3,iter(samples)), number=n) )
+	print( timeit.timeit(wrapper(binary_zip4,iter(samples)), number=n) )
 	
 	
 	for sample in samples[:10]:

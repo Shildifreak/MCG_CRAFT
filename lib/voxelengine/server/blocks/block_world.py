@@ -33,18 +33,23 @@ class BlockWorld(Serializable):
 		        "codec"     : self.blockdata_encoder,
 		        }
 	
-	def _block_by_id(self, block_id, position):
+	def _blockdata_by_id(self, block_id, position):
 		if block_id == self.block_storage.NO_BLOCK_ID:
-			blockdata = self.world_generator.terrain(position)
+			return self.world_generator.terrain(position)
 		else:
-			blockdata = self.blockdata_encoder.get_blockdata_by_id(block_id)
-		block = self.BlockClass(blockdata, position=position, blockworld=self)
-		return block
+			return self.blockdata_encoder.get_blockdata_by_id(block_id)
+	
+	def _get_blockdata(self, position, t = 0, relative_timestep = True):
+		position = Vector(position)
+		block_id = self.block_storage.get_block_id(position, t, relative_timestep)
+		blockdata = self._blockdata_by_id(block_id, position)
+		return blockdata
 	
 	def __getitem__(self, position, t = 0, relative_timestep = True):
 		position = Vector(position)
-		block_id = self.block_storage.get_block_id(position, t, relative_timestep)
-		return self._block_by_id(block_id, position)
+		blockdata = self._get_blockdata(position, t, relative_timestep)
+		block = self.BlockClass(blockdata, position=position, blockworld=self)
+		return block
 	
 	get = __getitem__
 	
@@ -52,25 +57,33 @@ class BlockWorld(Serializable):
 		position = Vector(position)
 		# create a block object, or if already given one, make sure position and world match
 		block = self.BlockClass(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
+		blockdata = freeze(value)
 		# check with terrain_generator to see if to delete
 		natural_blockdata = self.world_generator.terrain(position)
 		# translate to block_id (delete or set)
 		if block == natural_blockdata:
 			block_id = self.block_storage.NO_BLOCK_ID
 		else:
-			blockdata = freeze(block)
 			block_id = self.blockdata_encoder.increment_count_and_get_id(blockdata)
 		# apply
 		block_changed = self.block_storage.set_block_id(position, block_id)
 		if block_changed:
 			# update BlockWorldIndex
-			self.block_world_index.notice_change(position, block.get_tags())
+			self.block_world_index.notice_change(position, self._get_tags(blockdata))
 			# issue event for others to notice change
 			#self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
 			self.event_system.add_event(0,Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
+	@functools.lru_cache()
+	def _get_tags(self, blockdata):
+		return self.BlockClass(blockdata).get_tags()
+
+	@functools.lru_cache()
+	def _client_version(self, blockdata):
+		return self.BlockClass(blockdata).client_version()
+
 	def get_tags(self, position):
-		return self[position].get_tags()
+		return self._get_tags(self._get_blockdata(position))
 
 	@functools.wraps(BlockWorldIndex.find_blocks)
 	def find_blocks(self, *args, **kwargs):
@@ -80,4 +93,6 @@ class BlockWorld(Serializable):
 	@functools.wraps(BlockStorage.list_changes)
 	def list_changes(self, area, since_tick):
 		for position, block_id in self.block_storage.list_changes(area, since_tick):
-			yield position, self._block_by_id(block_id, position)
+			blockdata = self._blockdata_by_id(block_id, position)
+			block_client_version = self._client_version(blockdata)
+			yield position, block_client_version

@@ -555,6 +555,9 @@ def run():
             for command in get_inputs():
                 if command == "quit":
                     quitFlag = True
+                elif command == "kill":
+                    print("Game killed")
+                    return
                 elif command == "save":
                     save()
                 elif command == "reload":
@@ -568,7 +571,7 @@ def run():
                     else:
                         print("use like this: play clienttype [username] [password]")
                 else:
-                    print("valid commands include: quit, save, reload, stats")
+                    print("valid commands include: quit, kill, save, reload, stats")
             
             # game server update - communicate with clients
             g.update()

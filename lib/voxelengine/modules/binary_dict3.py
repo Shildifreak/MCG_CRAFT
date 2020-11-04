@@ -86,6 +86,15 @@ class BinaryDict(object):
         signs, ints_zipped = binary_zip(*position)
         tree = self.trees[signs]
         tree[ints_zipped] = value
+    
+    def setdefault(self, position, default):
+        signs, ints_zipped = binary_zip(*position)
+        tree = self.trees[signs]
+        try:
+            return tree[ints_zipped]
+        except KeyError:
+            tree[ints_zipped] = default
+            return default
         
     def pop(self, position):
         signs, ints_zipped = binary_zip(*position)

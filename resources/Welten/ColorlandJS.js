@@ -41,7 +41,7 @@ class RNG {
 		return options[i];
 	}
 }
-random = new RNG(seed || 1);
+random = new RNG(seed*(1<<30) || 1);
 
 
 class BlockMap extends Map {

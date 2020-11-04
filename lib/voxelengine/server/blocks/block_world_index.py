@@ -5,6 +5,7 @@ if __name__ == "__main__":
 
 import collections
 from voxelengine.modules.geometry import BinaryBox
+import random
 
 class BlockWorldIndex(object):
 	def __init__(self, get_tags_for_position):
@@ -15,7 +16,9 @@ class BlockWorldIndex(object):
 		"""new_tags can be provided to avoid overhead of calling get_tags_for_position, but it has to be the same tags"""
 		if new_tags == None:
 			new_tags = self.get_tags_for_position(position)
-		assert new_tags == self.get_tags_for_position(position)
+		if __debug__:
+			if random.random() < 0.001:
+				assert new_tags == self.get_tags_for_position(position)
 		bb = BinaryBox(0, position)
 		if bb not in self._block_tag_cache:
 			return

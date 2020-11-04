@@ -67,13 +67,14 @@ class BlockStorage(Serializable):
 		returns whether the block was changed
 		"""
 		# warn if manipulating same block multiple times?
-		try:
-			block_history = self.structures[position]
-		except KeyError:
-			if block_id == self.NO_BLOCK_ID:
+		if block_id == self.NO_BLOCK_ID:
+			try:
+				block_history = self.structures[position]
+			except KeyError:
 				return False
-			block_history = self.structures[position] = []
 		else:
+			block_history = self.structures.setdefault(position, [])
+		if block_history:
 			previous_block_id = block_history[-1][1]
 			if block_id == previous_block_id:
 				return False

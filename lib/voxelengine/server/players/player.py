@@ -148,18 +148,19 @@ class Player(object):
 
 	@staticmethod
 	def _async_update_area(world, area, since_tick, block_adder, sleep=0):
-		for position, block in world.blocks.list_changes(area, since_tick):
-			block_adder.add("set", position, block.client_version())
+		for position, block_client_version in world.blocks.list_changes(area, since_tick):
+			block_adder.add("set", position, block_client_version)
 			time.sleep(sleep)
 		block_adder.close()
 	
 	def _update_area_loop(self):
+		dt = 0.0001
 		while not self.quit_flag:
 			self.new_area_updates_event.wait()
 			while self.area_updates:
 				_, args = self.area_updates.popitem(last=False)
-				self._async_update_area(*args,sleep=0.0001)
-				time.sleep(0.0001)
+				self._async_update_area(*args,sleep=dt)
+				time.sleep(dt)
 
 	def _update(self):
 		"""internal update method, automatically called by game loop"""

@@ -7,7 +7,7 @@ class Block(dict):
 	def __init__(self, data, position=None, blockworld=None):
 		if isinstance(data, str):
 			data = {"id":data}
-		super().__init__(data)
+		dict.__init__(self, data)
 		self.position = position
 		self.blockworld = blockworld
 
