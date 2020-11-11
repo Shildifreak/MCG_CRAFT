@@ -13,7 +13,7 @@ class Schaf(Entity):
 
         self["texture"] = "SCHAF"
         self["SPEED"] = 10
-        self["JUMPSPEED"] = 25
+        self["JUMPSPEED"] = 10
         self["forward"] = False
         self["turn"] = 0
         self["nod"] = False
