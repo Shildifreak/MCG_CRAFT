@@ -45,6 +45,7 @@ class Config(dict):
             configfile.write(repr(self))
 
 default_serverconfig = {
+            # Exposed via GUI
             "name"       : "%ss MCGCraft Server" %getpass.getuser(),
             "description": "",
             "file"       : "",
@@ -53,7 +54,11 @@ default_serverconfig = {
             "whitelist"  : "127.0.0.1",
             "parole"     : "",
             "texturepack": "default",
-            
+
+            # To Be Exposed via GUI
+            "resource_paths": ["default"],
+
+            # Hidden
             "auto_create_entities_for_players" : True,
             "autosaveintervall" : None,
             "host"      : "",

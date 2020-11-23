@@ -6,7 +6,7 @@ from generate_web_version     import generate_web_version
 
 
 # find all universal version 1.0 directories
-basepath = os.path.join("..","..","resources","texturepacks")
+basepath = os.path.join("..","..","resources","default","texturepacks")
 paths = os.listdir(basepath)
 
 FACES = {"top","bottom","front","back","left","right"}

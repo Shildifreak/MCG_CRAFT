@@ -14,7 +14,7 @@ sys.path.append(LIBPATH)
 
 import voxelengine.modules.socket_connection_6.socket_connection as socket_connection
 from gui.tkgui import ClientGUI
-from gui.config import clientconfig
+from config import clientconfig
 from voxelengine.modules import appdirs
 
 clienttypes = os.listdir(os.path.join(LIBPATH,"voxelengine","client"))

@@ -18,12 +18,11 @@ import socket
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"lib"))
-sys.path.append(os.path.join(PATH,"resources","Welten","structures"))
 
 import resources
 import voxelengine
 
-from gui.config import Config, default_serverconfig
+from config import Config, default_serverconfig
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
 import voxelengine.server.world_data_template
@@ -472,6 +471,16 @@ def zeitstats(timer, tps_history = [0]*200):
 
 def run():
     global w, g
+    resources.load_resources_from(config["resource_paths"])
+    worldtype_paths = {}
+    for resource_path in config["resource_paths"]:
+        worldtypes_dir = os.path.join(PATH,"resources",resource_path,"Welten")
+        if os.path.isdir(worldtypes_dir):
+            worldtype_names = os.listdir(worldtypes_dir) #everything before resource_path is dropped in case of absolute path
+            for worldtype_name in worldtype_names:
+                if worldtype_name.endswith(".py") or worldtype_name.endswith(".js"):
+                    worldtype_name = worldtype_name[:-3]
+                    worldtype_paths[worldtype_name] = os.path.join(worldtypes_dir, worldtype_name)
     savegamepath = config["file"]
     if os.path.exists(savegamepath):
         print("== Loading World ==")
@@ -484,7 +493,7 @@ def run():
         generator_data = data["block_world"]["generator"]
         generator_data["name"] = config["worldtype"]
         generator_data["seed"] = random.random()
-        generator_data["path"] = os.path.join(PATH,"resources","Welten",config["worldtype"])
+        generator_data["path"] = worldtype_paths[config["worldtype"]]
         generator_data["path_py"] = generator_data["path"] + ".py"
         generator_data["path_js"] = generator_data["path"] + ".js"
         if os.path.isfile(generator_data["path_py"]):
@@ -534,7 +543,7 @@ def run():
     settings = {"wait" : False,
                 "name" : config["name"],
                 "parole" : config["parole"],
-                "texturepack_path" : os.path.join(PATH,"resources","texturepacks",config["texturepack"],".versions"),
+                "texturepack_path" : os.path.join(PATH,"resources","default","texturepacks",config["texturepack"],".versions"), #TODO: merge texturepacks of all resourcepacks
                 "PlayerClass" : Player,
                 "host" : config["host"],
                 "http_port" : config["http_port"],

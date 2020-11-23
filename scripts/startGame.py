@@ -12,7 +12,7 @@ sys.path.append(os.path.join(PATH,".."))
 sys.path.append(os.path.join(PATH,"..","lib"))
 
 from gui.tkgui import ServerGUI as UI
-from gui.config import clientconfig, serverconfig, serverconfigfn
+from config import clientconfig, serverconfig, serverconfigfn
 
 clientconfig.enable_autosave()
 serverconfig.enable_autosave()
@@ -74,8 +74,13 @@ class CommandHandler(object):
 
 command_handler = CommandHandler()
 
-worldtypes = os.listdir(os.path.join(PATH,"..","resources","Welten"))
+worldtypes = []
+for resource_path in serverconfig["resource_paths"]:
+    worldtypes_dir = os.path.join(PATH,"..","resources",resource_path,"Welten") #everything before resource_path is dropped in case of absolute path
+    if os.path.isdir(worldtypes_dir):
+        worldtypes.extend(os.listdir(worldtypes_dir))
 worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
+
 clienttypes = os.listdir(os.path.join(PATH,"..","lib","voxelengine","client"))
 clienttypes = [c for c in clienttypes if os.path.exists(os.path.join(PATH, "..", "lib", "voxelengine", "client", c, "client.py"))]
 

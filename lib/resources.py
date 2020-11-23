@@ -16,10 +16,11 @@ SLIDING = 0.000001
 
 class Block(voxelengine.Block):
     blast_resistance = 0
-    defaults = {"p_level":0,
-                "p_stronglevel":None,
-                "p_ambient":True,
-                "p_directions":(),"rotation":0,"base":"b"}
+    defaults = {"p_level":0, # redstone power level
+                "p_stronglevel":None, # only used on solid blocks so solid blocks powered by redstone don't power other redstone
+                "p_ambient":False, # power nonsolid blocks in all directions
+                "p_directions":(), # power solid blocks in these directions
+                "rotation":0,"base":"b"}
 
     def __init__(self,*args,**kwargs):
         super(Block,self).__init__(*args,**kwargs)
@@ -164,6 +165,7 @@ class Block(voxelengine.Block):
 class SolidBlock(Block):
     defaults = Block.defaults.copy()
     defaults["p_stronglevel"] = 0
+    defaults["p_ambient"] = True
     def handle_event_block_update(self,event):
         """directions indicates where update(s) came from... usefull for observer etc."""
         """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
@@ -370,30 +372,48 @@ class Entity(voxelengine.Entity):
         self["inventory"][i_air] = item
         return True
 
-blockClasses  = collections.defaultdict(lambda:SolidBlock)
-itemClasses   = collections.defaultdict(lambda:Item)
-entityClasses = collections.defaultdict(lambda:Entity)
+blockClasses  = None # initialized in load_resources_from
+itemClasses   = None # initialized in load_resources_from
+entityClasses = None # initialized in load_resources_from
 
 def register_item(name):
     def _register_item(item_subclass):
+        if name in itemClasses:
+            print("Warning: %s replaces previous definition %s" % (item_subclass, itemClasses[name]))
         itemClasses[name] = item_subclass
         return item_subclass
     return _register_item
 
 def register_block(name):
     def _register_block(block_subclass):
+        if name in blockClasses:
+            print("Warning: %s replaces previous definition %s" % (block_subclass, blockClasses[name]))
         blockClasses[name] = block_subclass
         return block_subclass
     return _register_block
 
 def register_entity(name):
     def _register_entity(entity_subclass):
+        if name in entityClasses:
+            print("Warning: %s replaces previous definition %s" % (entity_subclass, entityClasses[name]))
         entityClasses[name] = entity_subclass
         return entity_subclass
     return _register_entity
 
-for directory in ("blocks","entities"):
-    path = os.path.join(PATH,directory)
-    for fn in os.listdir(path):
-        if fn.endswith(".py") and not fn.startswith("_"):
-            imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+def load_resources_from(resource_paths):
+    global blockClasses, itemClasses, entityClasses
+
+    blockClasses  = collections.defaultdict(lambda:SolidBlock)
+    itemClasses   = collections.defaultdict(lambda:Item)
+    entityClasses = collections.defaultdict(lambda:Entity)
+        
+    for resource_path in resource_paths:
+        structurepath = os.path.join(PATH, "..", "resources", resource_path, "structures")
+        sys.path.append(structurepath)
+        for directory in ("blocks","entities"):
+            path = os.path.join(PATH, ".." , "resources", resource_path, directory) #everything before resource_path is dropped in case of absolute path
+            if os.path.isdir(path):
+                for fn in os.listdir(path):
+                    if fn.endswith(".py") and not fn.startswith("_"):
+                        imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+        sys.path.remove(structurepath)

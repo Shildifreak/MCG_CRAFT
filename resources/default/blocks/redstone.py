@@ -43,9 +43,13 @@ class Repeater(Block):
         self["p_directions"] = (d,)
         
         source = self.world.blocks[self.position - d]
-        if "strong powered" or ("weak powered" and "correct direction"):
-            "do stuff"
-        # tbc.
+        if source["p_level"] and (source["p_ambient"] or (d in source["p_directions"])):
+            self["state"] = ""
+            self["p_level"] = 0
+        else:
+            self["state"] = ""
+            self["p_level"] = 0
+        self.save()
 
     #def activated(self,character,face):
     #    d = self.get_front_facing_vector()
