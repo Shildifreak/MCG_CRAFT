@@ -1,7 +1,8 @@
 #* encoding: utf-8 *#
 
-import sys, os
-sys.path.append(os.path.join("lib","voxelengine","modules"))
+import sys, os, inspect
+PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+sys.path.append(os.path.join(PATH,"..","lib","voxelengine","modules"))
 import appdirs
 import pyglet
 from pyglet.window import key, mouse
@@ -20,15 +21,18 @@ else:
     config = {}
 
 actions = [
+    ("left_hand", u"Block abbauen / linke Hand"),
+    ("right_hand", u"Block setzen / rechte Hand"),
     ("for",  u"vorwärts laufen"),
     ("back", u"rückwärts laufen"),
     ("left", "nach links laufen"),
     ("right", "nach rechts laufen"),
     ("jump", u"hüpfen"),
-    ("fly", "fliegen"),
-    ("inv", u"inventar öffnen/schließen"),
-    ("shift", u"ducken + sekundäre Mausfunktionen"),
+    ("fly", "Flugmodus aktivieren"),
+    ("inv", u"Inventar öffnen/schließen"),
+    ("shift", u"ducken + mod. Mausfunktionen"),
     ("sprint", u"sprinten"),
+    ("emote", u"Grimasse schneiden"),
     ("inv1", u"Inventarplatz 1 auswählen"),
     ("inv2", u"Inventarplatz 2 auswählen"),
     ("inv3", u"Inventarplatz 3 auswählen"),
@@ -55,24 +59,40 @@ def on_draw():
     label.draw()
 
 @window.event
-def on_key_press(s, modifiers):
-    global symbol
-    symbol = s
+def on_key_press(key, modifiers):
+    global event
+    event = ("key", key)
+    try:
+        label.text = next(a)
+    except StopIteration:
+        window.close()
+
+@window.event
+def on_mouse_release(x, y, button, modifiers):
+    global event
+    event = ("mouse", button)
     try:
         label.text = next(a)
     except StopIteration:
         window.close()
 
 def ablauf():
-    keys = []
+    keys = [
+    ]
     for action, desc in actions:
         yield desc
-        keys.append((symbol,action))
+        keys.append((event, action))
     config["controls"] = keys
-    yield "Fertig!"
-    with open(configfn,"w") as configfile:
-        configfile.write(repr(config))
-    print("saved")
+    while True:
+        yield "Speichern? (y/n)"
+        if event[1] == key.Y:
+            with open(configfn,"w") as configfile:
+                configfile.write(repr(config))
+            yield "gespeichert"
+            break
+        if event[1] == key.N:
+            yield "nicht gespeichert"
+            break
     
 a = ablauf()
 label.text = next(a)
