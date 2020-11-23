@@ -3,6 +3,7 @@ assert sys.version >= "3" # in lower version calling input() is dangerous
 import itertools, collections, math
 import socket
 import signal, _thread, threading
+import inspect
 
 def floatrange(a,b):
     """
@@ -77,4 +78,8 @@ def get_ip():
 class operator_friendly_set(set):
     __slots__ = ()
     __add__ = set.union
+    def __init__(self,*args, **kwargs):
+        set.__init__(self,*args,**kwargs)
+        frame=inspect.stack()[-2]
+        print("operator_friendly_set was used in: "+frame.filename+" line "+str(frame.lineno))
 
