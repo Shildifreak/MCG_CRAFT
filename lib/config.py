@@ -1,7 +1,7 @@
 import sys, os, inspect
 import functools
 import getpass
-import ast
+import json
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,".."))
@@ -9,8 +9,8 @@ sys.path.append(os.path.join(PATH,".."))
 import voxelengine.modules.appdirs as appdirs
 
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-serverconfigfn = os.path.join(configdir,"serversettings.py")
-clientconfigfn = os.path.join(configdir,"clientsettings.py")
+serverconfigfn = os.path.join(configdir,"serversettings.json")
+clientconfigfn = os.path.join(configdir,"clientsettings.json")
 
 class Config(dict):
     def __init__(self, fn, *args, **kwargs):
@@ -33,16 +33,20 @@ class Config(dict):
     def load(self):
         """update from file"""
         if os.path.exists(self.fn):
-            with open(self.fn,"r") as configfile:
-                rememberedconfig = ast.literal_eval(configfile.read())
+            try:
+                with open(self.fn,"r") as configfile:
+                    rememberedconfig = json.load(configfile)
+            except json.decoder.JSONDecodeError:
+                raise Exception("Invalid JSON in config file %s" % self.fn)
             self.update(rememberedconfig)
+            pass
 
     def save(self):
         """save to file"""
         if not os.path.exists(os.path.dirname(self.fn)):
             os.makedirs(os.path.dirname(self.fn))
         with open(self.fn,"w") as configfile:
-            configfile.write(repr(self))
+            json.dump(self, configfile, indent=4)
 
 default_serverconfig = {
             # Exposed via GUI

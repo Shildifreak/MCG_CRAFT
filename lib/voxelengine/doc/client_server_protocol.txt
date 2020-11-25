@@ -4,7 +4,7 @@ server -> client
 		must be sent as first message to newly connected client and specifies where to find texturepack etc.
 		setup_source is json object and may contain entries for host, port
 	clear generator_data
-		lösche alle Blöcke, setze monitored area zurück,
+		lösche alle Blöcke und Entities, setze monitored area zurück,
                 setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator
 	del x y z
 		lösche den Block
@@ -77,3 +77,9 @@ Ablauf:
 			----- update  ---->
 			<---- set     -----
 			      ...
+
+Message Groups:
+	The order of messages in regard to control messages has to remain as is, however:
+
+	Messages in different normal groups don't have to wait for each other.
+	Messages in the same group can sometimes be merged (eg. by dropping earlier one)

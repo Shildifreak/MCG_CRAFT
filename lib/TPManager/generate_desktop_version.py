@@ -79,16 +79,16 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 		print("unused_textures:\n\t"+"\n\t".join(unused_textures))
 	#get output size
 	output_size = tuple(map(max, *(texture_directory.read_texture(name).get_size()
-	                               for name in texture_index if name not in missing_textures
+	                               for name in texture_directory.list_textures() if name in used_textures
 	                               for texture_directory in texture_directories)))
 	print("TEXTURE_SIZE:", output_size)
 	height = output_size[1]*TEXTURE_COUNT
 	textures = pygame.surface.Surface((output_size[0], height), pygame.SRCALPHA)
 	textures.fill((0,0,0,0))
 	for texture_directory in texture_directories:
-		for name, index in texture_index.items():
-			if name in missing_textures:
-				continue
+		existing_here = set(texture_directory.list_textures())
+		for name in used_textures & existing_here:
+			index = texture_index[name]
 			t = texture_directory.read_texture(name)
 			if t.get_size() != output_size:
 				print("mismatched resolution, rescaling",name)

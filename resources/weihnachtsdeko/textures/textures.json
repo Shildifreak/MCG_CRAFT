@@ -1,0 +1,64 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "gesicht_front": [
+            0,
+            1
+        ],
+        "gesicht_back": [
+            2,
+            1
+        ],
+        "gesicht_right": [
+            1,
+            1
+        ],
+        "gesicht_top": [
+            2,
+            0
+        ],
+        "weiss": [
+            3,
+            1
+        ],
+        "geist_face": [
+            3,
+            0
+        ],
+        "grass": [
+            0,
+            2
+        ],
+        "gelbe_blume": [
+            4,
+            2
+        ],
+        "rote_blume": [
+            2,
+            2
+        ],
+        "lila_blume": [
+            3,
+            2
+        ],
+        "weisse_blume": [
+            5,
+            2
+        ],
+        "blaue_blume": [
+            6,
+            2
+        ],
+        "laub": [
+            0,
+            3
+        ],
+        "fruhlingslaub": [
+            1,
+            3
+        ]
+    }
+}

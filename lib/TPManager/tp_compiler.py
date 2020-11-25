@@ -24,13 +24,16 @@ class TP_Compiler(object):
 			print("textures are missing description",description_path)
 			return
 
-		print(path)
 		with open(description_path) as description_file:
 			description = ast.literal_eval(description_file.read())
 		self.texture_directories.append(textureIO.TextureDirectory(path))
 		
 		# refine description
 		description.setdefault("BLOCKS", {})
+		description.setdefault("BLOCK_MODELS", {})
+		description.setdefault("ITEMS", {})
+		description.setdefault("ENTITY_MODELS", {})
+		
 		for blockname, block in description["BLOCKS"].items():
 			block.setdefault("transparent", False)
 			block.setdefault("fog_color", (255, 255, 255, 0))
@@ -73,7 +76,6 @@ class TP_Compiler(object):
 						blockmodel["faces"]["inside"].extend(blockmodel["faces"].pop(face))
 				description["BLOCK_MODELS"][blockname] = blockmodel
 		
-		description.setdefault("BLOCK_MODELS", {})
 		for blockmodelname, blockmodel in description["BLOCK_MODELS"].items():
 			if not "icon" in blockmodel:
 				blockmodel["icon"] = "missing_texture"
