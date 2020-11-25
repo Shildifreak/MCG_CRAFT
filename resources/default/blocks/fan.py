@@ -1,11 +1,12 @@
 from resources import *
+import falling
 
 @register_block("FAN")
 
-class fanblock(Block):
+class fanblock(falling.FallingBlock):
 
     def get_tags(self):
-        return super().get_tags() + {"block_update"}
+        return super().get_tags() | {"block_update"}
 
     def handle_event_block_update(self,event):
         if self.redstone_activated() and self.get("last_push",0) < self.world.clock.current_gametick:
@@ -16,3 +17,4 @@ class fanblock(Block):
                 self.world.request_move_block(p1,p2)
                 self["last_push"]=self.world.clock.current_gametick
                 self.save()
+        super().handle_event_block_update(event)
