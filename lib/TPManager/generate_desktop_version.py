@@ -16,28 +16,16 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 
 	texture_index = AutoIndex()
 
-	description = {"BLOCKS":[],"BLOCK_MODELS":[],"ENTITY_MODELS":{}}
-
-	for blockname, blockdata in normalized_universal_description["BLOCKS"].items():
-		
-		transparent = blockdata["transparent"]
-		texture_list = [(0, texture_index[blockdata["faces"][face]]) for face in FACES]
-		icon = (0, texture_index[blockdata["icon"]])
-		if icon in texture_list:
-			icon_index = texture_list.index(icon)
-		else:
-			print("can't use icon thats not part of blocks textures in desktop version in",blockname)
-			icon_index = 0
-		block = blockname, transparent, icon_index, texture_list
-		description["BLOCKS"].append(block)
+	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{}}
 	
+	# as of now desktop version needs a pseudo blockmodel for each item
 	for itemname, itemdata in normalized_universal_description["ITEMS"].items():
 		icon = (0, texture_index[itemdata["icon"]])
 		transparent = False
-		texture_list = [icon]*6
-		icon_index = 0
-		block = itemname, transparent, icon_index, texture_list # as of now desktop version needs a block for each item
-		description["BLOCKS"].append(block)
+		facecoordslist = [[] for _ in FACES + ("inside",)]
+		textcoordslist = [[] for _ in FACES + ("inside",)]
+		blockmodel = itemname, transparent, icon, facecoordslist, textcoordslist
+		description["BLOCK_MODELS"].append(blockmodel)
 	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]

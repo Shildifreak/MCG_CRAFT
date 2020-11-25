@@ -342,13 +342,6 @@ def load_setup(host, port):
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
     BLOCKNAMES = []
-    for name, transparency, icon_index, textures in description["BLOCKS"]:
-        n = 0.5 - 0.01*transparency
-        if not transparency:
-            BLOCKNAMES.append(name)
-        BLOCKMODELS[name] = cube_model(textures,n,not transparency) #[top,bottom,front,back,left,right[,other]] = [(vertices,tex_coords),...]
-        ICON[name] = tex_coord(*textures[icon_index])
-        TRANSPARENCY[name] = transparency
     for name, transparency, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
         BLOCKMODELS[name] = block_model(vertices, textures)
         ICON[name] = tex_coord(*icon_coords)
