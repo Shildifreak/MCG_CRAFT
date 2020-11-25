@@ -57,7 +57,7 @@ class BlockWorld(Serializable):
 		position = Vector(position)
 		# create a block object, or if already given one, make sure position and world match
 		block = self.BlockClass(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
-		blockdata = freeze(value)
+		blockdata = freeze(block)
 		# check with terrain_generator to see if to delete
 		natural_blockdata = self.world_generator.terrain(position)
 		# translate to block_id (delete or set)
