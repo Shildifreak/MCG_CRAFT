@@ -1,0 +1,624 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "laub": [
+            3,
+            12
+        ],
+        "dirt": [
+            0,
+            15
+        ],
+        "sand": [
+            7,
+            13
+        ],
+        "bedrock": [
+            2,
+            15
+        ],
+        "hirnholz": [
+            3,
+            13
+        ],
+        "stone": [
+            6,
+            15
+        ],
+        "holzbretter": [
+            3,
+            15
+        ],
+        "mossstone": [
+            9,
+            13
+        ],
+        "holzrinde": [
+            3,
+            14
+        ],
+        "grass_side": [
+            0,
+            14
+        ],
+        "grass_top": [
+            0,
+            13
+        ],
+        "myzel_side": [
+            2,
+            14
+        ],
+        "myzel_top": [
+            2,
+            13
+        ],
+        "schnee_side": [
+            1,
+            14
+        ],
+        "schnee_top": [
+            1,
+            13
+        ],
+        "schnee": [
+            1,
+            12
+        ],
+        "schildblock": [
+            8,
+            15
+        ],
+        "gelb": [
+            0,
+            4
+        ],
+        "hellgrun": [
+            1,
+            4
+        ],
+        "grun": [
+            2,
+            4
+        ],
+        "turkies": [
+            3,
+            4
+        ],
+        "dunkelgrun": [
+            4,
+            4
+        ],
+        "dunkelgrau": [
+            6,
+            4
+        ],
+        "lila": [
+            7,
+            4
+        ],
+        "grau": [
+            8,
+            4
+        ],
+        "rot": [
+            11,
+            4
+        ],
+        "hellrot": [
+            12,
+            4
+        ],
+        "rosa": [
+            13,
+            4
+        ],
+        "schwarz": [
+            0,
+            3
+        ],
+        "braun": [
+            3,
+            3
+        ],
+        "orange": [
+            5,
+            3
+        ],
+        "hellorange": [
+            6,
+            3
+        ],
+        "hellblau": [
+            11,
+            3
+        ],
+        "hellgrau": [
+            12,
+            3
+        ],
+        "weiss": [
+            13,
+            3
+        ],
+        "muenze": [
+            6,
+            12
+        ],
+        "schein": [
+            7,
+            12
+        ],
+        "kredidtkarte": [
+            5,
+            12
+        ],
+        "diamant_block": [
+            0,
+            7
+        ],
+        "gold_block": [
+            1,
+            7
+        ],
+        "gold_erz": [
+            1,
+            8
+        ],
+        "eisen_block": [
+            2,
+            7
+        ],
+        "eisen_erz": [
+            2,
+            8
+        ],
+        "kohle_erz": [
+            3,
+            8
+        ],
+        "redstone_block": [
+            4,
+            7
+        ],
+        "smaragd_erz": [
+            5,
+            8
+        ],
+        "lapis_block": [
+            6,
+            7
+        ],
+        "lapis_erz": [
+            6,
+            8
+        ],
+        "gesicht_front": [
+            1,
+            1
+        ],
+        "gesicht_left": [
+            0,
+            1
+        ],
+        "gesicht_right": [
+            2,
+            1
+        ],
+        "gesicht_back": [
+            3,
+            1
+        ],
+        "gesicht_bottom": [
+            1,
+            2
+        ],
+        "damengesicht_front": [
+            10,
+            1
+        ],
+        "damengesicht_back": [
+            12,
+            1
+        ],
+        "damengesicht_right": [
+            11,
+            1
+        ],
+        "damengesicht_left": [
+            9,
+            1
+        ],
+        "creeper_face": [
+            4,
+            1
+        ],
+        "creeper": [
+            4,
+            2
+        ],
+        "skelett_face": [
+            7,
+            1
+        ],
+        "schaf_face": [
+            5,
+            1
+        ],
+        "geist_face": [
+            8,
+            1
+        ],
+        "commandblock": [
+            8,
+            6
+        ],
+        "schafbeine": [
+            5,
+            2
+        ],
+        "menschenbeine": [
+            6,
+            2
+        ],
+        "damenbeine": [
+            12,
+            2
+        ],
+        "damenkoerper": [
+            11,
+            2
+        ],
+        "torch_on": [
+            7,
+            6
+        ],
+        "torch_off": [
+            7,
+            5
+        ],
+        "lamp_off": [
+            5,
+            5
+        ],
+        "lamp_on": [
+            5,
+            6
+        ],
+        "piston_bottom": [
+            0,
+            5
+        ],
+        "repeater_off": [
+            6,
+            5
+        ],
+        "repeater_on": [
+            6,
+            6
+        ],
+        "racketenwerfer_side": [
+            15,
+            9
+        ],
+        "racketenwerfer_back": [
+            14,
+            8
+        ],
+        "tnt_bottom": [
+            15,
+            7
+        ],
+        "tnt_top": [
+            15,
+            5
+        ],
+        "tnt_side": [
+            15,
+            6
+        ],
+        "atnt_bottom": [
+            14,
+            7
+        ],
+        "atnt_top": [
+            14,
+            5
+        ],
+        "atnt_side": [
+            14,
+            6
+        ],
+        "btnt_bottom": [
+            13,
+            7
+        ],
+        "btnt_top": [
+            13,
+            5
+        ],
+        "btnt_side": [
+            13,
+            6
+        ],
+        "fruhlingsgrass_top": [
+            0,
+            12
+        ],
+        "fruhlingslaub": [
+            2,
+            12
+        ],
+        "fan": [
+            4,
+            6
+        ],
+        "bucherregal": [
+            8,
+            13
+        ],
+        "gold": [
+            15,
+            4
+        ],
+        "silber": [
+            15,
+            3
+        ],
+        "quarzsaule_querschnitt": [
+            5,
+            13
+        ],
+        "quarzsaule": [
+            5,
+            14
+        ],
+        "glas": [
+            9,
+            14
+        ],
+        "netherstone": [
+            4,
+            15
+        ],
+        "obsidian": [
+            1,
+            15
+        ],
+        "prismarin": [
+            9,
+            15
+        ],
+        "rissige_steinziegel": [
+            10,
+            14
+        ],
+        "gemeisselter_steinziegel": [
+            10,
+            13
+        ],
+        "chest_top": [
+            3,
+            10
+        ],
+        "chest_bottom": [
+            2,
+            10
+        ],
+        "chest_front": [
+            2,
+            9
+        ],
+        "chest_side": [
+            3,
+            9
+        ],
+        "door_closed_upper_half": [
+            12,
+            5
+        ],
+        "door_closed_lower_half": [
+            12,
+            6
+        ],
+        "door_open_upper_half": [
+            11,
+            5
+        ],
+        "door_open_lower_half": [
+            11,
+            6
+        ],
+        "door_open_surface": [
+            11,
+            7
+        ],
+        "door_closed_surface": [
+            12,
+            7
+        ],
+        "missing_texture": [
+            15,
+            0
+        ],
+        "transparent": [
+            14,
+            0
+        ],
+        "kaktus_side": [
+            4,
+            14
+        ],
+        "kaktus_querschnitt": [
+            4,
+            13
+        ],
+        "hebel": [
+            8,
+            5
+        ],
+        "setzling": [
+            3,
+            11
+        ],
+        "doppelsteinstufe": [
+            6,
+            14
+        ],
+        "steinstufe_surface": [
+            6,
+            13
+        ],
+        "grass": [
+            0,
+            11
+        ],
+        "weisse_blume": [
+            6,
+            11
+        ],
+        "lila_blume": [
+            4,
+            11
+        ],
+        "rote_blume": [
+            2,
+            11
+        ],
+        "gelbe_blume": [
+            1,
+            11
+        ],
+        "sonnenblume": [
+            5,
+            11
+        ],
+        "blaue_blume": [
+            7,
+            11
+        ],
+        "herz": [
+            4,
+            12
+        ],
+        "rocket": [
+            15,
+            8
+        ],
+        "redstone_dust_0": [
+            0,
+            6
+        ],
+        "redstone_dust_4": [
+            1,
+            6
+        ],
+        "redstone_dust_8": [
+            2,
+            6
+        ],
+        "redstone_dust_12": [
+            3,
+            6
+        ],
+        "damengesicht_top": [
+            9,
+            2
+        ],
+        "sandstone": [
+            7,
+            14
+        ],
+        "bruchstein": [
+            7,
+            15
+        ],
+        "piston_side": [
+            2,
+            5
+        ],
+        "piston_top": [
+            3,
+            5
+        ],
+        "piston_top_sticky": [
+            4,
+            5
+        ],
+        "brick": [
+            5,
+            15
+        ],
+        "diamant_erz": [
+            0,
+            8
+        ],
+        "gesicht_top": [
+            0,
+            2
+        ],
+        "zombie_face": [
+            6,
+            1
+        ],
+        "racketenwerfer_front": [
+            14,
+            9
+        ],
+        "smaragd_block": [
+            5,
+            7
+        ],
+        "steinziegel": [
+            10,
+            12
+        ],
+        "damengesicht_bottom": [
+            10,
+            2
+        ],
+        "testblock_xp": [
+            8,
+            0
+        ],
+        "testblock_xn": [
+            9,
+            0
+        ],
+        "testblock_yp": [
+            10,
+            0
+        ],
+        "testblock_yn": [
+            11,
+            0
+        ],
+        "testblock_zp": [
+            12,
+            0
+        ],
+        "testblock_zn": [
+            13,
+            0
+        ],
+        "HALM": [
+            8,
+            11
+        ],
+        "gesicht_front_hollow_eyes": [
+            3,
+            2
+        ],
+        "gesicht_front_smile": [
+            2,
+            2
+        ],
+        "reinforced_stone": [
+            0,
+            10
+        ]
+    }
+}

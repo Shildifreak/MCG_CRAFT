@@ -1,7 +1,10 @@
 import sys, os, inspect, imp
 import math, random, time, collections
+import tempfile
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
+from TPManager.tp_compiler import TP_Compiler
 
 import voxelengine
 from voxelengine.modules.shared import *
@@ -372,9 +375,9 @@ class Entity(voxelengine.Entity):
         self["inventory"][i_air] = item
         return True
 
-blockClasses  = None # initialized in load_resources_from
-itemClasses   = None # initialized in load_resources_from
-entityClasses = None # initialized in load_resources_from
+blockClasses    = None # initialized in load_resources_from
+itemClasses     = None # initialized in load_resources_from
+entityClasses   = None # initialized in load_resources_from
 
 def register_item(name):
     def _register_item(item_subclass):
@@ -400,6 +403,9 @@ def register_entity(name):
         return entity_subclass
     return _register_entity
 
+texturepackDirectory = tempfile.TemporaryDirectory()
+texturepackPath = texturepackDirectory.name
+
 def load_resources_from(resource_paths):
     global blockClasses, itemClasses, entityClasses
 
@@ -408,12 +414,20 @@ def load_resources_from(resource_paths):
     entityClasses = collections.defaultdict(lambda:Entity)
         
     for resource_path in resource_paths:
-        structurepath = os.path.join(PATH, "..", "resources", resource_path, "structures")
-        sys.path.append(structurepath)
+        structure_path = os.path.join(PATH, "..", "resources", resource_path, "structures")
+        sys.path.append(structure_path)
         for directory in ("blocks","entities"):
             path = os.path.join(PATH, ".." , "resources", resource_path, directory) #everything before resource_path is dropped in case of absolute path
             if os.path.isdir(path):
                 for fn in os.listdir(path):
                     if fn.endswith(".py") and not fn.startswith("_"):
                         imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
-        sys.path.remove(structurepath)
+        sys.path.remove(structure_path)
+
+    tp_compiler = TP_Compiler()
+    for resource_path in resource_paths:
+        textures_path = os.path.join(PATH, "..", "resources", resource_path, "textures")
+        if os.path.isdir(textures_path):
+            print(textures_path)
+            tp_compiler.add_textures_from(textures_path)
+    tp_compiler.save_to(texturepackPath)

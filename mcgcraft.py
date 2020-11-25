@@ -543,7 +543,7 @@ def run():
     settings = {"wait" : False,
                 "name" : config["name"],
                 "parole" : config["parole"],
-                "texturepack_path" : os.path.join(PATH,"resources","default","texturepacks",config["texturepack"],".versions"), #TODO: merge texturepacks of all resourcepacks
+                "texturepack_path" : resources.texturepackPath,
                 "PlayerClass" : Player,
                 "host" : config["host"],
                 "http_port" : config["http_port"],
