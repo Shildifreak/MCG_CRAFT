@@ -17,14 +17,16 @@ from gui.tkgui import ClientGUI
 from config import clientconfig
 from voxelengine.modules import appdirs
 
-clienttypes = os.listdir(os.path.join(LIBPATH,"voxelengine","client"))
-clienttypes = [c for c in clienttypes if os.path.exists(os.path.join(LIBPATH, "voxelengine", "client", c, "client.py"))]
+def get_clienttypes():
+    clienttypes = os.listdir(os.path.join(LIBPATH,"voxelengine","client"))
+    clienttypes = [c for c in clienttypes if os.path.exists(os.path.join(LIBPATH, "voxelengine", "client", c, "client.py"))]
+    return clienttypes
 
 events = collections.defaultdict(bool)
 def callback(command, value=True):
     events[command] = value
         
-gui = ClientGUI(None, clientconfig, clienttypes=clienttypes, callback=callback, background = False)
+gui = ClientGUI(None, clientconfig, get_clienttypes=get_clienttypes, callback=callback, background = False)
 def run_gui():
     servers = None
     while True:

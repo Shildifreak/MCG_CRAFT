@@ -20,15 +20,15 @@ import collections
 
 class GUI(object):
     def __init__(self, serverconfig, clientconfig,
-                 worldtypes = (), clienttypes = (),
+                 get_worldtypes = lambda:(), get_clienttypes = lambda:(),
                  callback = print, background = True):
         self.queue = collections.OrderedDict()
         self.stats = collections.OrderedDict()
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
         self.serverconfig = serverconfig
         self.clientconfig = clientconfig
-        self.worldtypes = worldtypes
-        self.clienttypes = clienttypes
+        self.get_worldtypes = get_worldtypes
+        self.clienttypes = get_clienttypes()
         self.callback = callback
         
         if background:
@@ -138,18 +138,26 @@ class GUI(object):
     def addwidgets_worldtype(self):
         # Worldtype #http://effbot.org/tkinterbook/optionmenu.htm
         def setworldtype(*args):
-            self.serverconfig["worldtype"] = wtvar.get()
-        wtvar = Tkinter.StringVar(self.root)
-        wtvar.set(self.serverconfig["worldtype"]) # default value
-        wtvar.trace("w",setworldtype)
-        if self.serverconfig["worldtype"] not in self.worldtypes:
-            self.worldtypes = (self.serverconfig["worldtype"],) + tuple(self.worldtypes)
+            self.serverconfig["worldtype"] = self.wtvar.get()
+        self.wtvar = Tkinter.StringVar(self.root)
+        self.wtvar.set(self.serverconfig["worldtype"]) # default value
+        self.wtvar.trace("w",setworldtype)
 
         self.add_label("Welttyp")
-        wtmenu = Tkinter.OptionMenu(self.root, wtvar, *self.worldtypes)
-        wtmenu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
-        wtmenu.configure(takefocus=1)
+        self.wtmenu = Tkinter.OptionMenu(self.root, self.wtvar, "placeholder")
+        self.update_worldtypes()
+        self.wtmenu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        self.wtmenu.configure(takefocus=1)
         self.row += 1
+    
+    def update_worldtypes(self):
+        worldtypes = self.get_worldtypes()
+        if self.serverconfig["worldtype"] not in worldtypes:
+            worldtypes = (self.serverconfig["worldtype"],) + tuple(worldtypes)
+
+        self.wtmenu["menu"].delete(0,"end")
+        for wt in worldtypes:
+            self.wtmenu["menu"].add_command(label=wt, command=Tkinter._setit(self.wtvar, wt))
 
     def addwidgets_mobspawning(self):
         # Mob Spawning
@@ -196,7 +204,8 @@ class GUI(object):
     def addwidgets_username_password(self):
         # Username
         def setusername(username):
-            self.clientconfig["username"] = username
+            if self.clientconfig["username"] != username:
+                self.clientconfig["username"] = username
             if username:
                 self.passwordlabel.grid()
                 self.passwordentry.grid()
@@ -238,24 +247,44 @@ class GUI(object):
         self.row += 1
         
 
-    def addwidgets_texturepack(self):
-        # Texturepack
-        texturepacktypes = ("default_stable", "weihnachtsdeko", "default")
-
-        def settexturepack(*args):
-            self.serverconfig["texturepack"] = texturepackvar.get()        
-        texturepackvar = Tkinter.StringVar(self.root)
-        texturepackvar.set(self.serverconfig["texturepack"])
-        texturepackvar.trace("w",settexturepack)
+    def addwidgets_resourcepaths(self):
+        # Resource Paths
+        self.add_label("Resource Paths")
+        resourcepaths_menubutton = Tkinter.Menubutton(self.root, relief="raised")
+        resourcepaths_menubutton["menu"] = resourcepaths_menu = Tkinter.Menu(resourcepaths_menubutton, tearoff=0)
         
-        if self.serverconfig["texturepack"] not in texturepacktypes:
-            texturepacktypes = (self.serverconfig["texturepack"],) + tuple(texturepacktypes)
+        def update_text():
+            resourcepaths_menubutton.configure(
+                text=", ".join(p.split("/")[-1] for p in self.serverconfig["resource_paths"]) or "nothing selected",
+                foreground="black", activeforeground="black")
+            if not "default" in self.serverconfig["resource_paths"]:
+                resourcepaths_menubutton.configure(foreground="orange red", activeforeground="orange red")
+        update_text()
+        
+        def update_selection(resource_path, v):
+            enabled = v.get()
+            if enabled:
+                if resource_path in self.serverconfig["resource_paths"]:
+                    return
+                self.serverconfig["resource_paths"].append(resource_path)
+            else:
+                if not resource_path in self.serverconfig["resource_paths"]:
+                    return
+                self.serverconfig["resource_paths"].remove(resource_path)
+            update_text()
+            self.serverconfig["resource_paths"] = self.serverconfig["resource_paths"] # to trigger save
+            self.update_worldtypes()
 
-        self.add_label("Texturepack")
-        texturepack_menu = Tkinter.OptionMenu(self.root, texturepackvar, *texturepacktypes)
-        texturepack_menu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
-        texturepack_menu.configure(takefocus=1)
+        resource_path_options = self.serverconfig["resource_path_options"]
+        for name in resource_path_options:
+            v = Tkinter.BooleanVar()
+            v.set(name in self.serverconfig["resource_paths"])
+            resourcepaths_menu.add_checkbutton(label=name, onvalue=True, offvalue=False, variable=v, command=lambda n=name, v=v:update_selection(n, v))
+
+        resourcepaths_menubutton.grid(column = 1, columnspan=3, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        resourcepaths_menubutton.configure(takefocus=1)
         self.row += 1
+
 
     def addwidgets_run_play(self):
         self.running = False
@@ -395,13 +424,13 @@ class ServerGUI(GUI):
     def init_widgets(self):
         self.addwidgets_name()
         self.addwidgets_file()
+        self.addwidgets_resourcepaths()
         self.addwidgets_worldtype()
         self.addwidgets_mobspawning()
         self.addwidgets_whitelist()
         self.addwidgets_server_parole()
         self.addwidgets_username_password()
         self.addwidgets_clienttype()
-        self.addwidgets_texturepack()
         self.addwidgets_run_play()
         self.addwidgets_statsframe()
 
@@ -421,7 +450,8 @@ if __name__ == "__main__":
                 "mobspawning": False,
                 "whitelist": "127.0.0.1",
                 "parole"   : "",
-                "texturepack": "default",
+                "resource_paths": ["default"],
+                "resource_path_options": ["default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
     }
     clientconfig = {
                 "username" : "",
@@ -430,8 +460,8 @@ if __name__ == "__main__":
                 "parole"   : "",
                 "address"  : "",
     }
-    #gui = ServerGUI(serverconfig, clientconfig, ("one","two","three"), ("desktop","web"), background = True)
-    gui = ClientGUI(None, clientconfig, None, ("desktop","web"))
+    gui = ServerGUI(serverconfig, clientconfig, lambda:("one","two","three"), lambda:("desktop","web"), background = True)
+    #gui = ClientGUI(None, clientconfig, lambda:(), lambda:("desktop","web"))
 
     #import time
     #time.sleep(1)

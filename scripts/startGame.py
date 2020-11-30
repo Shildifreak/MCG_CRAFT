@@ -74,18 +74,29 @@ class CommandHandler(object):
 
 command_handler = CommandHandler()
 
-worldtypes = []
-for resource_path in serverconfig["resource_paths"]:
-    worldtypes_dir = os.path.join(PATH,"..","resources",resource_path,"Welten") #everything before resource_path is dropped in case of absolute path
-    if os.path.isdir(worldtypes_dir):
-        worldtypes.extend(os.listdir(worldtypes_dir))
-worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
+for pathname in serverconfig["resource_paths"]:
+    if pathname not in serverconfig["resource_path_options"]:
+        serverconfig["resource_path_options"].append(pathname)
+for pathname in os.listdir(os.path.join(PATH,"..","resources")):
+    if pathname not in serverconfig["resource_path_options"]:
+        serverconfig["resource_path_options"].append(pathname)
 
-clienttypes = os.listdir(os.path.join(PATH,"..","lib","voxelengine","client"))
-clienttypes = [c for c in clienttypes if os.path.exists(os.path.join(PATH, "..", "lib", "voxelengine", "client", c, "client.py"))]
+def get_worldtypes():
+    worldtypes = []
+    for resource_path in serverconfig["resource_paths"]:
+        worldtypes_dir = os.path.join(PATH,"..","resources",resource_path,"Welten") #everything before resource_path is dropped in case of absolute path
+        if os.path.isdir(worldtypes_dir):
+            worldtypes.extend(os.listdir(worldtypes_dir))
+    worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
+    return worldtypes
+
+def get_clienttypes():
+    clienttypes = os.listdir(os.path.join(PATH,"..","lib","voxelengine","client"))
+    clienttypes = [c for c in clienttypes if os.path.exists(os.path.join(PATH, "..", "lib", "voxelengine", "client", c, "client.py"))]
+    return clienttypes
 
 ui = UI(serverconfig, clientconfig,
-        worldtypes, clienttypes,
+        get_worldtypes, get_clienttypes,
         callback=command_handler.handle_command,
         background=False)
 ui.mainloop()
