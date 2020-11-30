@@ -703,12 +703,13 @@ class Model(object):
         glPopMatrix()
         for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,texture in model[modelpart]:
-                x, y, z = offset if modelpart in ("head","legl","legr") else relpos
+                offset = offset if modelpart in ("head","legl","legr") else relpos
                 texture = model_maps.get(texture, texture) #replace texture if in model_maps
                 blockmodel = BLOCKMODELS[texture] # using blockmodels here seems strange :(
                 for face in range(len(FACES)):
-                    texture_data = blockmodel[face][1]
-                    vertex_data = face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
+                    vertex_data, texture_data = blockmodel[face]
+                    #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
+                    vertex_data = [x*size[c%3]+offset[c%3] for c,x in enumerate(vertex_data)]
                     if modelpart == "head":
                         vertex_data = self._transform(head_matrix,relpos,vertex_data)
                     if modelpart == "legl":
@@ -719,10 +720,14 @@ class Model(object):
                     color_data = (0.5,)*len(vertex_data)
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
-                    vertex_lists.append(self.batch.add(4, GL_QUADS, self.textured_normal_group,
-                        ('v3f/static', vertex_data),
-                        ('t2f/static', texture_data),
-                        ('c3f/static', color_data)))
+                    try:
+                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, self.textured_normal_group,
+                            ('v3f/static', vertex_data),
+                            ('t2f/static', texture_data),
+                            ('c3f/static', color_data)))
+                    except:
+                        print(model_id, model_maps, vertex_data, texture_data, color_data)
+                        raise
                     #M# make only one vertex list per entity!
         self.entities[entity_id] = vertex_lists
 
