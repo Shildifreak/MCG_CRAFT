@@ -29,7 +29,7 @@
     #"GREEN" ,                  : {,       0, [( 0, 2)]],
     #["HAUT"  ,                   False,       0, [(11,14)]],
     #"WOLLE"                    : ( 8, 2)
-    #["ÖL",                       False,       0, [( 1, 5)]],
+    #["OEL",                       False,       0, [( 1, 5)]],
 
 {
 "BLOCKS" : {
@@ -110,7 +110,7 @@
     "Menschenbeine"            : {"faces":{"top":"gesicht_top", "bottom":"gesicht_bottom", "other":"menschenbeine" }},
     "Damenbeine"               : {"faces":{"top":"hellgrau",    "bottom":"rot",            "other":"damenbeine"    }},
 
-    #Oberkörper
+    #Oberkoerper
     "Damenkoerper"             : {"faces":{"all":"damenkoerper"}},
 
     # REDSTONE
