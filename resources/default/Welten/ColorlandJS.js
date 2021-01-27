@@ -41,8 +41,12 @@ class RNG {
 		return options[i];
 	}
 }
-random = new RNG(seed*(1<<30) || 1);
-
+if (Number.isInteger(seed) && (seed >= 0)) {
+	random = new RNG(seed || 1);
+}
+else {
+	random = new RNG(seed*(1<<30) || 1);
+}
 
 class BlockMap extends Map {
 	get (position) {

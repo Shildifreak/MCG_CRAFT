@@ -492,7 +492,7 @@ def run():
         data = copy.deepcopy(voxelengine.server.world_data_template.data)
         generator_data = data["block_world"]["generator"]
         generator_data["name"] = config["worldtype"]
-        generator_data["seed"] = random.random()
+        generator_data["seed"] = random.getrandbits(32)
         generator_data["path"] = worldtype_paths[config["worldtype"]]
         generator_data["path_py"] = generator_data["path"] + ".py"
         generator_data["path_js"] = generator_data["path"] + ".js"
