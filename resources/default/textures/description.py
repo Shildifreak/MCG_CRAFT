@@ -150,6 +150,8 @@
     "WAND"                     : {"faces":{"all":"grun"}},
     "AIM"                      : {"faces":{"all":"gold"}},
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
+
+    "WATER"                    : {"faces":{"top":"water_surface","other":"transparent"}, "transparent":True, "fog_color":(136,170,255,136)},
     },
 
 "ITEMS" : {

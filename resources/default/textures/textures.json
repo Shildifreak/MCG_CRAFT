@@ -619,6 +619,10 @@
         "reinforced_stone": [
             0,
             10
+        ],
+        "water_surface": [
+            12,
+            15
         ]
     }
 }
