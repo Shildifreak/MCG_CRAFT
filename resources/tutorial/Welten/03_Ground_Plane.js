@@ -3,8 +3,11 @@ var blocks = new BlockWorld();
 
 // --------------------------- //
 
-blocks.set([0,0,0], "STONE");
-
+for (var x = -10; x <= 10; x = x + 1) {
+	for (var z = -10; z <= 10; z = z + 1) {
+		blocks.set([x,0,z], "GRASS");
+	}
+}
 
 // --------------------------- //
 
