@@ -36,6 +36,7 @@ class TP_Compiler(object):
 		
 		for blockname, block in description["BLOCKS"].items():
 			block.setdefault("transparent", False)
+			block.setdefault("connecting", False)
 			block.setdefault("fog_color", (255, 255, 255, 0))
 			block.setdefault("refraction_index", 1)
 			block.setdefault("color_filter", ((1, 0, 0, 0),
@@ -62,6 +63,7 @@ class TP_Compiler(object):
 				O, I = d, 1-d
 				blockmodel = {"icon" : block["icon"],
 							  "transparent": block["transparent"],
+							  "connecting": block["connecting"],
 							  "faces": {"top"   : [(((O,I,I),(I,I,I),(I,I,O),(O,I,O)),images["top"   ])],
 										"bottom": [(((I,O,I),(O,O,I),(O,O,O),(I,O,O)),images["bottom"])],
 										"front" : [(((O,O,I),(I,O,I),(I,I,I),(O,I,I)),images["front" ])],
@@ -81,6 +83,7 @@ class TP_Compiler(object):
 				blockmodel["icon"] = "missing_texture"
 				print("missing icon in", blockmodelname)
 			blockmodel.setdefault("transparent", True)
+			blockmodel.setdefault("connecting", False)
 			faces = blockmodel.setdefault("faces", {})
 			for face in (*FACES,"inside"):
 				facedata = faces.get(face, [])

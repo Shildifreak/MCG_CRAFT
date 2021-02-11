@@ -16,9 +16,12 @@
 #			"other" : "side",
 #		}
 #		
-#		"transparent" : false,
+#		"transparent" : False,
+#		"connecting" : False,
 #		"fog_color" : (255,255,255,255),
+#		
 #		"refraction_index" : 1,
+#       "translucency" : 0,
 #		"color_filter": ((1, 0, 0, 0),
 #						 (0, 1, 0, 0),
 #						 (0, 0, 1, 0),
@@ -151,7 +154,7 @@
     "AIM"                      : {"faces":{"all":"gold"}},
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
 
-    "WATER"                    : {"faces":{"top":"water_surface","other":"transparent"}, "transparent":True, "fog_color":(136,170,255,136)},
+    "WATER"                    : {"faces":{"all":"water_surface"}, "transparent":True, "fog_color":(136,170,255,80), "connecting":True},
     },
 
 "ITEMS" : {
