@@ -10,6 +10,7 @@ class TextureDirectory(object):
 		self.reload()
 	def reload(self):
 		self.texture_files = {}
+		self.material_files = {}
 		assert os.path.isdir(self.path)
 		for dirpath, dirnames, filenames in os.walk(self.path, topdown=True):
 			if ".versions" in dirnames:
@@ -19,12 +20,22 @@ class TextureDirectory(object):
 					texture_file = TextureFile(os.path.join(dirpath, filename))
 					for name in texture_file.list_textures():
 						assert name not in self.texture_files
-						self.texture_files[name] = texture_file
+						if name.endswith(".material"):
+							self.material_files[name] = texture_file
+						else:
+							self.texture_files[name] = texture_file
 	def list_textures(self):
 		return self.texture_files.keys()
 	def read_texture(self, name):
 		"""returns surface"""
+		assert not name.endswith(".material")
 		return self.texture_files[name].read_texture(name)
+	def read_material(self, name):
+		assert not name.endswith(".material")
+		name += ".material"
+		if name in self.material_files:
+			return self.material_files[name].read_texture(name)
+		return None
 	def write_texture(self, name, surface):
 		if name in self.texture_files:
 			self.texture_files[name].write_texture(name, surface)

@@ -1,4 +1,4 @@
-var spawnpoint = [0,0,0];
+var spawnpoint = [0,5,0];
 
 class BlockWorld extends Map { get (key) { return super.get(""+key) }; set (key, value) { super.set(""+key, value); } }
 var blocks = new BlockWorld();

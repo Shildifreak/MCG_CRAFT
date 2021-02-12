@@ -130,5 +130,25 @@ def generate_textures_file(texture_index, texture_directories):
 			if t.get_size() != output_size:
 				print("mismatched resolution, rescaling",name)
 				t = pygame.transform.scale(t, output_size)
+			m = texture_directory.read_material(name)
+			if m and m.get_size() != output_size:
+				print("mismatched resolution, rescaling",name+".material")
+				m = pygame.transform.scale(m, output_size)
+			t = apply_material(t, m)
 			textures.blit(t, (0, output_size[1]*index))
 	return textures
+
+
+def apply_material(texture, material):
+	width, height = texture.get_size()
+	for y in range(height):
+		for x in range(width):
+			pos = (x,y)
+			r, g, b, transparency = texture.get_at(pos)
+			_, _, _, reflectivity = material.get_at(pos) if material else (0,0,0,255)
+			a = min(transparency, reflectivity) & ~1;
+			is_reflecting = transparency > reflectivity;
+			a += is_reflecting;
+			texture.set_at(pos, (r,g,b,a))
+	
+	return texture

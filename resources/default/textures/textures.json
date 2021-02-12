@@ -623,6 +623,14 @@
         "water_surface": [
             12,
             15
+        ],
+        "diamant_block.material": [
+            7,
+            7
+        ],
+        "diamant_erz.material": [
+            7,
+            8
         ]
     }
 }
