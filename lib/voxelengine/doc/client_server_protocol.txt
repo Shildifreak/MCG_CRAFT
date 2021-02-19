@@ -44,7 +44,7 @@ client -> server
 	
 	keys bitmap
 	
-	scrolling: n
+	scrolling n
 	
 	left click
 	
@@ -55,6 +55,9 @@ client -> server
 	right clicked hud_id
 	
 	inv
+	
+	text ...
+		Nutzereingabe im Chat
 
 
 Ablauf:
