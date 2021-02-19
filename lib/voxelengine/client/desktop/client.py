@@ -71,6 +71,7 @@ KEYMAP = [
     (("mouse", mouse.LEFT ),"left_hand" ),
     (("mouse", mouse.RIGHT),"right_hand"),
     (("key"  , key.F      ),"emote"     ),
+    (("key"  , key.T      ),"chat"      ),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -846,10 +847,13 @@ class Window(pyglet.window.Window):
         pyglet.window.Window.__init__(self,*args, **kwargs)
         #super(Window, self).__init__(*args, **kwargs)
 
-        # Whether or not the window exclusively captures the mouse.
+        # Whether or not the window exclusively captures the mouse and other status info
         self.exclusive = False
         self.hud_open = False
         self.debug_info_visible = False
+        self.chat_open = False
+        self.chat_input_buffer = ""
+        self.chat_cursor_position = 0
 
         glEnable(GL_NORMALIZE)
         default_block_shader      = Shader([vertex_shader_code], [     default_fragment_shader_code])
@@ -876,9 +880,14 @@ class Window(pyglet.window.Window):
         # Instance of the model that handles the world.
         self.model = Model()
         
-        # The label that is displayed in the top left of the canvas.
+        # The label for debug info
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
+            color=(0, 0, 0, 255))
+
+        # The label for current chat_input_buffer
+        self.chat_label = pyglet.text.Label('', font_name='Arial', font_size=18,
+            x=10, y= 10, anchor_x='left', anchor_y='bottom',
             color=(0, 0, 0, 255))
 
         # This call schedules the `update()` method to be called
@@ -1090,14 +1099,27 @@ class Window(pyglet.window.Window):
         used_events = set([i[0] for i in KEYMAP])
         if (event in used_events) or (event == True):
             eventstates = 0
-            for (event_type, symbol), action in KEYMAP:
-                if event_type == "key":
-                    if self.keystates[symbol]:
-                        eventstates |= 1<<(ACTIONS.index(action))
-                if event_type == "mouse":
-                    if self.mousestates[symbol]:
-                        eventstates |= 1<<(ACTIONS.index(action))
+            for e, action in KEYMAP:
+                (event_type, symbol) = e
+                if (event_type == "key"   and self.keystates[symbol] and not self.chat_open) \
+                or (event_type == "mouse" and self.mousestates[symbol]):
+                    eventstates |= 1<<(ACTIONS.index(action))
+                    if event == e:
+                        self.handle_input_action(action)
+                else:
+                    if event == e:
+                        self.handle_input_action_end(action)
             self.client.send("keys "+str(eventstates))
+
+    def handle_input_action(self, action):
+        if action == "inv":
+            if self.hud_open:
+                self.hud_open = False
+                self.set_exclusive_mouse(True)
+
+    def handle_input_action_end(self, action):
+        if action == "chat": #do this on release, so key is not printed into chat
+            self.chat_open = True
 
     def on_key_press(self, symbol, modifiers):
         """
@@ -1113,22 +1135,74 @@ class Window(pyglet.window.Window):
         """
 
         if symbol == key.ESCAPE:
-            self.set_exclusive_mouse(False)
+            if self.chat_open:
+                self.client.send("chat_close")
+                self.chat_open = False
+            else:
+                self.set_exclusive_mouse(False)
         else:
-            if symbol == key.E:
-                if self.hud_open:
-                    self.hud_open = False
-                    self.set_exclusive_mouse(True)
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
                 self.enable_fragment_texture = not self.enable_fragment_texture
             if symbol == key.F5:
                 self.enable_fragment_light = not self.enable_fragment_light
+            if self.chat_open:
+                pass
             self.send_input_change(("key", symbol))
                 
     def on_key_release(self, symbol, modifiers):
         self.send_input_change(("key", symbol))
+
+    def on_text(self, text):
+        if self.chat_open:
+            for c in text:
+                if c in ("\n","\r"):
+                    self.client.send("text %s" % self.chat_input_buffer)
+                    self.chat_input_buffer = ""
+                    self.chat_cursor_position = 0
+                else:
+                    self.chat_input_buffer = (
+                        self.chat_input_buffer[:self.chat_cursor_position] + 
+                        c +
+                        self.chat_input_buffer[self.chat_cursor_position:] )
+                    self.chat_cursor_position += 1
+            print("chat:", repr(self.chat_input_buffer))
+    
+    def on_text_motion(self, motion):
+        """The user moved the text input cursor.
+        """
+        l = len(self.chat_input_buffer)
+
+        if motion == key.MOTION_BACKSPACE:
+            self.chat_input_buffer = (self.chat_input_buffer[:self.chat_cursor_position-1] + 
+                                      self.chat_input_buffer[self.chat_cursor_position:] )
+            self.chat_cursor_position -= 1
+        elif motion == key.MOTION_DELETE:
+            self.chat_input_buffer = (self.chat_input_buffer[:self.chat_cursor_position] + 
+                                      self.chat_input_buffer[self.chat_cursor_position+1:] )
+        elif motion == key.MOTION_LEFT:
+            self.chat_cursor_position -= 1
+        elif motion == key.MOTION_RIGHT:
+            self.chat_cursor_position += 1
+        elif motion in (key.MOTION_BEGINNING_OF_LINE, key.MOTION_PREVIOUS_PAGE, key.MOTION_BEGINNING_OF_FILE):
+            self.chat_cursor_position = 0
+        elif motion in (key.MOTION_END_OF_LINE, key.MOTION_NEXT_PAGE, key.MOTION_END_OF_FILE):
+            self.chat_cursor_position = l
+        elif motion == key.MOTION_UP:
+            print("chat history is not implemented yet")
+        elif motion == key.MOTION_DOWN:
+            print("chat history is not implemented yet")
+        elif motion == key.MOTION_NEXT_WORD:
+            print("moving cursor to next word is not implemented yet")
+        elif motion == key.MOTION_PREVIOUS_WORD:
+            print("moving cursor to previous word is not implemented yet")
+        else:
+            print("encountered unknown text motion", motion)
+
+        self.chat_cursor_position = max(0, min(l, self.chat_cursor_position))
+        print("chat:", repr(self.chat_input_buffer))
+
 
     def on_resize(self, width, height):
         """
@@ -1211,6 +1285,8 @@ class Window(pyglet.window.Window):
         
         if self.debug_info_visible:
             self.draw_debug_info()
+        if self.chat_open:
+            self.draw_chat_buffer()
     
     def draw_debug_info(self):
         """
@@ -1224,7 +1300,16 @@ class Window(pyglet.window.Window):
         
         self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d' % (fps, x, y, z, queue, face_buffer, terrain_queue)
         self.label.draw()
-        
+    
+    def draw_chat_buffer(self):
+        """
+        draw the text the user is currently entering into chat (not send to server yet)
+        """
+        show_cursor = (int(time.time()*1.5)&1) #and (self.chat_cursor_position != len(self.chat_input_buffer))
+        caret = "|" if show_cursor else " "
+        self.chat_label.text = (self.chat_input_buffer[:self.chat_cursor_position] + caret +
+                                self.chat_input_buffer[self.chat_cursor_position:] )
+        self.chat_label.draw()
 
     def draw_focused_block(self):
         """

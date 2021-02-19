@@ -33,6 +33,7 @@ actions = [
     ("shift", u"ducken + mod. Mausfunktionen"),
     ("sprint", u"sprinten"),
     ("emote", u"Grimasse schneiden"),
+    ("chat", u"Chat öffnen"),
     ("inv1", u"Inventarplatz 1 auswählen"),
     ("inv2", u"Inventarplatz 2 auswählen"),
     ("inv3", u"Inventarplatz 3 auswählen"),
