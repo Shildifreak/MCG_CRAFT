@@ -8,7 +8,8 @@ class Torch(Block):
     defaults["p_directions"] = (Vector((0,1,0)),)
     defaults["p_ambient"] = True
     def handle_event_block_update(self,event):
-        self.world.event_system.add_event(1,Event("redstone_update",Point(self.position)))
+        redstone_update = Event("redstone_update",Point(self.position))
+        self.world.event_system.add_event(redstone_update, 1)
 
     
     def handle_event_redstone_update(self, event):
@@ -27,4 +28,4 @@ class Torch(Block):
         return False
 
     def get_tags(self):
-        return super(Torch,self).get_tags().union({"block_update", "redstone_update"}) - {"solid"}
+        return (super().get_tags() - {"solid"}) | {"block_update", "redstone_update"}

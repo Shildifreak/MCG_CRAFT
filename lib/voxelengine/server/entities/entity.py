@@ -39,8 +39,8 @@ class Entity(ObservableDict):
             self.world.entities.notice_move(self,old_position,new_position)
             
             # tell everyone listening that entity has moved
-            self.world.event_system.add_event(0,Event("entity_leave",self.HITBOX+old_position,self))
-            self.world.event_system.add_event(0,Event("entity_enter",self.HITBOX+new_position,self))
+            self.world.event_system.add_event(Event("entity_leave",self.HITBOX+old_position,self))
+            self.world.event_system.add_event(Event("entity_enter",self.HITBOX+new_position,self))
 
     def _on_tags_change(self, new_tags):
         if self.world:
@@ -51,7 +51,7 @@ class Entity(ObservableDict):
         # leave old world
         if self.world:
             self.world.entities.remove(self)
-            self.world.event_system.add_event(0,Event("entity_leave",self.HITBOX+self["position"],self))
+            self.world.event_system.add_event(Event("entity_leave",self.HITBOX+self["position"],self))
         self.world = None
 
         # change position
@@ -61,7 +61,7 @@ class Entity(ObservableDict):
         self.world = new_world
         if self.world:
             self.world.entities.add(self)
-            self.world.event_system.add_event(0,Event("entity_enter",self.HITBOX+self["position"],self))
+            self.world.event_system.add_event(Event("entity_enter",self.HITBOX+self["position"],self))
         
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -119,7 +119,7 @@ class Entity(ObservableDict):
 
     def _on_visible_change(self,*_):
         if self.world:
-            self.world.event_system.add_event(0,Event("entity_change",self.HITBOX+self["position"],self))
+            self.world.event_system.add_event(Event("entity_change",self.HITBOX+self["position"],self))
 
 if __name__ == "__main__":
     e = Entity()

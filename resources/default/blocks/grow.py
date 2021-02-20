@@ -10,7 +10,7 @@ class Dirt(Block):
             self.world.blocks[self.position] = "GRASS"
 
     def get_tags(self):
-        return super(Dirt,self).get_tags().union({"random_tick"})
+        return super().get_tags() | {"random_tick"}
 
 @register_block("GRASS")
 class Grassblock(Block):
@@ -23,7 +23,7 @@ class Grassblock(Block):
         elif self.relative[(0,1,0)] not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume","HALM",]:
             self.world.blocks[self.position] = "DIRT"
     def get_tags(self):
-        return super(Grassblock,self).get_tags().union({"random_tick"})
+        return super().get_tags() | {"random_tick"}
             
 
 @register_block("grass")
@@ -41,7 +41,7 @@ class Plant(Block):
         if self.relative[(0,-1,0)] != "GRASS":
             self.world.blocks[self.position] = "AIR"
     def get_tags(self):
-        return super(Plant,self).get_tags().union({"block_update"})-{"solid"}
+        return (super().get_tags() - {"solid"}) | {"block_update"}
 
 
 @register_block("Setzling")
@@ -53,7 +53,7 @@ class Setzling(Block):
             self.relative[(d_pos[0], d_pos[1]-1, d_pos[2])] = block
 
     def get_tags(self):
-        return super(Setzling,self).get_tags().union({"random_tick"}) - {"solid"}
+        return (super().get_tags() - {"solid"}) | {"random_tick"}
 
     def collides_with(self,area):
         return False

@@ -16,6 +16,7 @@ import threading
 import json
 import urllib.request
 import io
+import codecs
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -762,10 +763,47 @@ class Model(object):
                             ('t2f/static', texture_data))
         else:
             x,y = center_pos
-            label = pyglet.text.Label(texture[1:],x=x,y=y,
-                                      anchor_x='center',anchor_y='center',
-                                      batch=self.hud_batch,group=textgroup,
-                                      font_name="Arial")
+            text = codecs.decode(texture[1:].encode(), "base64").decode()
+            if not "\n" in text:
+                label = pyglet.text.Label(text,x=x,y=y,
+                                          anchor_x='center',anchor_y='center',
+                                          width=size[0], height=size[1],
+                                          batch=self.hud_batch,group=textgroup,
+                                          multiline=True, # align only works when multiline = True
+                                          align="right",
+                                          font_name="Arial"
+                                          )
+                label.content_valign = "bottom"
+            else:
+                document = pyglet.text.decode_text(text)
+                document.set_style(0, len(document.text), {
+                    'font_name': "Arial",
+                    #'font_size': font_size,
+                    #'bold': bold,
+                    #'italic': italic,
+                    'color': (255,255,255,255),
+                    'align': "left",
+                    })
+                label = pyglet.text.layout.ScrollableTextLayout(document,
+                                          batch=self.hud_batch,group=textgroup,
+                                          multiline=True, width=size[0], height=size[1],
+                                          )
+                label.begin_update()
+                
+                label.x = x
+                label.y = y
+                label.anchor_x = "center"
+                label.anchor_y = "center"
+                
+                # doesn't work although it should (bug in pyglet)
+                #label.valign = label.height - label.content_height
+                #label.content_valign = "bottom"
+                
+                #M# workaround for bug in pyglet
+                label.top_group.view_y = label.height - label.content_height
+                
+                label.end_update()
+                
             vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work
         self.hud_elements[element_id] = (vertex_list,element_data,corners)
         
@@ -775,7 +813,7 @@ class Model(object):
             vertex_list.delete()
 
     def hud_resize(self, window_size):
-        for vertex_list,element_data,_ in self.hud_elements.values():
+        for vertex_list,element_data,_ in tuple(self.hud_elements.values()):
             self.set_hud(element_data,window_size)
 
     def _add_block(self, position, block_name):
@@ -883,12 +921,12 @@ class Window(pyglet.window.Window):
         # The label for debug info
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
-            color=(0, 0, 0, 255))
+            color=(0, 0, 0, 255), group=textgroup)
 
         # The label for current chat_input_buffer
         self.chat_label = pyglet.text.Label('', font_name='Arial', font_size=18,
             x=10, y= 10, anchor_x='left', anchor_y='bottom',
-            color=(0, 0, 0, 255))
+            color=(0, 0, 0, 255), group=textgroup)
 
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
@@ -1010,11 +1048,13 @@ class Window(pyglet.window.Window):
         focused = None
         z = float("-inf")
         for _,element_data,corners in self.model.hud_elements.values():
-            if corners[0] < x < corners[6]:
-                if corners[1] < y < corners[7]:
-                    if corners[2] > z:
-                        focused = element_data[0]
-                        z = corners[2]
+            name = element_data[0]
+            if name.startswith("#"):
+                if corners[0] < x < corners[6]:
+                    if corners[1] < y < corners[7]:
+                        if corners[2] > z:
+                            focused = name
+                            z = corners[2]
         return focused
 
     def on_mouse_press(self, x, y, button, modifiers):
@@ -1167,7 +1207,6 @@ class Window(pyglet.window.Window):
                         c +
                         self.chat_input_buffer[self.chat_cursor_position:] )
                     self.chat_cursor_position += 1
-            print("chat:", repr(self.chat_input_buffer))
     
     def on_text_motion(self, motion):
         """The user moved the text input cursor.
@@ -1201,7 +1240,6 @@ class Window(pyglet.window.Window):
             print("encountered unknown text motion", motion)
 
         self.chat_cursor_position = max(0, min(l, self.chat_cursor_position))
-        print("chat:", repr(self.chat_input_buffer))
 
 
     def on_resize(self, width, height):

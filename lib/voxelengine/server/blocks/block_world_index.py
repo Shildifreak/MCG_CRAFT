@@ -4,7 +4,7 @@ if __name__ == "__main__":
 	__package__ = "voxelengine.server.blocks"
 
 import collections
-from voxelengine.modules.geometry import BinaryBox
+from voxelengine.modules.geometry import BinaryBox, EVERYWHERE, SOMEWHERE, NOWHERE
 import random
 
 class BlockWorldIndex(object):
@@ -70,6 +70,10 @@ class BlockWorldIndex(object):
 		if isinstance(tags, str):
 			tags = {tags}
 		assert isinstance(tags, set)
+		assert area != EVERYWHERE
+
+		if area == SOMEWHERE or area == NOWHERE:
+			return
 
 		# get binary box cover of area
 		# get tags for those boxes, if necessary generate the tags

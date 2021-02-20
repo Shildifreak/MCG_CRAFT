@@ -20,4 +20,4 @@ class StoneBlock(Block):
         #print("hey, you can't mine bedrock")
 
     def get_tags(self):
-        return super(StoneBlock,self).get_tags() - {"explosion"} # can't explode
+        return super().get_tags() - {"explosion"} # can't explode

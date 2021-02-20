@@ -71,8 +71,8 @@ class BlockWorld(Serializable):
 			# update BlockWorldIndex
 			self.block_world_index.notice_change(position, self._get_tags(blockdata))
 			# issue event for others to notice change
-			#self.event_system.add_event(0,Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
-			self.event_system.add_event(0,Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
+			#self.event_system.add_event(Event("block_update",BinaryBox(0,position).bounding_box(),block)) #since it's 0 delay there is no problem with passing unfrozen object
+			self.event_system.add_event(Event("block_update",Sphere(position,1.2),block)) #since it's 0 delay there is no problem with passing unfrozen object
 		
 	@functools.lru_cache()
 	def _get_tags(self, blockdata):

@@ -99,7 +99,7 @@ class Vector(tuple):
         return "Vector"+tuple.__repr__(self)
 
 class Area(object):
-    def binary_box_cover():
+    def binary_box_cover(self):
         """return a set of binary boxes so that everything that collides with self collides with one of the binary boxes"""
         raise NotImplementedError()
     
@@ -354,12 +354,26 @@ class Ray(Area):
         return None, None, None
 
 class Everywhere(Area):
+    """EVERYWHERE collides with everything except NOWHERE"""
     __slots__ = ()
     def distance(self, other):
+        if isinstance(other, Nowhere):
+            return 1
         return -1
 EVERYWHERE = Everywhere()
 
+class Somewhere(Area):
+    """SOMEWHERE collides only with EVERYWHERE"""
+    __slots__ = ()
+    def distance(self, other):
+        if isinstance(other, Everywhere):
+            return -1
+        else:
+            return 1
+SOMEWHERE = Somewhere()
+
 class Nowhere(Area):
+    """NOWHERE collides with nothing"""
     __slots__ = ()
     def distance(self, other):
         return 1

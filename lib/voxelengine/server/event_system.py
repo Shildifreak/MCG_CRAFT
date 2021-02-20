@@ -25,6 +25,7 @@ class EventSystem(Serializable):
 		hitbox_update  # call for every entity and use for things like collision, pressure plates, ...
 		explosion
 		random_tick    # get's randomly created around players
+		chat           # someone or something posted a chat message
 	"""
 	def __init__(self, world, event_data_list):
 		self.world = world
@@ -34,10 +35,11 @@ class EventSystem(Serializable):
 	def __serialize__(self):
 		return [tuple(event) for event in self.event_queue]
 	
-	def add_event(self, delay, event):
+	def add_event(self, event, delay=0):
 		"""
 		in <delay> ticks, 
 		"""
+		assert isinstance(event, Event)
 		assert delay >= 0
 		self.event_queue[delay].append(event)
 	

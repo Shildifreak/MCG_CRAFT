@@ -3,6 +3,7 @@ import _thread as thread
 import threading
 import time
 import json
+import codecs
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -25,6 +26,7 @@ class Player(object):
 		self.action_states = {}
 		self.was_pressed_set = set()
 		self.was_released_set = set()
+		self.new_chat_msgs_list = list()
 		self.quit_flag = False
 		
 		self.hud_cache = {}
@@ -63,10 +65,22 @@ class Player(object):
 		"""return whether key was released since last update"""
 		return key in self.was_released_set
 
+	def new_chat_messages(self):
+		"""new messages that the player sent. Use like this:
+		for msg in player.new_chat_messages():
+			...
+		"""
+		while self.new_chat_msgs_list:
+			yield self.new_chat_msgs_list.pop(0)
+
 	def set_focus_distance(self,distance):
 		"""Set maximum distance for focusing block"""
 		self.outbox.add("focusdist","%g"%distance)
 		self.focus_distance = distance
+
+	def set_hud_text(self,element_id,text,position,rotation,size,alignment):
+		text_b64 = codecs.encode(text.encode(), "base64").rstrip().decode()
+		self.set_hud(element_id,"/"+text_b64,position,rotation,size,alignment)
 
 	def set_hud(self,element_id,texture,position,rotation,size,alignment):
 		if texture == "AIR":
@@ -216,6 +230,10 @@ class Player(object):
 		elif cmd == "control" and len(args) == 2:
 			entity_id, password = args
 			self._control_request(entity_id, password)
+
+		elif cmd == "text" and len(args) >= 1:
+			text = " ".join(args)
+			self.new_chat_msgs_list.append(text)
 
 		else:
 			self.was_pressed_set.add(msg)

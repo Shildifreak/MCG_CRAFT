@@ -27,7 +27,7 @@ class Redstone(Block):
         return False
 
     def get_tags(self):
-        return super(Redstone,self).get_tags().union({"block_update"}) - {"solid"}
+        return (super().get_tags() - {"solid"}) | {"block_update"}
 
 #        Block.block_update(self,faces)
 
@@ -58,7 +58,7 @@ class Repeater(Block):
     #        "rotation":self["rotation"]}
 
     def get_tags(self):
-        return super(Repeater,self).get_tags().union({"block_update"})
+        return super().get_tags() | {"block_update"}
 
 
 

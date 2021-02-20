@@ -8,7 +8,6 @@ from TPManager.tp_compiler import TP_Compiler
 
 import voxelengine
 from voxelengine.modules.shared import *
-from voxelengine.modules.utils import operator_friendly_set
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box
 from voxelengine.server.event_system import Event
 
@@ -156,7 +155,7 @@ class Block(voxelengine.Block):
         - solid     .. which means they got a hitbox (see collides_with for further instruction
         - explosion .. this block got an event handler for explosions
         """
-        return operator_friendly_set({"solid", "explosion"})
+        return {"solid", "explosion"}
 
     def collides_with(self, area):
         """

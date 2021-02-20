@@ -20,11 +20,13 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"lib"))
 
 import resources
+import command_manager
 import voxelengine
 
 from config import Config, default_serverconfig
 from voxelengine.modules.shared import *
-from voxelengine.modules.geometry import Vector, EVERYWHERE, Sphere
+from voxelengine.modules.geometry import Vector, EVERYWHERE, SOMEWHERE, Sphere, Point
+from voxelengine.server.event_system import Event
 import voxelengine.server.world_data_template
 
 class InventoryDisplay():
@@ -68,11 +70,11 @@ class InventoryDisplay():
                             continue
                     self.player.undisplay_item(name)
             if inventory and self.is_open:
-                self.player.set_hud("inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
-                self.player.set_hud("inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
+                self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
             else:
-                self.player.del_hud("inventory:(%s,%s)" %(k,-1))
-                self.player.del_hud("inventory:(%s,%s)" %(k,+1))
+                self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
+                self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
 
     def open(self,foreign_inventory = None):
         if self.is_open:
@@ -120,7 +122,7 @@ class InventoryDisplay():
     
     def handle_drag(self,event):
         button, dragged, from_element, to_element = event.split(" ")
-        if from_element.startswith("inventory") and to_element.startswith("inventory"):
+        if from_element.startswith("#inventory") and to_element.startswith("#inventory"):
             from_args = from_element.rsplit("(",1)[1].split(")",1)[0].split(",")
             to_args = to_element.rsplit("(",1)[1].split(")",1)[0].split(",")
             if len(from_args) == 3 and len(to_args) == 3:
@@ -148,6 +150,30 @@ class InventoryDisplay():
         y = inventory2.replace(index2, x)
         inventory1.replace(index1, y)
 
+class ChatDisplay(object):
+    def __init__(self, player):
+        self.player = player
+        self.log = []
+        self.current_text = ""
+        self.display()
+        
+    def add_message(self, message):
+        self.log.append((time.time(),message))
+        self.display()
+
+    def display(self, t0 = 0):
+        text = "\n"+"\n".join(m for t,m in self.log if t > t0) #extra linebreak at start to force mulitline mode in client
+        if text == self.current_text:
+            return
+        self.current_text = text
+        position = Vector(0.05, 0.1, 0.5)
+        rotation = 0
+        size = (0.9,0.7)
+        align = INNER|TOP|LEFT
+        self.player.set_hud_text("chat",text,position,rotation,size,align)
+        #self.player.set_hud("chat_bg","STONE",position+(0,0,-0.1),rotation,size,align)
+
+
 class Player(voxelengine.Player):
     RENDERDISTANCE = 10
 
@@ -156,6 +182,7 @@ class Player(voxelengine.Player):
         self.set_focus_distance(8)
         self.flying = False
         self.inventory_display = InventoryDisplay(self)
+        self.chat = ChatDisplay(self)
 
     def create_character(self):
         world = self.universe.get_spawn_world()
@@ -192,6 +219,15 @@ class Player(voxelengine.Player):
             self.entity.register_item_callback(self._update_right_hand_image,"inventory")
             self.entity.register_item_callback(self._update_lives,"lives")
 
+    def handle_events(self, events):
+        other_events = []
+        for event in events:
+            if event.tag == "chat":
+                self.chat.add_message(event.data)
+            else:
+                other_events.append(event)
+        super().handle_events(other_events)
+
     def _open_inventory_callback(self, boolean):
         if boolean:
             self.inventory_display.open(self.entity.foreign_inventory)
@@ -212,6 +248,22 @@ class Player(voxelengine.Player):
             self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
 
     def update(self):
+        for msg in self.new_chat_messages():
+            if msg.startswith("/"):
+                command_manager.execute_command(self, msg)
+            elif msg:
+                if self.world:
+                    if self.entity:
+                        area = Point(self.entity["position"])
+                    else:
+                        area = SOMEWHERE
+                    event = Event("chat",area,msg)
+                    self.world.event_system.add_event(event)
+                else:
+                    print("Player want's to say something but is not in any world.")
+            else: #empty messages are only sent to player himself
+                self.chat.add_message("")
+        
         if not self.entity:
             return
         pe = self.entity
@@ -223,9 +275,9 @@ class Player(voxelengine.Player):
         if self.was_pressed("emote") or self.was_released("emote"):
             pe.update_texture(show_emote=self.is_pressed("emote"))
         for pressed in self.was_pressed_set:
-            if pressed.startswith("left clicked inventory") or pressed.startswith("right clicked inventory"):
+            if pressed.startswith("left clicked #inventory") or pressed.startswith("right clicked #inventory"):
                 self.inventory_display.handle_click(pressed)
-            if pressed.startswith("left dragged inventory") or pressed.startswith("right dragged inventory"):
+            if pressed.startswith("left dragged #inventory") or pressed.startswith("right dragged #inventory"):
                 self.inventory_display.handle_drag(pressed)
             if pressed.startswith("inv") and pressed != "inv":
                 inv_slot = int(pressed[3:])
@@ -354,13 +406,13 @@ class Player(voxelengine.Player):
 
     def display_item(self,name,item,position,size,align):
         w, h = size
-        self.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
+        self.set_hud("#"+name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
         self.set_hud(name,item["id"],position,0,Vector(size)*0.8,align)
-        self.set_hud(name+"_count","/"+str(item.get("count","")),position+Vector((0.6*w,-0.6*h,0.01)),0,(0,0),align)
+        self.set_hud_text(name+"_count",str(item.get("count","")),position+Vector((0,0,0.01)),0,size,align)
 
     def undisplay_item(self,name):
-        for suffix in ("_bgbox","","_count"):
-            self.del_hud(name+suffix)
+        for prefix, suffix in (("#","_bgbox"),("",""),("","_count")):
+            self.del_hud(prefix+name+suffix)
 
 class ValidTag(object):
     __slots__ = ("value", "callback")

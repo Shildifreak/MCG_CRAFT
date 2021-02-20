@@ -8,7 +8,7 @@ class Wand(Block):
         return False
 
     def get_tags(self):
-        return super(Wand,self).get_tags() - {"solid"}
+        return super().get_tags() - {"solid"}
 
 
 @register_block("AIM")

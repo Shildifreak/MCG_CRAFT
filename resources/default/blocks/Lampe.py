@@ -11,4 +11,4 @@ class Lamp(SolidBlock):
         self.save()
 
     def get_tags(self):
-        return super(Lamp,self).get_tags().union({"block_update"})
+        return super().get_tags() | {"block_update"}

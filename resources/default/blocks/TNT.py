@@ -21,13 +21,13 @@ class tntblock(Block):
         self.world.blocks[self.position] = "AIR"
         power = random.randint(self.power_min,self.power_max)
         explosion_event = Event("explosion",Sphere(self.position,power))
-        self.world.event_system.add_event(0, explosion_event)
+        self.world.event_system.add_event(explosion_event)
         
     def handle_event_explosion(self,events):
         self.explode()
 
     def get_tags(self):
-        return super().get_tags() + {"block_update"}
+        return super().get_tags() | {"block_update"}
 
 @register_block("A-TNT")
 class a_tntblock(tntblock):
@@ -44,4 +44,4 @@ class b_tntblock(tntblock):
         upper_bounds = self.position + (+power, -1, +power)
         area = Box(lower_bounds, upper_bounds)
         explosion_event = Event("explosion",area)
-        self.world.event_system.add_event(0, explosion_event)
+        self.world.event_system.add_event(explosion_event)
