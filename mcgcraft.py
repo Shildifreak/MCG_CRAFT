@@ -20,7 +20,6 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"lib"))
 
 import resources
-import command_manager
 import voxelengine
 
 from config import Config, default_serverconfig
@@ -249,19 +248,26 @@ class Player(voxelengine.Player):
 
     def update(self):
         for msg in self.new_chat_messages():
-            if msg.startswith("/"):
-                command_manager.execute_command(self, msg)
-            elif msg:
-                if self.world:
-                    if self.entity:
-                        area = Point(self.entity["position"])
-                    else:
-                        area = SOMEWHERE
-                    event = Event("chat",area,msg)
-                    self.world.event_system.add_event(event)
+            if msg.strip():
+                name = repr(self)
+                if self.entity:
+                    name = self.entity.get("id",name)
+                print("[%s][%s] %s" % (time.strftime("%Z %Y-%m-%d %T"), name, msg))
+                if msg.startswith("/"):
+                    cmd = resources.Command(self, msg)
+                    cmd.execute()
+                    #self.chat.add_message(msg)
                 else:
-                    print("Player want's to say something but is not in any world.")
-            else: #empty messages are only sent to player himself
+                    if self.world:
+                        if self.entity:
+                            area = Point(self.entity["position"])
+                        else:
+                            area = SOMEWHERE
+                        event = Event("chat",area,"[%s] %s"%(name,msg))
+                        self.world.event_system.add_event(event)
+                    else:
+                        print("Player want's to say something but is not in any world.")
+            else: #empty messages are only sent to player himself, so he can push up the chat if he want's to
                 self.chat.add_message("")
         
         if not self.entity:
@@ -631,8 +637,11 @@ def run():
                         g.launch_client(*args)
                     else:
                         print("use like this: play clienttype [username] [password]")
+                elif command.startswith("/"):
+                    cmd = resources.Command(u, command)
+                    cmd.execute()
                 else:
-                    print("valid commands include: quit, kill, save, reload, stats")
+                    print("valid commands include: quit, kill, save, reload, stats, /help")
             
             # game server update - communicate with clients
             g.update()

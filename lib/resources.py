@@ -374,12 +374,90 @@ class Entity(voxelengine.Entity):
         self["inventory"][i_air] = item
         return True
 
+
+
+
+class Command(object):
+	"""
+	permission_level:
+		  -1 - no commands allowed
+		   0 - commands with no effects in game (whisper, help, log, etc.)
+		   1 - commands with negative effects to originator (kill, ...)
+		   2 - commands with slight positive effects (goto)
+		   3 - commands with great positive effect (give)
+		   9 - commands that directly affect other entities (entity, setblock, ...)
+		  90 - commands that effect players (kick, ban, timeout, ...)
+		 900 - commands that effect permissions (op, deop, ...)
+		9000 - server level commands (restart, stop, etc.)
+	"""
+	commands = {} # {name: command_func}
+
+	@classmethod
+	def register_command(cls, name, permission_level=9000):
+		def _register_command(command):
+			cls.commands[name] = command
+			command.permission_level = permission_level
+			return command
+		return _register_command
+
+	def __init__(self, originator, command_text):
+		self.originator = originator
+		self.command_text = command_text
+
+		if isinstance(self.originator, voxelengine.Player):
+			self.originator_name = "Player " + repr(self.originator)
+			if self.originator.entity:
+				self.originator_name += " [%s]" % self.originator.entity["id"]
+			self.permission_level = 3
+			self.universe = self.originator.universe
+			self.player = self.originator
+			self.entity = self.originator.entity #may still be None
+		elif isinstance(self.originator, voxelengine.Universe):
+			self.originator_name = "Server"
+			self.permission_level = 9000
+			self.universe = self.originator
+			self.player = None
+			self.entity = None
+		else:
+			raise NotImplementedError()
+
+		if self.entity:
+			self.world = self.entity.world
+			self.position = self.entity["position"]
+		else:
+			self.world = None
+			self.position = None
+
+	def send_feedback(self, feedback):
+		if isinstance(self.originator, voxelengine.Player):
+			self.originator.chat.add_message(feedback)
+		print(feedback)
+
+	def execute_subcommand(self, subcommand):
+		self.command_text = subcommand
+		self.execute()
+
+	def execute(self):
+		command_name, self.arg_text, *_ = self.command_text.split(" ",1) + [""]
+		command_name = command_name.lstrip("/")
+		command_func = self.commands.get(command_name, None)
+		if command_func:
+			# ensure permission
+			if self.permission_level < command_func.permission_level:
+				self.send_feedback("command /%s: insufficient permission level" % command_name)
+				return
+			# call command_function
+			command_func(self)
+		else:
+			self.send_feedback("Command /%s is not defined" % command_name)
+
 blockClasses    = None # initialized in load_resources_from
 itemClasses     = None # initialized in load_resources_from
 entityClasses   = None # initialized in load_resources_from
 
 def register_item(name):
     def _register_item(item_subclass):
+        assert issubclass(item_subclass, Item)
         if name in itemClasses:
             print("Warning: %s replaces previous definition %s" % (item_subclass, itemClasses[name]))
         itemClasses[name] = item_subclass
@@ -388,6 +466,7 @@ def register_item(name):
 
 def register_block(name):
     def _register_block(block_subclass):
+        assert issubclass(block_subclass, Block)
         if name in blockClasses:
             print("Warning: %s replaces previous definition %s" % (block_subclass, blockClasses[name]))
         blockClasses[name] = block_subclass
@@ -396,11 +475,14 @@ def register_block(name):
 
 def register_entity(name):
     def _register_entity(entity_subclass):
+        assert issubclass(entity_subclass, Entity)
         if name in entityClasses:
             print("Warning: %s replaces previous definition %s" % (entity_subclass, entityClasses[name]))
         entityClasses[name] = entity_subclass
         return entity_subclass
     return _register_entity
+
+register_command = Command.register_command
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name
@@ -415,7 +497,7 @@ def load_resources_from(resource_paths):
     for resource_path in resource_paths:
         structure_path = os.path.join(PATH, "..", "resources", resource_path, "structures")
         sys.path.append(structure_path)
-        for directory in ("blocks","entities"):
+        for directory in ("blocks","entities","items","commands"):
             path = os.path.join(PATH, ".." , "resources", resource_path, directory) #everything before resource_path is dropped in case of absolute path
             if os.path.isdir(path):
                 for fn in os.listdir(path):

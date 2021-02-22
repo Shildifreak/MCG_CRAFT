@@ -16,6 +16,13 @@ class EntityWorld(Serializable):
 		        "entities": list(self.entities)
 		        }
 
+	def __getitem__(self, entity_id):
+		#M# dear future me, please optimize this!
+		for entity in self.entities:
+			if entity.get("id",None) == entity_id:
+				return entity
+		raise KeyError()
+
 	def find_entities(self, area=EVERYWHERE, tags=frozenset()):
 		"""entities may be different in size in regards to different tags"""
 		#entities are added into binary box tree by their binary box cover[s] for the corresponding tags
