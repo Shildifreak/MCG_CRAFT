@@ -17,7 +17,7 @@ def _help(command):
 def goto(command):
 	"""/goto x y z"""
 	if not command.entity:
-		command.send_feedback("command /goto: missing target")
+		command.send_feedback("command /goto: don't know which entity to target")
 		return
 	position = command.arg_text.strip().split(" ")
 	if len(position) != 3:
@@ -29,6 +29,18 @@ def goto(command):
 		command.send_feedback("command /goto: arguments have to be numbers")
 		return
 	command.entity["position"] = position
+
+@register_command("skin",1)
+def skin(command):
+	"""/skin block_name"""
+	block_name = command.arg_text.strip()
+	if any(map(str.isspace,block_name)):
+		command.send_feedback("command /skin: block_name must not contain whitespace characters")
+		return
+	if not command.entity:
+		command.send_feedback("command /skin: don't know which entity to target")
+		return
+	command.entity["skin"] = block_name
 
 @register_command("entity", 9)
 def entity(command):
