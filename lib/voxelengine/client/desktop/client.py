@@ -1418,8 +1418,8 @@ def show_on_window(client):
             if not args.password:
                 print("Consider setting a password when using a name.")
         else:
-            entity_id = "tmp:" + str(random.getrandbits(32))
-            password = str(random.getrandbits(32))
+            entity_id = "tmp:" + hex(random.getrandbits(32))[2:]
+            password = hex(random.getrandbits(32))[2:]
             if args.password:
                 print("Ignoring user set password because no name was given.")
         client.send("control %s %s"%(entity_id, password))

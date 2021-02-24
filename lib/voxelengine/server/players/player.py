@@ -139,10 +139,15 @@ class Player(object):
 					return
 		else:
 			#M# if settings["auto_create_entities_for_players"]
+			if entity_id.startswith("tmp:"):
+				is_tmp = True
+				entity_id = entity_id[4:]
+			else:
+				is_tmp = False
 			entity = self.create_character()
 			entity["id"] = entity_id
 			entity["password"] = password
-			entity["is_tmp"] = entity_id.startswith("tmp:")
+			entity["is_tmp"] = is_tmp
 		self.control(entity)
 		
 
