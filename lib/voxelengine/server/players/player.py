@@ -38,12 +38,16 @@ class Player(object):
 			thread.start_new_thread(self._update_area_loop, ())
 
 	def quit(self):
+		self.control(None)
 		self.quit_flag = True
-		if self.entity:
-			#self.entity.set_world(None,(0,0,0)) #M# maybe just change texture to ghost so player can rejoin later?
-			pass
 
 	def control(self,entity):
+		if self.entity:
+			if self.entity.get("is_tmp",False):
+				self.entity.set_world(None,(0,0,0))
+			else:
+				#M# if player character, make invisible while offline?
+				pass
 		self.entity = entity
 		self._notice_position()
 
@@ -138,6 +142,7 @@ class Player(object):
 			entity = self.create_character()
 			entity["id"] = entity_id
 			entity["password"] = password
+			entity["is_tmp"] = entity_id.startswith("tmp:")
 		self.control(entity)
 		
 
@@ -240,10 +245,11 @@ class Player(object):
 
 	def _notice_position(self):
 		"""set position of camera/player"""
-		if self.entity["position"]:
-			if self.entity.world != self.world:
-				self._set_world(self.entity.world)
-			self.outbox.add("goto",self.entity["position"])
+		if self.entity:
+			if self.entity["position"]:
+				if self.entity.world != self.world:
+					self._set_world(self.entity.world)
+				self.outbox.add("goto",self.entity["position"])
 
 	def _set_world(self, new_world):
 		"""to be called when self.entity.world has changed """
