@@ -62,6 +62,13 @@ class Observable(Serializable):
         self.data[key] = value
         self.trigger(static_key)
 
+    def replace(self,key,value):
+        prev_value = self[key]
+        if isinstance(prev_value, Observable):
+            prev_value.parent = None
+        self[key] = value #should cause trigger
+        return prev_value
+
     def register_callback(self,callback,initial_call=True):
         self.callbacks.add(callback)
         if initial_call:
@@ -136,13 +143,6 @@ class ObservableList(Observable):
     def insert(self,index,value):
         self.data.insert(index,self._adopted_value(value))
         self.trigger(None)
-
-    def replace(self,index,value):
-        prev_value = self[index]
-        if isinstance(prev_value, Observable):
-            prev_value.parent = None
-        self[index] = value #should cause trigger
-        return prev_value
 
     def pop(self,index):
         value = self.data.pop(index)

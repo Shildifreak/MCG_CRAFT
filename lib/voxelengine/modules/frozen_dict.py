@@ -1,3 +1,8 @@
+import sys, os
+if __name__ == "__main__":
+    sys.path.append(os.path.abspath("../.."))
+    __package__ = "voxelengine.modules"
+from voxelengine.modules.serializableCollections import Serializable
 
 class FrozenDict(dict):
 	__slots__ = ()
@@ -20,14 +25,17 @@ class FrozenDict(dict):
 	clear = _not_allowed
 
 def freeze(obj):
-	if isinstance(obj, (str, int, float, frozenset)):
+	if isinstance(obj, (str, int, float, frozenset, FrozenDict)):
 		return obj
 	if isinstance(obj, (tuple, list)):
 		return tuple(freeze(e) for e in obj)
 	if isinstance(obj, set):
 		return frozenset(obj)
-	if isinstance(obj, (dict, FrozenDict)):
+	if isinstance(obj, dict):
 		return FrozenDict({k:freeze(v) for k,v in obj.items()})
+	if isinstance(obj, Serializable):
+		return freeze(obj.__serialize__())
+	raise ValueError("can't freeze object of type %s : %s" %(type(obj), obj))
 
 if __name__ == "__main__":
 	

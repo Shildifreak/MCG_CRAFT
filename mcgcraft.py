@@ -25,25 +25,143 @@ import voxelengine
 from config import Config, default_serverconfig
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, SOMEWHERE, Sphere, Point
+from voxelengine.modules.observableCollections import ObservableList, observable_from
 from voxelengine.server.event_system import Event
 import voxelengine.server.world_data_template
+
+class InventoryWrapper(object):
+    """subclasses are designed to unifiy access to entity and block inventories"""
+
+    def __init__(self):
+        self.open = 0
+
+    def __enter__(self, *args):
+        self.open += 1
+
+    def __exit__(self, *args):
+        assert self.open
+        self.open -= 1
+
+    def __getitem__(self, key):
+        assert self.open
+        return self.inventory[key]
+
+    def get(self, index, default_value):
+        assert self.open
+        return self.inventory.get(index, default_value)
+    
+    def replace(self, index, value):
+        assert self.open
+        return self.inventory.replace(index, value)
+    
+    def may_contain(self, item):
+        assert self.open
+        return self.inventory.may_contain(item)
+
+class BlockInventoryWrapper(InventoryWrapper):
+    def __init__(self, world, position):
+        super().__init__()
+        self.world = world
+        self.position = position
+        self.observers = dict()
+    
+    def __eq__(self, other):
+        if not isinstance(other, BlockInventoryWrapper):
+            return False
+        if self.world is other.world and self.position == other.position:
+            return True
+        return False
+
+    def __enter__(self, *args):
+        # open if not open already
+        if not self.open:
+            self.changed = False
+            self.block = self.world.blocks[self.position]
+            self.inventory = observable_from(self.block["inventory"])
+        # increment open counter
+        self.open += 1
+        
+    def __exit__(self, *args):
+        # make sure it was open before
+        assert self.open
+        # decrement open counter
+        self.open -= 1
+        # if not open anymore, close
+        if not self.open:
+            # save changes
+            if self.changed:
+                self.block["inventory"] = self.inventory
+                self.block.save()
+            # remove references
+            self.inventory = None
+            self.block = None
+            
+    def replace(self, index, value):
+        assert self.open
+        self.changed = True
+        return self.inventory.replace(index, value)
+
+    def register_callback(self, callback):
+        assert callback not in self.observers
+        area = Point(self.position)
+        observer = self.world.event_system.new_observer(callback,area,"block_update")
+        self.observers[callback] = observer
+
+    def unregister_callback(self, callback):
+        observer = self.observers.pop(callback)
+        self.world.event_system.del_observer(observer)
+
+    def __del__(self):
+        assert not self.observers
+
+class EntityInventoryWrapper(InventoryWrapper):
+    def __init__(self, inventory):
+        super().__init__()
+        self.inventory = inventory
+
+    def __eq__(self, other):
+        return self.inventory is other.inventory
+
+    def register_callback(self, callback):
+        self.inventory.register_callback(callback,False)
+
+    def unregister_callback(self, callback):
+        self.inventory.unregister_callback(callback)
+
+class EmptyInventoryWrapper(InventoryWrapper):
+    def __bool__(self):
+        return False
+    def register_callback(self, callback):
+        pass
+    def unregister_callback(self, callback):
+        pass
+
+def inventory_wrapper_factory(inventory_pointer):
+    if inventory_pointer == None:
+        return EmptyInventoryWrapper()
+    elif isinstance(inventory_pointer, ObservableList):
+        return EntityInventoryWrapper(inventory_pointer)
+    elif isinstance(inventory_pointer, tuple) and len(inventory_pointer) == 2 and\
+        isinstance(inventory_pointer[0], World) and isinstance(inventory_pointer[1], Vector):
+        return BlockInventoryWrapper(*inventory_pointer)
+    else:
+        raise ValueError("invalid inventory_pointer type %s" % type(inventory_pointer))
 
 class InventoryDisplay():
     def __init__(self,player):
         self.player = player
         self.is_open = False #Full inventory or only hotbar
-        self.inventory = None
-        self.foreign_inventory = None
+        self.inventory = EmptyInventoryWrapper()
+        self.foreign_inventory = EmptyInventoryWrapper()
         self.current_pages = [0,0]
 
-    def register(self, inventory):
+    def register(self, inventory_pointer):
         self.unregister()
-        self.inventory = inventory
-        if self.inventory:
-            self.inventory.register_callback(self.callback)                
+        self.inventory = inventory_wrapper_factory(inventory_pointer)
+        self.inventory.register_callback(self.callback)
+        self.display()
     def unregister(self):
-        if self.inventory:
-            self.inventory.unregister_callback(self.callback)                        
+        self.inventory.unregister_callback(self.callback)
 
     def callback(self,inventory):
         self.display()
@@ -55,46 +173,47 @@ class InventoryDisplay():
         size = (0.1,0.1)
         rows = 4# if self.foreign_inventory else 9
         for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
-            for col in range(7):
-                for row in range(rows):
-                    name = "inventory:(%i,%i,%i)" %(k,col,row)
-                    if inventory and (self.is_open or k + row == 0):
-                        i = self._calculate_index(k,row,col)
-                        item = inventory.get(i,None)
-                        if item:
-                            x = 0.2*(col - 3)
-                            y = 0.2*(row) + k - 0.8
-                            position = (x,y,0)
-                            self.player.display_item(name,item,position,size,INNER|CENTER)
-                            continue
-                    self.player.undisplay_item(name)
-            if inventory and self.is_open:
-                self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
-                self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
-            else:
-                self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
-                self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
+            with inventory:
+                for col in range(7):
+                    for row in range(rows):
+                        name = "inventory:(%i,%i,%i)" %(k,col,row)
+                        if inventory and (self.is_open or k + row == 0):
+                            i = self._calculate_index(k,row,col)
+                            item = inventory.get(i,None)
+                            if item:
+                                x = 0.2*(col - 3)
+                                y = 0.2*(row) + k - 0.8
+                                position = (x,y,0)
+                                self.player.display_item(name,item,position,size,INNER|CENTER)
+                                continue
+                        self.player.undisplay_item(name)
+                if inventory and self.is_open:
+                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
+                    self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                else:
+                    self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
+                    self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
 
-    def open(self,foreign_inventory = None):
+    def open(self,foreign_inventory_pointer = None):
         if self.is_open:
             self.close()
         self.is_open = True
         self.player.focus_hud()
         self.current_pages = [0,0]
-        if foreign_inventory != None:
-            self.foreign_inventory = foreign_inventory
-            if foreign_inventory != self.inventory:
-                foreign_inventory.register_callback(self.callback,False)
+        if foreign_inventory_pointer != None:
+            self.foreign_inventory = inventory_wrapper_factory(foreign_inventory_pointer)
+            if self.foreign_inventory != self.inventory:
+                self.foreign_inventory.register_callback(self.callback)
         self.display()
 
     def close(self):
         if not self.is_open:
             return
         self.is_open = False
-        if self.foreign_inventory != None:
+        if self.foreign_inventory:
             if self.foreign_inventory != self.inventory:
                 self.foreign_inventory.unregister_callback(self.callback)
-            self.foreign_inventory = None
+            self.foreign_inventory = EmptyInventoryWrapper()
         self.display()
     
     def toggle(self):
@@ -115,7 +234,7 @@ class InventoryDisplay():
                 self.player.entity[hand] = self._calculate_index(k,row,col)
         else:
             k, direction = map(int,args)
-            inventory = self.inventory if k==0 else self.foreign_inventory
+            #inventory = self.inventory if k==0 else self.foreign_inventory
             self.current_pages[k] = max(0,self.current_pages[k] + direction)
             self.display()
     
@@ -137,17 +256,19 @@ class InventoryDisplay():
                     self.swap(from_inventory, from_index, to_inventory, to_index)
     
     def swap(self,inventory1,index1,inventory2,index2):
-        # prüfen ob die Items in das jeweils andere Inventar hineindürfen
-        if (not inventory1.may_contain(inventory2[index2])) or \
-           (not inventory2.may_contain(inventory1[index1])):
-            return
-        # prüfen dass die items nicht dasselbe sind, weil sonst das Vertauschen das Item löscht
-        if inventory1 == inventory2 and index1 == index2:
-            return
-        # ersetzen mit AIR um den index in der Liste nicht zu verändern (wichtig falls zwei Dinge aus dem selben inventar getauscht werden sollen)
-        x = inventory1.replace(index1, {"id":"AIR"})
-        y = inventory2.replace(index2, x)
-        inventory1.replace(index1, y)
+        with inventory1:
+            with inventory2:
+                # prüfen ob die Items in das jeweils andere Inventar hineindürfen
+                if (not inventory1.may_contain(inventory2[index2])) or \
+                   (not inventory2.may_contain(inventory1[index1])):
+                    return
+                # prüfen dass die items nicht dasselbe sind, weil sonst das Vertauschen das Item löscht
+                if inventory1 == inventory2 and index1 == index2:
+                    return
+                # ersetzen mit AIR um den index in der Liste nicht zu verändern (wichtig falls zwei Dinge aus dem selben inventar getauscht werden sollen)
+                x = inventory1.replace(index1, {"id":"AIR"})
+                y = inventory2.replace(index2, x)
+                inventory1.replace(index1, y)
 
 class ChatDisplay(object):
     def __init__(self, player):

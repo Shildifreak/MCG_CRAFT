@@ -16,6 +16,8 @@ class EventQueue(list):
 			return []
 		return super(EventQueue,self).pop(index)
 
+Observer = namedtuple("Observer", ["area", "tags", "handle_events"])
+
 class EventSystem(Serializable):
 	"""
 	example event_tags:
@@ -29,6 +31,7 @@ class EventSystem(Serializable):
 	"""
 	def __init__(self, world, event_data_list):
 		self.world = world
+		self.observers = set()
 		event_list = [Event(event_data) for event_data in event_data_list]
 		self.event_queue = EventQueue(event_list) #[[event,...],...] #event queue sorted by remaining delay
 	
@@ -62,6 +65,8 @@ class EventSystem(Serializable):
 					targets[entity].append(event)
 				for player in self.world.players.find_players(event.area, event.tag):
 					targets[player].append(event)
+				for observer in self.find_observers(event.area, event.tag):
+					targets[observer].append(event)
 			for position, target_events in block_targets.items():
 				targets[self.world.blocks[position]] = target_events
 			for target, target_events in targets.items():
@@ -70,3 +75,24 @@ class EventSystem(Serializable):
 	def tick(self):
 		missed_events = self.event_queue.pop(0)
 		assert not missed_events
+
+
+
+	def find_observers(self, area, tags):
+		""""""
+		if isinstance(tags, str):
+			tags = {tags} #M# could use frozenset instead
+		for observer in self.observers:
+			if observer.tags.issubset(tags):
+				if observer.area.collides_with(area):
+					yield observer
+
+	def new_observer(self, callback, area, tags):
+		if isinstance(tags, str):
+			tags = frozenset((tags,))
+		observer = Observer(area, tags, callback)
+		self.observers.add(observer)
+		return observer
+
+	def del_observer(self, observer):
+		self.observers.remove(observer)
