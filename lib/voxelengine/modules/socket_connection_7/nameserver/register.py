@@ -49,12 +49,6 @@ conn = sqlite3.connect(dbpath)
 c = conn.cursor()
 
 if False:
-	c.execute('''DROP TABLE server''')
-	# Create table
-	c.execute('''CREATE TABLE server
-				 (uid integer, key text, value text, time real, PRIMARY KEY (uid))''')
-
-if False:
 	# drop entries older than one minute
 	c.execute('''DELETE FROM server
 	             WHERE time < ?''', (time.time()-60,))
