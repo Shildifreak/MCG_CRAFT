@@ -14,7 +14,7 @@ import threading
 import pathlib, urllib.parse
 import json
 
-import voxelengine.modules.socket_connection_6.socket_connection as socket_connection
+import voxelengine.modules.socket_connection_7.socket_connection as socket_connection
 import voxelengine.modules.utils
 from voxelengine.modules.utils import try_ports
 from voxelengine.server.players.player import Player

@@ -1,4 +1,5 @@
 import collections, itertools, threading
+import json
 
 from voxelengine.modules.geometry import BinaryBox
 
@@ -191,7 +192,7 @@ class MessageBuffer(object):
         for group in self.groupcycler:
             msg = group.pop()
             if msg != None:
-                yield " ".join(str(part) for part in msg)
+                yield msg
                 self.last_hit = group
                 self.sentcount += 1
             elif self.last_hit == group: #eine Runde rum ohne was zu finden

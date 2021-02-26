@@ -16,7 +16,6 @@ import threading
 import json
 import urllib.request
 import io
-import codecs
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -33,7 +32,7 @@ from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
 import client_utils
-import socket_connection_6.socket_connection as socket_connection
+import socket_connection_7.socket_connection as socket_connection
 import world_generation
 from shared import *
 from shader import Shader
@@ -554,12 +553,12 @@ class Model(object):
                     self.init_chunk_queue.add(chunkpos)
 
             # create messages for server
-            yield "update %s %i" % (area, m_id)
+            yield ("update", area.lower_bounds, area.upper_bounds, m_id)
         lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
         highest_corner_chunk = center_chunk_position + RENDERDISTANCE
-        x1, y1, z1 = lowest_corner_chunk << CHUNKBASE
-        x2, y2, z2 = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
-        yield "monitor %i %i %i %i %i %i %i" % (x1,y1,z1, x2,y2,z2, self.chunks.current_monitor_id)
+        lower_bounds = lowest_corner_chunk << CHUNKBASE
+        upper_bounds = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
+        yield ("monitor", lower_bounds, upper_bounds, self.chunks.current_monitor_id)
 
 
     ########## more private stuff ############
@@ -763,7 +762,7 @@ class Model(object):
                             ('t2f/static', texture_data))
         else:
             x,y = center_pos
-            text = codecs.decode(texture[1:].encode(), "base64").decode()
+            text = texture[1:]
             if not "\n" in text:
                 label = pyglet.text.Label(text,x=x,y=y,
                                           anchor_x='center',anchor_y='center',
@@ -978,71 +977,81 @@ class Window(pyglet.window.Window):
     def update(self, dt):
         global focus_distance
         with self.update_lock:
-            while True:
-                c = self.client.receive()
-                if not c:
-                    break
+            for command, *args in self.client.receive():
                 #print("client.py:", c)
-                if c.startswith("clear"):
-                    generator_data = json.loads(c[6:])
+                #M# maybe define this function somewhere else
+                def test(name,argc):
+                    if name == command:
+                        if len(args) == argc:
+                            return True
+                        print("Falsche Anzahl von Argumenten bei %s" %name)
+                    return False
+                if test("clear",1):
+                    generator_data, = args
                     self.model._clear(generator_data)
                     if self.model.monitor_after_clear: #M# this is a hack
                         for msg in self.model.monitor_around(self.position):
                             self.client.send(msg)
                         self.model.monitor_after_clear = False
                     continue
-                c = c.split(" ")
-                #M# maybe define this function somewhere else
-                def test(name,argc):
-                    if name == c[0]:
-                        if len(c) == argc:
-                            return True
-                        print("Falsche Anzahl von Argumenten bei %s" %name)
-                    return False
-                if test("del",4):
-                    position = Vector(map(int,c[1:4]))
+                elif test("del",1):
+                    position, = args
+                    position = Vector(position)
                     self.model.remove_block(position)
-                elif test("delarea",7):
-                    x_min, y_min, z_min, x_max, y_max, z_max = map(int, c[1:7])
-                    area = Box(Vector(x_min, y_min, z_min), Vector(x_max, y_max, z_max))
+                elif test("delarea",2):
+                    lower_bounds, upper_bounds = args
+                    lower_bounds = Vector(lower_bounds)
+                    upper_bounds = Vector(upper_bounds)
+                    area = Box(lower_bounds, upper_bounds)
                     raise NotImplementedError()
-                    position = Vector(map(int,c[1:4]))
-                    self.model.del_area(position)
-                elif test("set", 5):
-                    position = Vector(map(int,c[1:4]))
-                    self.model.add_block(position,c[4])
-                elif test("goto",4):
-                    position = Vector(map(float,c[1:4]))
-                    self.position = position
-                    for msg in self.model.monitor_around(position):
+                    #self.model.del_area(position)
+                elif test("set", 2):
+                    position, block_name = args
+                    position = Vector(position)
+                    assert type(block_name) == str
+                    self.model.add_block(position,block_name)
+                elif test("goto",1):
+                    position, = args
+                    self.position = Vector(position)
+                    for msg in self.model.monitor_around(self.position):
                         self.client.send(msg)
-                elif test("focusdist",2):
-                    focus_distance = float(c[1])
-                elif test("setentity",8):
-                    position = Vector(map(float,c[3:6]))
-                    rotation = map(float,c[6:8])
-                    self.model.set_entity(int(c[1]),c[2],position,rotation)
-                elif test("delentity",2):
-                    self.model.del_entity(int(c[1]))
-                elif test("sethud",10):
-                    position = Vector(map(float,c[3:6]))
-                    rotation = float(c[6])
-                    size = Vector(map(float,c[7:9]))
-                    element_data = c[1],c[2],position,rotation,size,int(c[9])
+                elif test("focusdist",1):
+                    focus_distance, = args
+                    assert isinstance(focus_distance, (int, float))
+                elif test("setentity",4):
+                    entity_id, model, position, rotation = args
+                    assert type(entity_id) == int
+                    assert type(model) == str
+                    position = Vector(position)
+                    rotation = Vector(rotation)
+                    self.model.set_entity(entity_id,model,position,rotation)
+                elif test("delentity",1):
+                    entity_id, = args
+                    self.model.del_entity(entity_id)
+                elif test("sethud",6):
+                    element_id, texture, position, rotation, size, align = args
+                    assert type(element_id) == str
+                    assert type(texture) == str
+                    position = Vector(position)
+                    rotation = float(rotation)
+                    size = Vector(size)
+                    assert type(align) == int
+                    element_data = element_id,texture,position,rotation,size,align
                     self.model.set_hud(element_data,self.get_size()) #id,texture,position,rotation,size,align
-                elif test("delhud",2):
-                    self.model.del_hud(c[1])
-                elif test("focushud",1):
+                elif test("delhud",1):
+                    element_id, = args
+                    self.model.del_hud(element_id)
+                elif test("focushud",0):
                     self.set_exclusive_mouse(False)
                     self.hud_open = True
                 else:
                     print("unknown command", c)
             self.model.process_queue()
             m = max(0, MSGS_PER_TICK - len(self.model.queue))
-            self.client.send("tick %s" % m)
+            self.client.send(("tick",m))
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        self.client.send("scrolling "+str(scroll_y))
+        self.client.send(("scrolling",scroll_y))
         
     def get_focused(self, x, y):
         focused = None
@@ -1081,7 +1090,7 @@ class Window(pyglet.window.Window):
             self.focused_on_mouse_press = self.get_focused(x,y)
             if self.focused_on_mouse_press == None:
                 if self.hud_open:
-                    self.client.send("inv")
+                    self.client.send(("press","inv"))
                     self.hud_open = False
                 self.set_exclusive_mouse(True)
     
@@ -1101,11 +1110,11 @@ class Window(pyglet.window.Window):
             if button_name:
                 focused_on_mouse_release = self.get_focused(x,y)
                 if self.focused_on_mouse_press == focused_on_mouse_release:
-                    self.client.send("%s clicked %s" %
-                        (button_name,self.focused_on_mouse_press))
+                    self.client.send(("clicked",button_name,
+                                      self.focused_on_mouse_press))
                 else:
-                    self.client.send("%s dragged %s %s" % 
-                        (button_name,self.focused_on_mouse_press, focused_on_mouse_release))
+                    self.client.send(("dragged",button_name,
+                                      self.focused_on_mouse_press, focused_on_mouse_release))
             self.focused_on_mouse_press = None
     
     def on_mouse_leave(self, x, y):
@@ -1130,7 +1139,7 @@ class Window(pyglet.window.Window):
             x, y = x + dx * m, y + dy * m
             y = max(-90, min(90, y))
             self.rotation = (x, y)
-            self.client.send("rot %s %s" %self.rotation)
+            self.client.send(("rot", self.rotation))
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self.on_mouse_motion(x, y, dx, dy)
@@ -1149,7 +1158,7 @@ class Window(pyglet.window.Window):
                 else:
                     if event == e:
                         self.handle_input_action_end(action)
-            self.client.send("keys "+str(eventstates))
+            self.client.send(("keys",eventstates))
 
     def handle_input_action(self, action):
         if action == "inv":
@@ -1176,7 +1185,7 @@ class Window(pyglet.window.Window):
 
         if symbol == key.ESCAPE:
             if self.chat_open:
-                self.client.send("chat_close")
+                self.client.send(("press","chat_close"))
                 self.chat_open = False
             else:
                 self.set_exclusive_mouse(False)
@@ -1198,7 +1207,7 @@ class Window(pyglet.window.Window):
         if self.chat_open:
             for c in text:
                 if c in ("\n","\r"):
-                    self.client.send("text %s" % self.chat_input_buffer)
+                    self.client.send(("text",self.chat_input_buffer))
                     self.chat_input_buffer = ""
                     self.chat_cursor_position = 0
                 else:
@@ -1422,7 +1431,7 @@ def show_on_window(client):
             password = hex(random.getrandbits(32))[2:]
             if args.password:
                 print("Ignoring user set password because no name was given.")
-        client.send("control %s %s"%(entity_id, password))
+        client.send(("control", entity_id, password))
         window = Window(width=800, height=600, caption='MCG-Craft 1.1.4',
                         resizable=True, client=client, fullscreen=False)
         # Hide the mouse cursor and prevent the mouse from leaving the window.
@@ -1454,5 +1463,6 @@ def main():
         run(serverinfo)
 
 args = client_utils.parser.parse_args()
+print(args)
 if __name__ == '__main__':
     main()

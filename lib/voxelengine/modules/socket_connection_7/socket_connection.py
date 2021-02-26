@@ -12,8 +12,8 @@ import itertools
 import sys, os, inspect
 if __name__ == "__main__":
 	sys.path.append(os.path.abspath("../../.."))
-	__package__ = "voxelengine.modules.socket_connection_6"
-from voxelengine.modules.socket_connection_6.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
+	__package__ = "voxelengine.modules.socket_connection_7"
+from voxelengine.modules.socket_connection_7.socket_connection_codecs import CodecSwitcher, CustomCodec, Disconnect
 
 if sys.version < "3":
     import thread
@@ -79,11 +79,14 @@ class client(template):
         self.receive_buffer = []
 
     def send(self,*msgs):
+        msgs = tuple(json.dumps(msg,separators=(",",":")) for msg in msgs)
         self.codec_socket.send_messages(msgs)
 
     def receive(self):
         self.receive_buffer.extend(self.codec_socket.get_messages())
-        return self.receive_buffer.pop(0) if self.receive_buffer else False
+        while self.receive_buffer:
+            msg = self.receive_buffer.pop(0)
+            yield json.loads(msg)
 
     def close(self):
         self.socket.close()
@@ -125,6 +128,7 @@ class server(template):
         self.entry_socket.close()
 
     def send(self,addr,*msgs):
+        msgs = tuple(json.dumps(msg,separators=(",",":")) for msg in msgs)
         client_socket = self.clients.get_socket(addr)
         if client_socket:
             try:
@@ -140,6 +144,8 @@ class server(template):
             addr = self.clients.get_addr(client_socket)
             try:
                 msgs = client_socket.get_messages()
+                msgs = list(msgs)
+                msgs = map(json.loads, msgs)
                 msgs_with_addresses = zip(msgs, itertools.cycle((addr,)))
                 yield from msgs_with_addresses
             except Disconnect as e:

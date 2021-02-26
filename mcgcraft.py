@@ -222,12 +222,11 @@ class InventoryDisplay():
         else:
             self.open()
             
-    def handle_click(self,event):
-        if event.startswith("left"):
-            hand = "left_hand"
-        if event.startswith("right"):
-            hand = "right_hand"
-        args = event.rsplit("(",1)[1].split(")",1)[0].split(",")
+    def handle_click(self,button,element_id):
+        if not (element_id and element_id.startswith("#inventory")):
+            return
+        hand = button+"_hand"
+        args = element_id.rsplit("(",1)[1].split(")",1)[0].split(",")
         if len(args) == 3:
             k, col, row = map(int,args)
             if k == 0:
@@ -238,8 +237,7 @@ class InventoryDisplay():
             self.current_pages[k] = max(0,self.current_pages[k] + direction)
             self.display()
     
-    def handle_drag(self,event):
-        button, dragged, from_element, to_element = event.split(" ")
+    def handle_drag(self,button,from_element,to_element):
         if from_element.startswith("#inventory") and to_element.startswith("#inventory"):
             from_args = from_element.rsplit("(",1)[1].split(")",1)[0].split(",")
             to_args = to_element.rsplit("(",1)[1].split(")",1)[0].split(",")
@@ -296,6 +294,7 @@ class ChatDisplay(object):
 
 class Player(voxelengine.Player):
     RENDERDISTANCE = 10
+    CUSTOM_COMMANDS = {"clicked","dragged","scrolling"}
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -401,24 +400,28 @@ class Player(voxelengine.Player):
             self.inventory_display.toggle()
         if self.was_pressed("emote") or self.was_released("emote"):
             pe.update_texture(show_emote=self.is_pressed("emote"))
-        for pressed in self.was_pressed_set:
-            if pressed.startswith("left clicked #inventory") or pressed.startswith("right clicked #inventory"):
-                self.inventory_display.handle_click(pressed)
-            if pressed.startswith("left dragged #inventory") or pressed.startswith("right dragged #inventory"):
-                self.inventory_display.handle_drag(pressed)
-            if pressed.startswith("inv") and pressed != "inv":
-                inv_slot = int(pressed[3:])
+
+        for inv_slot in range(10):
+            if self.was_pressed("inv%i"%inv_slot):
                 hand = "left_hand" if self.is_pressed("shift") else "right_hand"
                 pe[hand] = inv_slot
                 pe.select_emote(inv_slot)
-            if pressed.startswith("scrolling"):
-                inv_inc_float = -float(pressed[10:])
-                hand = "left_hand" if self.is_pressed("shift") else "right_hand"
-                threshold = 0.1
-                inv_inc = (inv_inc_float >= threshold) - (inv_inc_float <= -threshold) #sign with -1,0,1 and threshold for 0
-                inv_slot = pe[hand] + inv_inc
-                inv_slot %= 7
-                pe[hand] = inv_slot
+
+        for button, element_id in self.new_custom_commands_dict["clicked"]:
+            if button in ("left", "right"):
+                self.inventory_display.handle_click(button, element_id)
+        for button, element_from, element_to in self.new_custom_commands_dict["dragged"]:
+            if button in ("left", "right"):
+                self.inventory_display.handle_drag(button, element_from, element_to)
+        for args in self.new_custom_commands_dict["scrolling"]:
+            inv_inc_float = -float(args[0])
+            hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+            threshold = 0.1
+            inv_inc = (inv_inc_float >= threshold) - (inv_inc_float <= -threshold) #sign with -1,0,1 and threshold for 0
+            inv_slot = pe[hand] + inv_inc
+            inv_slot %= 7
+            pe[hand] = inv_slot
+            
                 
 
         #if not self.is_active(): # freeze player if client doesnt respond
@@ -533,12 +536,12 @@ class Player(voxelengine.Player):
 
     def display_item(self,name,item,position,size,align):
         w, h = size
-        self.set_hud("#"+name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
-        self.set_hud(name,item["id"],position,0,Vector(size)*0.8,align)
+        self.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
+        self.set_hud("#"+name,item["id"],position,0,Vector(size)*0.8,align)
         self.set_hud_text(name+"_count",str(item.get("count","")),position+Vector((0,0,0.01)),0,size,align)
 
     def undisplay_item(self,name):
-        for prefix, suffix in (("#","_bgbox"),("",""),("","_count")):
+        for prefix, suffix in (("","_bgbox"),("#",""),("","_count")):
             self.del_hud(prefix+name+suffix)
 
 class ValidTag(object):

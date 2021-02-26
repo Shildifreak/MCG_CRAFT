@@ -3,7 +3,6 @@ import _thread as thread
 import threading
 import time
 import json
-import codecs
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -13,6 +12,7 @@ from voxelengine.server.entities.entity import Entity
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""
 	RENDERDISTANCE = 16
+	CUSTOM_COMMANDS = set()
 	def __init__(self,universe,initmessages=()):
 		self.universe = universe
 		self.entity = None
@@ -26,6 +26,7 @@ class Player(object):
 		self.action_states = {}
 		self.was_pressed_set = set()
 		self.was_released_set = set()
+		self.new_custom_commands_dict = collections.defaultdict(list)
 		self.new_chat_msgs_list = list()
 		self.quit_flag = False
 		
@@ -79,21 +80,19 @@ class Player(object):
 
 	def set_focus_distance(self,distance):
 		"""Set maximum distance for focusing block"""
-		self.outbox.add("focusdist","%g"%distance)
+		self.outbox.add("focusdist",distance)
 		self.focus_distance = distance
 
 	def set_hud_text(self,element_id,text,position,rotation,size,alignment):
-		text_b64 = codecs.encode(text.encode(), "base64").rstrip().decode()
-		self.set_hud(element_id,"/"+text_b64,position,rotation,size,alignment)
+		self.set_hud(element_id,"/"+text,position,rotation,size,alignment)
 
 	def set_hud(self,element_id,texture,position,rotation,size,alignment):
-		if texture == "AIR":
-			self.del_hud(element_id)
-			return
+		#if texture == "AIR":
+		#	self.del_hud(element_id)
+		#	return
 		if self.hud_cache.get(element_id,None) == (texture,position,rotation,size,alignment):
 			return
-		x,y,z = position; w,h = size
-		self.outbox.add("sethud", element_id, texture, x, y, z, rotation, w, h, alignment)
+		self.outbox.add("sethud", element_id, texture, position, rotation, size, alignment)
 		self.hud_cache[element_id] = (texture,position,rotation,size,alignment)
 
 	def del_hud(self,element_id):
@@ -190,16 +189,17 @@ class Player(object):
 		"""internal update method, automatically called by game loop"""
 		self.was_pressed_set.clear()
 		self.was_released_set.clear()
+		self.new_custom_commands_dict.clear()
 
 	def _handle_input(self,msg):
 		"""do something so is_pressed and was_pressed work"""
-		cmd, *args = msg.split(" ")
+		cmd, *args = msg
 
 		if cmd == "tick" and len(args) == 1:
 			self.outbox.reset_msg_counter(-int(args[0]))
 
-		elif cmd == "rot" and len(args) == 2:
-			x,y = map(float,args)
+		elif cmd == "rot" and len(args) == 1:
+			x,y = map(float,args[0])
 			if self.entity:
 				self.entity["rotation"] = (x,y)
 
@@ -213,11 +213,12 @@ class Player(object):
 					self.was_released_set.add(a)
 				self.action_states[a] = new_state
 
-		elif cmd == "monitor" and len(args) == 7:
-			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
-			m_id = int(args[6])
+		elif cmd == "monitor" and len(args) == 3:
+			lower_bounds = Vector(map(float, args[0]))
+			upper_bounds = Vector(map(float, args[1]))
+			m_id = int(args[2])
 			previously_monitored_area = self.monitored_area
-			self.monitored_area = Box(Vector(x1,y1,z1), Vector(x2,y2,z2))
+			self.monitored_area = Box(lower_bounds, upper_bounds)
 			self.monitor_ticks[m_id] = self.world.clock.current_gametick # needed for partial update when resuming monitoring of some area
 			# entities
 			previous_entities = set(self.world.entities.find_entities(previously_monitored_area))
@@ -227,26 +228,33 @@ class Player(object):
 			for entity in new_entities - previous_entities:
 				self._set_entity(entity)
 
-		elif cmd == "update" and len(args) == 7:
-			x1,y1,z1, x2,y2,z2 = map(float, args[:6])
-			m_id = int(args[6])
+		elif cmd == "update" and len(args) == 3:
+			lower_bounds = Vector(map(float, args[0]))
+			upper_bounds = Vector(map(float, args[1]))
+			m_id = int(args[2])
 			try:
 				since_tick = self.monitor_ticks[m_id]
 			except KeyError:
 				since_tick = 0
 				self.outbox.add("error", "unknown m_id",m_id)
-			self._update_area(Box(Vector((x1,y1,z1)), Vector((x2,y2,z2))), since_tick)
+			self._update_area(Box(lower_bounds, upper_bounds), since_tick)
 
 		elif cmd == "control" and len(args) == 2:
-			entity_id, password = args
+			entity_id, password = map(str, args)
 			self._control_request(entity_id, password)
 
-		elif cmd == "text" and len(args) >= 1:
-			text = " ".join(args)
+		elif cmd == "text" and len(args) == 1:
+			text = str(args[0])
 			self.new_chat_msgs_list.append(text)
 
+		elif cmd == "press" and len(args) == 1:
+			self.was_pressed_set.add(str(args[0]))
+		
+		elif cmd in self.CUSTOM_COMMANDS:
+			self.new_custom_commands_dict[cmd].append(args)
+		
 		else:
-			self.was_pressed_set.add(msg)
+			print("no matching format for message", msg)
 
 	def _notice_position(self):
 		"""set position of camera/player"""
@@ -267,11 +275,11 @@ class Player(object):
 		generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
 							"seed"   : self.world.blocks.world_generator.generator_data["seed"],
 							"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
-		self.outbox.add("clear",json.dumps(generator_data))
+		self.outbox.add("clear",generator_data)
 
 	def _set_entity(self,entity):
 		priority = 1 if entity == self.entity else 0
-		self.outbox.add("setentity",hash(entity),entity["texture"],entity["position"],*entity["rotation"], priority=priority)
+		self.outbox.add("setentity",hash(entity),entity["texture"],entity["position"],entity["rotation"], priority=priority)
 
 	def _del_entity(self,entity):
 		self.outbox.add("delentity",hash(entity))

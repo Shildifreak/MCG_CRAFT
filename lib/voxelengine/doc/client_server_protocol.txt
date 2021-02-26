@@ -1,46 +1,47 @@
 
+all messages are json encoded lists with the first element being the command type
+
 server -> client
-	setup setup_source
-		must be sent as first message to newly connected client and specifies where to find texturepack etc.
-		setup_source is json object and may contain entries for host, port
 	clear generator_data
 		lösche alle Blöcke und Entities, setze monitored area zurück,
                 setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator
-	del x y z
+	del <x y z>
 		lösche den Block
-	delarea xmin ymin zmin xmax ymax zmax
-		lösche alle Blöcke in dem Gebiet
-	set x y z block
+	set <x y z> block
 		setze block an stelle x y z
-	goto x y z
+	goto <x y z>
 		setze Kameraposition, starte Neuberechnung von monitored area
 	focusdist n
 		setze Distanz bis zu der Blöcke anvisiert werden
-	setentity id model x y z yaw pitch
+	setentity id model <x y z> <yaw pitch>
 		zeige/update Entity
 	delentity id
 		lösche Entity
-	sethud id texture x y z rotation w h align
+	sethud id texture <x y z> rotation <w h> align
 		zeige HUD Element
 	delhud id
 		lösche HUD Element
 	focushud
 		bringe Client in Mausmodus
-	error some msg
+	error <some msg> <fatality>
 		Client hat irgendwas falsch gemacht
+		fatality: False -> just display and move on, True -> shutdown/reconnect
 
-	setarea ... deprecated, for now
+	deprecated, for now
+		setarea ... 
+		delarea <xmin ymin zmin> <xmax ymax zmax>
+				lösche alle Blöcke in dem Gebiet
 
 client -> server
 	tick
 	
 	control entity_id password
 	
-	monitor x_min y_min z_min x_max y_max z_max m_id
+	monitor <x_min y_min z_min> <x_max y_max z_max> m_id
 	
-	update x_min y_min z_min x_max y_max z_max m_id
+	update <x_min y_min z_min> <x_max y_max z_max> m_id
 	
-	rot yaw pitch
+	rot <yaw pitch>
 	
 	keys bitmap
 	
@@ -54,9 +55,11 @@ client -> server
 	
 	right clicked hud_id
 	
-	inv
+	press key
+		causes a key press event for this key (only recognizable with was_pressed, not is_pressed)
+		currently used for inv and chat_closed
 	
-	text ...
+	text msg
 		Nutzereingabe im Chat
 
 
@@ -65,14 +68,18 @@ Ablauf:
 	Local Network Server Discovery
 		client		broadcast	server:discovery_port
 			----- ping parole   ---->
-			<---- pong gameport -----
+			<---- pong httpport -----
+
+	Metadata Fetching
+		client					server:http
+			----- get /info.json---->
+			<---- http response -----
 
 	Joining a Game
-		client					server
+		client					server:game
 			----- connect ---->
 			<---- accept  -----
 			
-			<---- setup   -----
 			----- control ---->
 			<---- clear   -----
 			<---- goto    -----
