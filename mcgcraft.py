@@ -25,7 +25,7 @@ import voxelengine
 from config import Config, default_serverconfig
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, EVERYWHERE, SOMEWHERE, Sphere, Point
-from voxelengine.modules.observableCollections import ObservableList, observable_from
+from voxelengine.modules.observableCollections import ObservableList, ObservableDict, observable_from
 from voxelengine.server.event_system import Event
 import voxelengine.server.world_data_template
 
@@ -139,7 +139,7 @@ class EmptyInventoryWrapper(InventoryWrapper):
 def inventory_wrapper_factory(inventory_pointer):
     if inventory_pointer == None:
         return EmptyInventoryWrapper()
-    elif isinstance(inventory_pointer, ObservableList):
+    elif isinstance(inventory_pointer, (ObservableList,ObservableDict)):
         return EntityInventoryWrapper(inventory_pointer)
     elif isinstance(inventory_pointer, tuple) and len(inventory_pointer) == 2 and\
         isinstance(inventory_pointer[0], World) and isinstance(inventory_pointer[1], Vector):
@@ -238,7 +238,8 @@ class InventoryDisplay():
             self.display()
     
     def handle_drag(self,button,from_element,to_element):
-        if from_element.startswith("#inventory") and to_element.startswith("#inventory"):
+        if from_element and to_element and \
+           from_element.startswith("#inventory") and to_element.startswith("#inventory"):
             from_args = from_element.rsplit("(",1)[1].split(")",1)[0].split(",")
             to_args = to_element.rsplit("(",1)[1].split(")",1)[0].split(",")
             if len(from_args) == 3 and len(to_args) == 3:
