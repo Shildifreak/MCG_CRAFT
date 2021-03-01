@@ -741,8 +741,6 @@ class Model(object):
         element_id,texture,position,rotation,size,align = element_data
         if element_id in self.hud_elements:
             self.del_hud(element_id)
-        if texture == "AIR":
-            return
         f = (max if OUTER & align else min)(window_size)
         size = f*Vector(size)
         center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
@@ -755,7 +753,9 @@ class Model(object):
         i = iter(corners)
         corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
         #img = pygame.transform.rotate(img,rotation)
-        if not texture.startswith ("/"):
+        if texture == "AIR":
+            vertex_list = None
+        elif not texture.startswith ("/"):
             texture_data = list(ICON[texture])
             vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_colorkey_group,
                             ('v3f/static', corners),

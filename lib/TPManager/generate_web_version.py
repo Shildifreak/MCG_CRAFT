@@ -40,6 +40,7 @@ def generate_description(texture_index, normalized_universal_description):
 	description["blockModelData"]["offsets"].append(0)
 	description["properties"]["translucency"].append(255)
 	description["properties"]["renderbits"].append(0x80)
+	description["icons"]["AIR"] = 0
 	
 	# BLOCKS
 	blocknames = list(normalized_universal_description["BLOCKS"].keys())
