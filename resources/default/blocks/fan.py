@@ -16,5 +16,5 @@ class fanblock(falling.FallingBlock):
             if self.world.blocks[p1] != "AIR" and self.world.blocks[p2] == "AIR":
                 self.world.request_move_block(p1,p2)
                 self["last_push"]=self.world.clock.current_gametick
-                self.save()
         super().handle_event_block_update(event)
+        return True

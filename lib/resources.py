@@ -26,9 +26,17 @@ class Block(voxelengine.Block):
 
     def __init__(self,*args,**kwargs):
         super(Block,self).__init__(*args,**kwargs)
-        self.morph()
+        self._morph()
     
-    def morph(self):
+    def turn_into(self, new_block):
+        self.clear()
+        if isinstance(new_block, str):
+            super(Block,self).__setitem__("id", new_block)
+        else:
+            self.update(new_block)
+        self._morph()
+    
+    def _morph(self):
         self.__class__ = blockClasses[self["id"]]
 
     def __getitem__(self, key):
@@ -36,28 +44,40 @@ class Block(voxelengine.Block):
             return super(Block, self).__getitem__(key)
         except KeyError:
             return self.defaults.get(key,None)
+
     def __setitem__(self, key, value):
         if value == self[key]:
             return
-        if key == "id":
-            self.morph()
         if value == self.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
             super(Block,self).__delitem__(key)
         else:
             super(Block,self).__setitem__(key,value)
+        if key == "id":
+            self._morph()
 
     def handle_event_default(self, events):
-        print("No handler for event",events[0].tag)
+        tag = events.pop().tag
+        # only print message if the block still has the tag, because if the block just
+        # changed in this subtick it may still receive events that don't effect it anymore
+        if tag in self.get_tags():
+            print("No handler for event", event.tag)
+        return False
     
     def handle_events(self, events):
         """API for event system"""
+        any_changed = False
         grouped_events = collections.defaultdict(set)
         for event in events:
             grouped_events[event.tag].add(event)
         for tag, events in grouped_events.items():
             f_name = "handle_event_"+tag
             f = getattr(self, f_name, self.handle_event_default)
-            f(events)
+            changed = f(events)
+            if __debug__:
+                if not isinstance(changed, bool):
+                    raise ValueError("event handler function %s has to return a bool representing whether it changed the block" % f)
+            any_changed = any_changed or changed
+        return any_changed
 
     # helper functions
     def redstone_activated(self):
@@ -133,10 +153,13 @@ class Block(voxelengine.Block):
         """blocks like levers should implement this action. Return value signalizes whether to execute use action of hold item"""
         return True
 
+    def item_version(self):
+        """use the output of this function when turning the block into an item"""
+        return {"id":self["id"],"count":1}
+
     def mined(self,character,face):
         """drop item or something... also remember to set it to air. Return value see activated"""
-        block = self.blockworld[self.position]
-        character.pickup_item({"id":self["id"],"count":1})
+        character.pickup_item(self.item_version())
         self.blockworld[self.position] = "AIR"
         
 
@@ -146,7 +169,9 @@ class Block(voxelengine.Block):
             #    position, power = event.area.center, event.area.radius
             #    distance = (position - self.position).length()
             if random.random() > self.blast_resistance:
-                self.world.blocks[self.position] = "AIR"
+                self.turn_into("AIR")
+                return True
+        return False
 
     def get_tags(self):
         """
@@ -182,7 +207,7 @@ class SolidBlock(Block):
                     stronglevel = max(stronglevel, neighbour["p_level"])
         self["p_level"] = level
         self["p_stronglevel"] = stronglevel
-        self.save()
+        return False
 
     def get_tags(self):
         return super(SolidBlock, self).get_tags().union({"block_update"})

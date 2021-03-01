@@ -5,23 +5,30 @@ import tree
 
 class Dirt(Block):
     blast_resistance = 0
-    def handle_event_random_tick(self):
+    def handle_event_random_tick(self,events):
         if self.world.blocks[self.position + (0,1,0)] == "AIR":
-            self.world.blocks[self.position] = "GRASS"
+            self.turn_into("GRASS")
+            print("grassing")
+            return True
+        return False
 
     def get_tags(self):
         return super().get_tags() | {"random_tick"}
 
 @register_block("GRASS")
 class Grassblock(Block):
-    def handle_event_random_tick(self):
-        if self.relative[(0,1,0)] == "AIR":
+    def handle_event_random_tick(self,events):
+        block_above = self.relative[(0,1,0)]
+        if block_above == "AIR":
             if random.random()<0.008:
-                self.relative[(0,1,0)] = random.choice(["grass","grass","grass","grass","HALM","HALM","HALM","HALM",
-                                                                       "LilaBlume","WeisseBlume","RoteBlume",
-                                                                       "BlaueBlume","GelbeBlume","SonnenBlume"])
-        elif self.relative[(0,1,0)] not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume","HALM",]:
-            self.world.blocks[self.position] = "DIRT"
+                flower_block = random.choice(["grass","grass","grass","grass","HALM","HALM","HALM","HALM",
+                                              "LilaBlume","WeisseBlume","RoteBlume",
+                                              "BlaueBlume","GelbeBlume","SonnenBlume"])
+                self.world.request_set_block(block_above.position, flower_block)
+        elif block_above not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume","HALM",]:
+            self.turn_into("DIRT")
+            return True
+        return False
     def get_tags(self):
         return super().get_tags() | {"random_tick"}
             
@@ -39,7 +46,9 @@ class Plant(Block):
         return False
     def handle_event_block_update(self,events):
         if self.relative[(0,-1,0)] != "GRASS":
-            self.world.blocks[self.position] = "AIR"
+            self.turn_into("AIR")
+            return True
+        return False
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"block_update"}
 
@@ -48,9 +57,11 @@ class Plant(Block):
 
 class Setzling(Block):
     blast_resistance = 0
-    def handle_event_random_tick(self):
+    def handle_event_random_tick(self,events):
         for d_pos, block in tree.tree_structure("eiche"):
-            self.relative[(d_pos[0], d_pos[1]-1, d_pos[2])] = block
+            replace_block = self.relative[(d_pos[0], d_pos[1]-1, d_pos[2])]
+            self.world.request_set_block(replace_block.position, block)
+        return False
 
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"random_tick"}

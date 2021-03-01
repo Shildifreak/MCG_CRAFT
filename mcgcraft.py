@@ -584,7 +584,8 @@ class World(voxelengine.World):
         tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
         for block in tickable_blocks:
             if random.random() < rate:
-                block.handle_event_random_tick()
+                random_tick = Event("random_tick", Point(block.position))
+                self.event_system.add_event(random_tick)
 
     def handle_block_requests(self):
         # translate move_requests
@@ -623,8 +624,11 @@ class World(voxelengine.World):
     def request_move_block(self, position_from, position_to, callback=None):
         self.move_requests.append((position_from, position_to, callback))
 
-    def request_set_block(self, position, blockname, priority, valid_tag, exclusive):
-        self.set_requests[position].append(Request(blockname, priority, valid_tag, exclusive))
+    def request_set_block(self, position, block, priority=0, valid_tag=None, exclusive=True):
+        if valid_tag == None:
+            valid_tag = ValidTag()
+        self.set_requests[position].append(Request(block, priority, valid_tag, exclusive))
+        return valid_tag
 
 class Timer(object):
     def __init__(self):

@@ -11,7 +11,7 @@ class Redstone(Block):
         # hier weitere verbindungen einfügen (für diagonalen)
         maxpower = 1
         for dpos in connections:
-            block = self.world[dpos+self.position]
+            block = self.world.blocks[dpos+self.position]
             if block["p_ambient"] or -dpos in block["p_directions"]:
                 level = block["p_stronglevel"]
                 if level == None:
@@ -21,7 +21,8 @@ class Redstone(Block):
         if self["p_level"] != p_level:
             self["p_level"] = p_level
             self["state"] = str(p_level)
-            self.save()
+            return True
+        return False
 
     def collides_with(self,area):
         return False
@@ -45,11 +46,11 @@ class Repeater(Block):
         source = self.world.blocks[self.position - d]
         if source["p_level"] and (source["p_ambient"] or (d in source["p_directions"])):
             self["state"] = ""
-            self["p_level"] = 0
+            self["p_level"] = 15
         else:
             self["state"] = ""
             self["p_level"] = 0
-        self.save()
+        return True
 
     #def activated(self,character,face):
     #    d = self.get_front_facing_vector()

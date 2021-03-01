@@ -104,6 +104,8 @@ class Player(object):
 		self.outbox.add("focushud")
 
 	def handle_events(self, events):
+		MUFFLED = ("random_tick")
+
 		entity_events = collections.defaultdict(set) # {entity:tags}
 
 		for event in events:
@@ -114,7 +116,7 @@ class Player(object):
 			elif event.tag in ("entity_leave", "entity_enter", "entity_change"):
 				entity = event.data
 				entity_events[entity].add(event.tag)
-			else:
+			elif event.tag not in MUFFLED:
 				print("player received",event.tag)
 
 		for entity, tags in entity_events.items():

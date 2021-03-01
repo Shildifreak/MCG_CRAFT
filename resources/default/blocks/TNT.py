@@ -12,19 +12,22 @@ class tntblock(Block):
             nachbarblock = self.relative[face]
             if nachbarblock["p_level"] > 0:
                 self.explode()
-                break
+                return True
+        return False
 
     def activated(self,character,face):
         self.explode()
+        self.save()
 
     def explode(self):
-        self.world.blocks[self.position] = "AIR"
         power = random.randint(self.power_min,self.power_max)
         explosion_event = Event("explosion",Sphere(self.position,power))
         self.world.event_system.add_event(explosion_event)
+        self.turn_into("AIR")
         
     def handle_event_explosion(self,events):
         self.explode()
+        return True
 
     def get_tags(self):
         return super().get_tags() | {"block_update"}
@@ -38,10 +41,10 @@ class a_tntblock(tntblock):
 class b_tntblock(tntblock):
 
     def explode(self):
-        self.world.blocks[self.position] = "AIR"
         power = random.randint(14,16)
         lower_bounds = self.position + (-power, -1, -power)
         upper_bounds = self.position + (+power, -1, +power)
         area = Box(lower_bounds, upper_bounds)
         explosion_event = Event("explosion",area)
         self.world.event_system.add_event(explosion_event)
+        self.turn_into("AIR")

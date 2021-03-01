@@ -1,7 +1,7 @@
 from resources import *
 from voxelengine.modules.observableCollections import ObservableDict
-# -*- coding: cp1252 -*-
-from resources import *
+import random
+
 @register_item("Muenzen")
 @register_item("Scheine")
 class notPlacable(Item):
@@ -11,7 +11,7 @@ class notPlacable(Item):
 
 class Kreditkarteninventar(ObservableDict):
     def may_contain(self, item):
-        if item["id"] in ("Muenzen", "Scheine"):
+        if item["id"] in ("Muenzen", "Scheine", "AIR"):
             return True
         else:
             return False
@@ -26,7 +26,8 @@ class Kredidtkarte(notPlacable):
         except KeyError:
             self.item["inventory"] = Kreditkarteninventar()
             for i in range(28):
-                self.item["inventory"][i] = {"id":"AIR"}
+                item_id = random.choices(["AIR","Muenzen","Scheine"],[5,3,2])[0]
+                self.item["inventory"][i] = {"id":item_id}
 
         character.foreign_inventory = self.item["inventory"]
         character["open_inventory"] = True

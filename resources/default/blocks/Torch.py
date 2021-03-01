@@ -10,7 +10,7 @@ class Torch(Block):
     def handle_event_block_update(self,event):
         redstone_update = Event("redstone_update",Point(self.position))
         self.world.event_system.add_event(redstone_update, 1)
-
+        return False
     
     def handle_event_redstone_update(self, event):
         # check block torch is attached to for redstone signal
@@ -22,7 +22,7 @@ class Torch(Block):
         else:
             self["state"] = "ON"
             self["p_level"] = 15
-        self.save()
+        return True
 
     def collides_with(self,hitbox,position):
         return False

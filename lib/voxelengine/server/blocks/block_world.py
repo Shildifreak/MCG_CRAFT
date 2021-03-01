@@ -26,6 +26,7 @@ class BlockWorld(Serializable):
 		self.block_world_index = BlockWorldIndex(self.get_tags)
 		self.world_generator   = WorldGenerator(block_world_data["generator"])
 		self.world = world
+		self.write_lock = ContextCounter()
 	
 	def __serialize__(self):
 		return {"generator" : self.world_generator.generator_data,
@@ -54,6 +55,8 @@ class BlockWorld(Serializable):
 	get = __getitem__
 	
 	def __setitem__(self, position, value):
+		if self.write_lock:
+			raise RuntimeError("Tried to set block in read only context.")
 		position = Vector(position)
 		# create a block object, or if already given one, make sure position and world match
 		block = self.BlockClass(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
@@ -96,3 +99,15 @@ class BlockWorld(Serializable):
 			blockdata = self._blockdata_by_id(block_id, position)
 			block_client_version = self._client_version(blockdata)
 			yield position, block_client_version
+
+class ContextCounter(object):
+	__slots__ = ("count",)
+	def __init__(self):
+		self.count = 0
+	def __enter__(self):
+		self.count += 1
+	def __exit__(self, *_):
+		assert self.count
+		self.count -= 1
+	def __bool__(self):
+		return bool(self.count)

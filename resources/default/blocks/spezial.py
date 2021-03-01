@@ -14,9 +14,12 @@ class Wand(Block):
 @register_block("AIM")
 class Aim(Block):
     blast_resistance = 1
-    def random_ticked(self):
+    def handle_event_random_tick(self,events):
         if random.random() > 0.9:
             x,y,z = self.position
-            self.world[(x,y+1,z)] = "STONE"
-            self.world[(x,y+2,z)] = "GESICHT"
+            self.world.request_set_block((x,y+1,z), "STONE")
+            self.world.request_set_block((x,y+2,z), "GESICHT")
+        return False
 
+    def get_tags(self):
+        return super().get_tags() | {"random_tick"}

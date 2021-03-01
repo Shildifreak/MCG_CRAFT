@@ -55,6 +55,7 @@ class EventSystem(Serializable):
 		else:
 			events = ()
 		while events:
+			# find affected blocks and entities
 			targets = defaultdict(list)
 			block_targets = defaultdict(list)
 			while events:
@@ -67,8 +68,18 @@ class EventSystem(Serializable):
 					targets[player].append(event)
 				for observer in self.find_observers(event.area, event.tag):
 					targets[observer].append(event)
-			for position, target_events in block_targets.items():
-				targets[self.world.blocks[position]] = target_events
+			# update blocks
+			changed_blocks = []
+			with self.world.blocks.write_lock:
+				for position, target_events in block_targets.items():
+					block = self.world.blocks[position]
+					changed = block.handle_events(target_events)
+					assert isinstance(changed, bool) # handle_events has to return either True or False
+					if changed:
+						changed_blocks.append(block)
+			for block in changed_blocks:
+				block.save()
+			# update entities
 			for target, target_events in targets.items():
 				target.handle_events(target_events)
 
