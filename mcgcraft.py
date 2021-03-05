@@ -478,15 +478,13 @@ class Player(voxelengine.Player):
         
         nv = Vector([0,0,0])
         sx,sy,sz = pe.get_sight_vector()
-        if self.is_pressed("for"):
-            nv += ( sx,0, sz)
-        if self.is_pressed("back"):
-            nv += (-sx,0,-sz)
-        if self.is_pressed("right"):
-            nv += (-sz,0, sx)
-        if self.is_pressed("left"):
-            nv += ( sz,0,-sx)
-
+        nv += Vector( sx,0, sz) * self.get_pressure("for")
+        nv += Vector(-sx,0,-sz) * self.get_pressure("back")
+        nv += Vector(-sz,0, sx) * self.get_pressure("right")
+        nv += Vector( sz,0,-sx) * self.get_pressure("left")
+        
+        speed_modifier *= nv.length()
+        
         # Flying
         if self.flying:
             if self.is_pressed("jump"):

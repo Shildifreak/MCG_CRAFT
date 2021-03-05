@@ -3,6 +3,7 @@
 import sys, os, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(os.path.join(PATH,"..","lib","voxelengine","modules"))
+import collections
 import appdirs
 import pyglet
 from pyglet.window import key, mouse
@@ -59,23 +60,57 @@ def on_draw():
     window.clear()
     label.draw()
 
-@window.event
-def on_key_press(key, modifiers):
+def assign_action(event_type, event_id):
     global event
-    event = ("key", key)
+    event = (event_type, event_id)
+    print(event)
     try:
         label.text = next(a)
+        window._legacy_invalid = True # otherwise Window won't update for some reason, another solution was to schedule a function that does nothing on main event loop
     except StopIteration:
         window.close()
+    
+
+@window.event
+def on_key_press(key, modifiers):
+    assign_action("key", key)
 
 @window.event
 def on_mouse_release(x, y, button, modifiers):
-    global event
-    event = ("mouse", button)
-    try:
-        label.text = next(a)
-    except StopIteration:
-        window.close()
+    assign_action("mouse", button)
+
+
+class joystick_handlers(object):        
+    THRESHOLD = 0.9
+    def on_joybutton_press(joystick, button):
+        assign_action("joystick", "button_%i"%button)
+
+    def on_joyaxis_motion(joystick, axis, value):
+        if getattr(joystick, axis+"_control").min == 0:
+            # assume this is a trigger or so and values are mapped -1 ..1, so we want to map them back to 0 ..1
+            value = (value + 1) / 2
+        joystick_handlers._on_joyaxis_motion(joystick, "+"+axis, +value)
+        joystick_handlers._on_joyaxis_motion(joystick, "-"+axis, -value)
+    
+    def on_joyhat_motion(joystick, hat_x, hat_y):
+        joystick_handlers._on_joyaxis_motion(joystick, "+joyhat_x", +hat_x)
+        joystick_handlers._on_joyaxis_motion(joystick, "-joyhat_x", -hat_x)
+        joystick_handlers._on_joyaxis_motion(joystick, "+joyhat_y", +hat_y)
+        joystick_handlers._on_joyaxis_motion(joystick, "-joyhat_y", -hat_y)
+
+    def _on_joyaxis_motion(joystick, axis, value):
+        state = (value > joystick_handlers.THRESHOLD)
+        if state and not joystick.axis_states[axis]:
+            assign_action("joystick", axis)
+        joystick.axis_states[axis] = state
+
+
+joysticks = pyglet.input.get_joysticks()
+print(len(joysticks),"joysticks found")
+for joystick in joysticks:
+    joystick.axis_states = collections.defaultdict(bool)
+    joystick.open()
+    joystick.push_handlers(joystick_handlers)
 
 def ablauf():
     keys = [

@@ -3,6 +3,7 @@ import _thread as thread
 import threading
 import time
 import json
+import base64
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -58,9 +59,13 @@ class Player(object):
 		character.set_world(world,world.blocks.world_generator.spawnpoint)
 		return character
 
-	def is_pressed(self,key):
+	def is_pressed(self,key,threshold=0.5):
 		"""return whether key is pressed """
-		return self.action_states.get(key,False)
+		return self.get_pressure(key) >= threshold
+	
+	def get_pressure(self, key):
+		"""return how much that key is pressed as a number between 0 and 1"""
+		return self.action_states.get(key,0)
 
 	def was_pressed(self,key):
 		"""return whether key was pressed since last update"""
@@ -206,12 +211,13 @@ class Player(object):
 				self.entity["rotation"] = (x,y)
 
 		elif cmd == "keys" and len(args) == 1:
-			action_states = int(args[0])
+			action_states = base64.decodebytes(args[0].encode("ascii"))
 			for i,a in enumerate(ACTIONS):
-				new_state = bool(action_states & (1<<(i)))
-				if new_state and not self.is_pressed(a):
+				new_state = int(action_states[i])/255.0 if (i < len(action_states)) else 0
+				old_state = self.action_states.get(a,0)
+				if new_state and not old_state:
 					self.was_pressed_set.add(a)
-				if not new_state and self.is_pressed(a):
+				if not new_state and old_state:
 					self.was_released_set.add(a)
 				self.action_states[a] = new_state
 

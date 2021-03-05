@@ -83,7 +83,7 @@ function count2d(f, d, k=1, w=constant_weight) {
         var counter = new Map();
         for (var dx = -d; dx < d+2; dx++) {
             for (var dz = -d; dz < d+2; dz++) {
-                t = f([xi+dx, zi+dz]);
+                var t = f([xi+dx, zi+dz]);
                 var v = counter.get(t);
                 if (v == undefined) {
                     v = 0;
@@ -181,7 +181,7 @@ function apply_filter (f /*, implicit filter_factory_list*/) {
 }
 
 
-var biome_terrain = apply_filter(noise32(),
+var biome_terrain = apply_filter(noise32(seed),
     [mod_map, [0,1,2]],
     [count2d, 3],
     [majority],
@@ -194,7 +194,7 @@ var biome_terrain = apply_filter(noise32(),
     [mod_map, ["MOUNTAIN","GRASSLAND","DESERT"]],
 )
 
-var tunnel_terrain = apply_filter(noise32(),
+var tunnel_terrain = apply_filter(noise32(seed),
     [mod_map, [0,0,0,0,0,0,0,0,0,
                1,1,1,1,1,1,1,1,1,1,1,
                2,2,2,2,2,2,2,2,2,2,2,
@@ -213,7 +213,7 @@ var tunnel_terrain = apply_filter(noise32(),
     [mod_map, ["GRASS", "AIR"]],
 )
 
-var tunnel3d_terrain = apply_filter(noise32(),
+var tunnel3d_terrain = apply_filter(noise32(seed),
     [mod_map, [0,0,0,0,0,0,0,0,0,
                1,1,1,1,1,1,1,1,1,1,1,
                2,2,2,2,2,2,2,2,2,2,2,
@@ -229,7 +229,7 @@ var tunnel3d_terrain = apply_filter(noise32(),
     [mod_map, ["AIR", "STONE"]],
 )
 
-var mountain_terrain_height = apply_filter(noise32(),
+var mountain_terrain_height = apply_filter(noise32(seed),
 	[mod_map, [-5, -5,
 			   0, 0,
 			   5, 5,
@@ -239,7 +239,7 @@ var mountain_terrain_height = apply_filter(noise32(),
 	[mul, 0.2],
 )
 
-var grassland_terrain_height = apply_filter(noise32(),
+var grassland_terrain_height = apply_filter(noise32(seed),
 	[mod_map, [-2, 0, 2, 3]],
 	[count2d, 3, 1, linear_weight],
 	[majority],
@@ -262,9 +262,19 @@ function terrain(position) {
 		}
 	}
 	if (b == "GRASSLAND") {
-    	var h = grassland_terrain_height([x,z]);
-		if (y <= h) {
-			return "GRASS"
+    	var h = Math.floor(grassland_terrain_height([x,z]));
+		if (y < h) {
+			return "DIRT"
+		}
+		if (y == h) {
+			if (y < 0) {
+				return "DIRT"
+			} else {
+				return "GRASS"
+			}
+		}
+		if (y <= 0) {
+			return "WATER"
 		}
 	}
 	if (b == "DESERT") {

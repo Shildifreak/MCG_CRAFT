@@ -16,6 +16,7 @@ import threading
 import json
 import urllib.request
 import io
+import base64
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -44,6 +45,7 @@ CHUNKSIZE = 2**CHUNKBASE
 TICKS_PER_SEC = 60
 MSGS_PER_TICK = 100
 ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE = CHUNKSIZE**DIMENSION*6
+JOYSTICK_DEADZONE = 0.1
 
 focus_distance = 0
 
@@ -865,6 +867,40 @@ class Model(object):
     def get_block(self,position):
         return self.blocks.get_block(position)
 
+class JoystickHandler(object):
+    def __init__(self, window):
+        self.window = window
+
+    def on_joybutton_press(self, joystick, button):
+        key = "button_%i"%button
+        joystick.states[key] = 255
+        self.window.send_input_change(("joystick",key))
+
+    def on_joybutton_release(self, joystick, button):
+        key = "button_%i"%button
+        joystick.states[key] = 0
+        self.window.send_input_change(("joystick",key))
+
+    def on_joyaxis_motion(self, joystick, axis, value):
+        if getattr(joystick, axis+"_control").min == 0:
+            # assume this is a trigger or so and values are mapped -1 ..1, so we want to map them back to 0 ..1
+            value = (value + 1) / 2
+        self._on_joyaxis_motion(joystick, "+"+axis, +value)
+        self._on_joyaxis_motion(joystick, "-"+axis, -value)
+
+    def on_joyhat_motion(self, joystick, hat_x, hat_y):
+        joystick_handlers._on_joyaxis_motion(joystick, "+joyhat_x", +hat_x)
+        joystick_handlers._on_joyaxis_motion(joystick, "-joyhat_x", -hat_x)
+        joystick_handlers._on_joyaxis_motion(joystick, "+joyhat_y", +hat_y)
+        joystick_handlers._on_joyaxis_motion(joystick, "-joyhat_y", -hat_y)
+
+    def _on_joyaxis_motion(self, joystick, axis, value):
+        key = axis
+        value = (value * (1+JOYSTICK_DEADZONE)) - JOYSTICK_DEADZONE
+        value = int(max(0, value) * 255) # map value to byte (0 .. 255)
+        joystick.states[key] = value
+        self.window.send_input_change(("joystick",key))
+
 class Window(pyglet.window.Window):
 
     def __init__(self, client = None, *args, **kwargs):
@@ -938,6 +974,14 @@ class Window(pyglet.window.Window):
         # and just a variable for the mouse that is updated by event_handlers below
         self.mousestates = collections.defaultdict(bool)
         self.focused_on_mouse_press = None
+
+        # joysticks
+        self.joysticks = pyglet.input.get_joysticks()
+        for joystick in self.joysticks:
+            joystick.open()
+            joystick_handler = JoystickHandler(self)
+            joystick.states = collections.defaultdict(float)
+            joystick.push_handlers(joystick_handler)
 
         # some function to tell about events
         if not client:
@@ -1147,18 +1191,25 @@ class Window(pyglet.window.Window):
     def send_input_change(self, event):
         used_events = set([i[0] for i in KEYMAP])
         if (event in used_events) or (event == True):
-            eventstates = 0
+            actionstates = bytearray(len(ACTIONS))
             for e, action in KEYMAP:
                 (event_type, symbol) = e
-                if (event_type == "key"   and self.keystates[symbol] and not self.chat_open) \
-                or (event_type == "mouse" and self.mousestates[symbol]):
-                    eventstates |= 1<<(ACTIONS.index(action))
-                    if event == e:
+                value = 0
+                if (event_type == "key"   and self.keystates[symbol] and not self.chat_open):
+                    value = 255
+                if (event_type == "mouse" and self.mousestates[symbol]):
+                    value = 255
+                if (event_type == "joystick"):
+                    for joystick in self.joysticks:
+                        value = max(value, joystick.states[symbol])
+                if event == e:
+                    if value > 0:
                         self.handle_input_action(action)
-                else:
-                    if event == e:
+                    else:
                         self.handle_input_action_end(action)
-            self.client.send(("keys",eventstates))
+                actionstates[ACTIONS.index(action)] = value
+            actionstates_b64 = base64.encodebytes(actionstates.rstrip(b"\00")).decode("ascii")
+            self.client.send(("keys",actionstates_b64))
 
     def handle_input_action(self, action):
         if action == "inv":
@@ -1274,6 +1325,7 @@ class Window(pyglet.window.Window):
         """
         width, height = self.get_size()
         #glDisable(GL_DEPTH_TEST)
+        glClear(GL_DEPTH_BUFFER_BIT)
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()

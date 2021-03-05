@@ -43,7 +43,9 @@ client -> server
 	
 	rot <yaw pitch>
 	
-	keys bitmap
+	keys states
+		states: base64 encoded bytearray containing state of each action (0 not pressed .. 255 completely pressed)
+		(trailing zero bytes are allowed to be stripped)
 	
 	scrolling n
 	
