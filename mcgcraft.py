@@ -295,7 +295,7 @@ class ChatDisplay(object):
 
 class Player(voxelengine.Player):
     RENDERDISTANCE = 10
-    CUSTOM_COMMANDS = {"clicked","dragged","scrolling"}
+    CUSTOM_COMMANDS = {"clicked","dragged"}
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -414,11 +414,9 @@ class Player(voxelengine.Player):
         for button, element_from, element_to in self.new_custom_commands_dict["dragged"]:
             if button in ("left", "right"):
                 self.inventory_display.handle_drag(button, element_from, element_to)
-        for args in self.new_custom_commands_dict["scrolling"]:
-            inv_inc_float = -float(args[0])
+        inv_inc = self.was_pressed("inv+") - self.was_pressed("inv-")
+        if inv_inc != 0:
             hand = "left_hand" if self.is_pressed("shift") else "right_hand"
-            threshold = 0.1
-            inv_inc = (inv_inc_float >= threshold) - (inv_inc_float <= -threshold) #sign with -1,0,1 and threshold for 0
             inv_slot = pe[hand] + inv_inc
             inv_slot %= 7
             pe[hand] = inv_slot
@@ -471,7 +469,7 @@ class Player(voxelengine.Player):
                 if do_next:
                     action2()
 
-        speed_modifier = 5 if self.is_pressed("sprint") else 1
+        speed_modifier = 2 if self.is_pressed("sprint") else 1
 
         # Movement
         pe.update_dt()
@@ -482,8 +480,6 @@ class Player(voxelengine.Player):
         nv += Vector(-sx,0,-sz) * self.get_pressure("back")
         nv += Vector(-sz,0, sx) * self.get_pressure("right")
         nv += Vector( sz,0,-sx) * self.get_pressure("left")
-        
-        speed_modifier *= nv.length()
         
         # Flying
         if self.flying:
@@ -499,17 +495,13 @@ class Player(voxelengine.Player):
         # Walking
         sv = pe.horizontal_move(self.is_pressed("jump"))
 
-        if self.was_released("for") or \
-           self.was_released("back") or \
-           self.was_released("right") or \
-           self.was_released("left"):
-            pe["velocity"] *= (0,1,0)
-
-        pe["velocity"] += nv*pe["ACCELERATION"]
-        l = pe["velocity"].length()
-        if l > pe["SPEED"]*speed_modifier:
-            f = pe["SPEED"]*speed_modifier / l
-            pe["velocity"] *= (f,1,f)
+        target_velocity = nv*pe["SPEED"]*speed_modifier
+        ax, _, az = target_velocity - pe["velocity"]
+        a_max = pe["ACCELERATION"]
+        ax = max(-a_max, min(a_max, ax))
+        az = max(-a_max, min(a_max, az))
+        
+        pe["velocity"] += (ax, 0, az)
 
         # save previous velocity and onground
         vy_vorher = pe["velocity"][1]

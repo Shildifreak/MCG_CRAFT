@@ -25,8 +25,8 @@ class Player(object):
 			self.outbox.add(*msg)
 		self.focus_distance = 0
 		self.action_states = {}
-		self.was_pressed_set = set()
-		self.was_released_set = set()
+		self.was_pressed_counter = collections.Counter()
+		self.was_released_counter = collections.Counter()
 		self.new_custom_commands_dict = collections.defaultdict(list)
 		self.new_chat_msgs_list = list()
 		self.quit_flag = False
@@ -68,12 +68,12 @@ class Player(object):
 		return self.action_states.get(key,0)
 
 	def was_pressed(self,key):
-		"""return whether key was pressed since last update"""
-		return key in self.was_pressed_set
+		"""return number of times key was pressed since last update"""
+		return self.was_pressed_counter[key]
 
 	def was_released(self,key):
 		"""return whether key was released since last update"""
-		return key in self.was_released_set
+		return self.was_released_counter[key]
 
 	def new_chat_messages(self):
 		"""new messages that the player sent. Use like this:
@@ -194,8 +194,8 @@ class Player(object):
 
 	def _update(self):
 		"""internal update method, automatically called by game loop"""
-		self.was_pressed_set.clear()
-		self.was_released_set.clear()
+		self.was_pressed_counter.clear()
+		self.was_released_counter.clear()
 		self.new_custom_commands_dict.clear()
 
 	def _handle_input(self,msg):
@@ -216,9 +216,9 @@ class Player(object):
 				new_state = int(action_states[i])/255.0 if (i < len(action_states)) else 0
 				old_state = self.action_states.get(a,0)
 				if new_state and not old_state:
-					self.was_pressed_set.add(a)
+					self.was_pressed_counter[a] += 1
 				if not new_state and old_state:
-					self.was_released_set.add(a)
+					self.was_released_counter[a] += 1
 				self.action_states[a] = new_state
 
 		elif cmd == "monitor" and len(args) == 3:
@@ -256,7 +256,7 @@ class Player(object):
 			self.new_chat_msgs_list.append(text)
 
 		elif cmd == "press" and len(args) == 1:
-			self.was_pressed_set.add(str(args[0]))
+			self.was_pressed_counter[str(args[0])] += 1
 		
 		elif cmd in self.CUSTOM_COMMANDS:
 			self.new_custom_commands_dict[cmd].append(args)

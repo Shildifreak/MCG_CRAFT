@@ -47,8 +47,6 @@ client -> server
 		states: base64 encoded bytearray containing state of each action (0 not pressed .. 255 completely pressed)
 		(trailing zero bytes are allowed to be stripped)
 	
-	scrolling n
-	
 	left click
 	
 	right click
@@ -59,7 +57,7 @@ client -> server
 	
 	press key
 		causes a key press event for this key (only recognizable with was_pressed, not is_pressed)
-		currently used for inv and chat_closed
+		currently used for inv, chat_closed and all actions caused by mouse_scroll events
 	
 	text msg
 		Nutzereingabe im Chat

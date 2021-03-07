@@ -83,7 +83,10 @@ if os.path.exists(configfn):
     with open(configfn) as configfile:
         config = eval(configfile.read(),globals())
         if "controls" in config:
-            KEYMAP = config["controls"]
+            if len(config["controls"]) > 0 and isinstance(config["controls"][0], dict):
+                KEYMAP = [(event, action) for control_layer in config["controls"] for action,event in control_layer.items()]
+            else:
+                KEYMAP = config["controls"]
         else:
             print("no controls found in file, using default controls")
 else:
@@ -882,9 +885,7 @@ class JoystickHandler(object):
         self.window.send_input_change(("joystick",key))
 
     def on_joyaxis_motion(self, joystick, axis, value):
-        if getattr(joystick, axis+"_control").min == 0:
-            # assume this is a trigger or so and values are mapped -1 ..1, so we want to map them back to 0 ..1
-            value = (value + 1) / 2
+        self._on_joyaxis_motion(joystick, "trigger_%s"%axis, (value+1)/2)
         self._on_joyaxis_motion(joystick, "+"+axis, +value)
         self._on_joyaxis_motion(joystick, "-"+axis, -value)
 
@@ -982,6 +983,9 @@ class Window(pyglet.window.Window):
             joystick_handler = JoystickHandler(self)
             joystick.states = collections.defaultdict(float)
             joystick.push_handlers(joystick_handler)
+
+        # current state of actions
+        self.actionstates = collections.defaultdict(float)
 
         # some function to tell about events
         if not client:
@@ -1093,9 +1097,27 @@ class Window(pyglet.window.Window):
             self.model.process_queue()
             m = max(0, MSGS_PER_TICK - len(self.model.queue))
             self.client.send(("tick",m))
+            
+            dyaw   = self.actionstates["+yaw"]   - self.actionstates["-yaw"]
+            dpitch = self.actionstates["+pitch"] - self.actionstates["-pitch"]
+            if dyaw != 0 or dpitch != 0:
+                k = 0.5
+                self.rotate(dyaw*k*dt, dpitch*k*dt)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         self.client.send(("scrolling",scroll_y))
+        symbol_x = "right" if scroll_x>0 else "left"
+        symbol_y = "up"    if scroll_y>0 else "down"
+        for e, action in KEYMAP:
+            e_type, symbol = e
+            if e_type == "scroll":
+                if symbol == symbol_x:
+                    for _ in range(math.ceil(abs(scroll_x))):
+                        self.client.send(("press",action))
+                if symbol == symbol_y:
+                    print(symbol, math.ceil(abs(scroll_y)))
+                    for _ in range(math.ceil(abs(scroll_y))):
+                        self.client.send(("press",action))
         
     def get_focused(self, x, y):
         focused = None
@@ -1164,6 +1186,14 @@ class Window(pyglet.window.Window):
     def on_mouse_leave(self, x, y):
         self.mousestates.clear()
         self.send_input_change(True)
+
+    def rotate(self, dyaw, dpitch):
+        yaw, pitch = self.rotation
+        yaw += dyaw
+        pitch += dpitch
+        pitch = max(-90, min(90, pitch))
+        self.rotation = (yaw,pitch)
+        self.client.send(("rot", self.rotation))
                 
     def on_mouse_motion(self, x, y, dx, dy):
         """
@@ -1179,11 +1209,7 @@ class Window(pyglet.window.Window):
         """
         if self.exclusive:
             m = 0.15
-            x, y = self.rotation
-            x, y = x + dx * m, y + dy * m
-            y = max(-90, min(90, y))
-            self.rotation = (x, y)
-            self.client.send(("rot", self.rotation))
+            self.rotate(dx*m, dy*m)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self.on_mouse_motion(x, y, dx, dy)
@@ -1191,7 +1217,7 @@ class Window(pyglet.window.Window):
     def send_input_change(self, event):
         used_events = set([i[0] for i in KEYMAP])
         if (event in used_events) or (event == True):
-            actionstates = bytearray(len(ACTIONS))
+            self.actionstates.clear()
             for e, action in KEYMAP:
                 (event_type, symbol) = e
                 value = 0
@@ -1203,22 +1229,18 @@ class Window(pyglet.window.Window):
                     for joystick in self.joysticks:
                         value = max(value, joystick.states[symbol])
                 if event == e:
-                    if value > 0:
-                        self.handle_input_action(action)
-                    else:
-                        self.handle_input_action_end(action)
-                actionstates[ACTIONS.index(action)] = value
+                    self.handle_input_action(action, value)
+                self.actionstates[action] = max(value, self.actionstates[action])
+            actionstates = bytearray(self.actionstates[a] for a in ACTIONS)
             actionstates_b64 = base64.encodebytes(actionstates.rstrip(b"\00")).decode("ascii")
             self.client.send(("keys",actionstates_b64))
 
-    def handle_input_action(self, action):
-        if action == "inv":
+    def handle_input_action(self, action, value):
+        if action == "inv" and value > 0:
             if self.hud_open:
                 self.hud_open = False
                 self.set_exclusive_mouse(True)
-
-    def handle_input_action_end(self, action):
-        if action == "chat": #do this on release, so key is not printed into chat
+        if action == "chat" and value == 0: #do this on release, so key is not printed into chat
             self.chat_open = True
 
     def on_key_press(self, symbol, modifiers):
