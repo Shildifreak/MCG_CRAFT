@@ -123,13 +123,13 @@ class GUI(object):
         file_focus_out(None)
         
         def openfile():
-            fn = filedialog.open_dialog("")
+            fn = filedialog.open_dialog(os.path.join("saves","worlds"))
             if fn != False:
                 setfile(fn, False)
         fileopenbutton = Tkinter.Button(self.root, text="öffnen", command=openfile)
         fileopenbutton.grid(column = 2, row = self.row-1, sticky = Tkinter.W+Tkinter.E)
         def newfile():
-            fn = filedialog.save_dialog("")
+            fn = filedialog.save_dialog(os.path.join("saves","worlds"))
             if fn != False:
                 setfile(fn, True)
         filenewbutton = Tkinter.Button(self.root, text="neu", command=newfile)

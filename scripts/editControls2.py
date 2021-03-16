@@ -2,32 +2,39 @@
 
 import sys, os, inspect
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-sys.path.append(os.path.join(PATH,"..","lib","voxelengine","modules"))
+sys.path.append(os.path.join(PATH,"..","lib"))
+
+if __name__ == "__main__":
+    os.chdir("..")
+
 import collections
-import appdirs
-import pyglet
+import json
+
+import config
+from gui import filedialog
+from voxelengine.modules import appdirs
+from voxelengine.modules import pyglet
 from pyglet.window import key, mouse
 
-configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
-configfn = os.path.join(configdir,"desktopclientsettings.py")
-print(configfn)
-if os.path.exists(configfn):
-    with open(configfn) as configfile:
+desktopconfigfn = os.path.join(config.configdir,"desktopclientsettings.py")
+print(desktopconfigfn)
+if os.path.exists(desktopconfigfn):
+    with open(desktopconfigfn) as configfile:
         try:
-            config = eval(configfile.read(),globals())
+            desktopconfig = eval(configfile.read(),globals())
         except:
-            config = {}
+            desktopconfig = {}
 else:
-    config = {}
+    desktopconfig = {}
 
-if (not "controls" in config) or (not isinstance(config["controls"], list)):
-    config["controls"] = []
+if (not "controls" in desktopconfig) or (not isinstance(desktopconfig["controls"], list)):
+    desktopconfig["controls"] = []
 
 #update from old format
-if len(config["controls"]) > 0 and not isinstance(config["controls"][0], dict):
-    old_controls = config["controls"]
+if len(desktopconfig["controls"]) > 0 and not isinstance(desktopconfig["controls"][0], dict):
+    old_controls = desktopconfig["controls"]
     new_controls = [{action: event for event, action in old_controls}]
-    config["controls"] = new_controls
+    desktopconfig["controls"] = new_controls
 
 actions = [
     ("left_hand", u"linke Hand"),
@@ -96,9 +103,9 @@ def assign_action(event_type, event_id):
     print(event, recording)
     action_index, control_layer_index = recording
     action_name, _ = actions[action_index]
-    while len(config["controls"]) <= control_layer_index:
-        config["controls"].append({})
-    config["controls"][control_layer_index][action_name] = event
+    while len(desktopconfig["controls"]) <= control_layer_index:
+        desktopconfig["controls"].append({})
+    desktopconfig["controls"][control_layer_index][action_name] = event
     changed_since_save = True
     update_table()
     recording = None
@@ -116,10 +123,17 @@ def on_mouse_press(x, y, button, modifiers):
         if (action_index < 0 and control_layer_index < 0):
             if changed_since_save:
                 # save
-                with open(configfn,"w") as configfile:
-                    configfile.write(repr(config))
+                with open(desktopconfigfn,"w") as configfile:
+                    configfile.write(repr(desktopconfig))
             changed_since_save = False
             update_table()
+            return
+        if action_index == -1:
+            export_preset(control_layer_index)
+            return
+        if action_index == -2:
+            import_preset(control_layer_index)
+            return
         if not (0 <= action_index < len(actions)):
             return
         if control_layer_index < 0:
@@ -129,9 +143,12 @@ def on_mouse_press(x, y, button, modifiers):
                 reset_resting_positions(joystick)
             recording = (action_index, control_layer_index)
         elif button == mouse.RIGHT:
-            if control_layer_index < len(config["controls"]):
+            if control_layer_index < len(desktopconfig["controls"]):
                 action_name, _ = actions[action_index]
-                config["controls"][control_layer_index].pop(action_name, None)
+                desktopconfig["controls"][control_layer_index].pop(action_name, None)
+                print(len(desktopconfig["controls"][control_layer_index]), len(desktopconfig["controls"]), control_layer_index)
+                while len(desktopconfig["controls"][-1]) == 0:
+                    desktopconfig["controls"].pop(-1)
                 changed_since_save = True
                 update_table()
     else:
@@ -200,6 +217,53 @@ recording_label = pyglet.text.Label('Placeholder Text',
                           x=window.width//2, y=window.height//2,
                           anchor_x='center', anchor_y='center')
 
+def import_preset(control_layer_index):
+    global changed_since_save
+    default_preset_directory = os.path.join("saves","presets")
+    filename = filedialog.open_dialog(
+        path = default_preset_directory,
+        title = "choose preset file",
+        filetypes = [("JSON File","*.json"),("Any files","*")],
+        defaultextension = ".json")
+    
+    if not filename:
+        return
+    
+    with open(filename, "r") as f:
+        filecontent = json.load(f)
+    
+    if not isinstance(filecontent, dict) or "MCGCRAFT_DESKTOP_CLIENT_CONTROL_LAYER_V1.0" not in filecontent:
+        print(filename, "is not a valid preset file")
+        return
+    
+    control_layer = filecontent["MCGCRAFT_DESKTOP_CLIENT_CONTROL_LAYER_V1.0"]
+    
+    while len(desktopconfig["controls"]) <= control_layer_index:
+        desktopconfig["controls"].append({})
+    
+    desktopconfig["controls"][control_layer_index] = control_layer
+    changed_since_save = True
+    
+    update_table()
+
+def export_preset(control_layer_index):
+    if not control_layer_index < len(desktopconfig["controls"]):
+        return
+    control_layer = desktopconfig["controls"][control_layer_index]
+
+    default_preset_directory = os.path.join("saves","presets")
+    filename = filedialog.save_dialog(
+        path = default_preset_directory,
+        title = "create preset file",
+        filetypes = [("JSON File","*.json")],
+        defaultextension = ".json")
+    if not filename:
+        return
+    if not filename.endswith(".json"):
+        filename += ".json"
+    with open(filename, "w") as f:
+        json.dump({"MCGCRAFT_DESKTOP_CLIENT_CONTROL_LAYER_V1.0":control_layer}, f)
+
 def update_table():
     global batch
     # create new batch
@@ -225,7 +289,7 @@ def update_table():
                           anchor_x='left', anchor_y='baseline',
                           batch=batch)
 
-        for j, control_layer in enumerate(config["controls"]):
+        for j, control_layer in enumerate(desktopconfig["controls"]):
             event = control_layer.get(action, None)
             if event == None:
                 continue
@@ -243,15 +307,29 @@ def update_table():
             if event[0] == "error":
                 text = event[1]
                 color = (255,100,0,255)
-            label = pyglet.text.Label(text,
+            pyglet.text.Label(text,
                               font_name='Times New Roman',
                               font_size=FONT_SIZE,
                               x=x, y=y,
                               anchor_x='left', anchor_y='baseline',
                               color = color,
                               batch=batch)
+    
+    for i, labeltext in enumerate(("import","export")):
+        y = window.height-(i)*ROW_HEIGHT+3
+        for j in range(20):
+            x = ACTION_LABEL_WIDTH + (j)*KEY_LABEL_WIDTH
+            color = (255,255,255,255) if (labeltext == "import" or (j < len(desktopconfig["controls"]) and desktopconfig["controls"][j])) else (100,100,100,255)
+            pyglet.text.Label(labeltext,
+                              font_name='Times New Roman',
+                              font_size=FONT_SIZE,
+                              x=x, y=y,
+                              anchor_x='left', anchor_y='top',
+                              color = color,
+                              batch=batch)
+    
     if changed_since_save:
-        label = pyglet.text.Label("Save Changes",
+        pyglet.text.Label("Save Changes",
                           font_name='Times New Roman',
                           font_size=FONT_SIZE,
                           x=0, y=window.height - ROW_HEIGHT//2,

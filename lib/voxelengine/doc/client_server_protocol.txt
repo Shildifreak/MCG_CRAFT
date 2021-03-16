@@ -19,6 +19,7 @@ server -> client
 		lösche Entity
 	sethud id texture <x y z> rotation <w h> align
 		zeige HUD Element
+		anklickbar wenn id mit # beginnt
 	delhud id
 		lösche HUD Element
 	focushud
@@ -36,6 +37,7 @@ client -> server
 	tick
 	
 	control entity_id password
+		to create temporary entity prefix entity_id with "tmp:"
 	
 	monitor <x_min y_min z_min> <x_max y_max z_max> m_id
 	
@@ -47,13 +49,10 @@ client -> server
 		states: base64 encoded bytearray containing state of each action (0 not pressed .. 255 completely pressed)
 		(trailing zero bytes are allowed to be stripped)
 	
-	left click
+	clicked button hud_element_id
+		button: left, right
 	
-	right click
-	
-	left clicked hud_id
-	
-	right clicked hud_id
+	dragged button from_hud_element_id to_hud_element_id
 	
 	press key
 		causes a key press event for this key (only recognizable with was_pressed, not is_pressed)
