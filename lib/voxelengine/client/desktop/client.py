@@ -981,11 +981,11 @@ class Window(pyglet.window.Window):
         for joystick in self.joysticks:
             joystick.open()
             joystick_handler = JoystickHandler(self)
-            joystick.states = collections.defaultdict(float)
+            joystick.states = collections.defaultdict(int)
             joystick.push_handlers(joystick_handler)
 
         # current state of actions
-        self.actionstates = collections.defaultdict(float)
+        self.actionstates = collections.defaultdict(int)
 
         # some function to tell about events
         if not client:
@@ -1108,6 +1108,7 @@ class Window(pyglet.window.Window):
         self.client.send(("scrolling",scroll_y))
         symbol_x = "right" if scroll_x>0 else "left"
         symbol_y = "up"    if scroll_y>0 else "down"
+        print(symbol_x, symbol_y, KEYMAP)
         for e, action in KEYMAP:
             e_type, symbol = e
             if e_type == "scroll":
