@@ -202,15 +202,31 @@ class Player(object):
 		"""do something so is_pressed and was_pressed work"""
 		cmd, *args = msg
 
-		if cmd == "tick" and len(args) == 1:
-			self.outbox.reset_msg_counter(-int(args[0]))
+		def deep_type(obj):
+			if isinstance(obj, (list, tuple)):
+				return tuple(map(deep_type, obj))
+			else:
+				return type(obj)
+		
+		class Number(object):
+			__slots__ = ()
+			@staticmethod
+			def __eq__(other):
+				return other in (int, float)
+		t_number = Number()
+		t_vector = (t_number, t_number, t_number)
+		
+		argsformat = deep_type(args)
 
-		elif cmd == "rot" and len(args) == 1:
+		if cmd == "tick" and argsformat == (int,):
+			self.outbox.reset_msg_counter(-args[0])
+
+		elif cmd == "rot" and argsformat == ((t_number,t_number),):
 			x,y = map(float,args[0])
 			if self.entity:
 				self.entity["rotation"] = (x,y)
 
-		elif cmd == "keys" and len(args) == 1:
+		elif cmd == "keys" and argsformat == (str,):
 			action_states = base64.decodebytes(args[0].encode("ascii"))
 			for i,a in enumerate(ACTIONS):
 				new_state = int(action_states[i])/255.0 if (i < len(action_states)) else 0
@@ -221,7 +237,7 @@ class Player(object):
 					self.was_released_counter[a] += 1
 				self.action_states[a] = new_state
 
-		elif cmd == "monitor" and len(args) == 3:
+		elif cmd == "monitor" and argsformat == (t_vector, t_vector, int):
 			lower_bounds = Vector(map(float, args[0]))
 			upper_bounds = Vector(map(float, args[1]))
 			m_id = int(args[2])
@@ -236,7 +252,7 @@ class Player(object):
 			for entity in new_entities - previous_entities:
 				self._set_entity(entity)
 
-		elif cmd == "update" and len(args) == 3:
+		elif cmd == "update" and argsformat == (t_vector, t_vector, int):
 			lower_bounds = Vector(map(float, args[0]))
 			upper_bounds = Vector(map(float, args[1]))
 			m_id = int(args[2])
@@ -247,22 +263,22 @@ class Player(object):
 				self.outbox.add("error", "unknown m_id",m_id)
 			self._update_area(Box(lower_bounds, upper_bounds), since_tick)
 
-		elif cmd == "control" and len(args) == 2:
+		elif cmd == "control" and argsformat == (str, str):
 			entity_id, password = map(str, args)
 			self._control_request(entity_id, password)
 
-		elif cmd == "text" and len(args) == 1:
+		elif cmd == "text" and argsformat == (str,):
 			text = str(args[0])
 			self.new_chat_msgs_list.append(text)
 
-		elif cmd == "press" and len(args) == 1:
+		elif cmd == "press" and argsformat == (str,):
 			self.was_pressed_counter[str(args[0])] += 1
 		
 		elif cmd in self.CUSTOM_COMMANDS:
 			self.new_custom_commands_dict[cmd].append(args)
 		
 		else:
-			print("no matching format for message", msg)
+			print("no matching format for message", msg, "with format", argsformat)
 
 	def _notice_position(self):
 		"""set position of camera/player"""
