@@ -12,7 +12,7 @@ if not defined:
 		gi.require_version('Gtk', '3.0')
 		from gi.repository import Gtk
 	except:
-		pass
+		print("no gi with Gtk >3.0 found")
 	else:
 
 		print("using Gtk >3.0 from gi")
@@ -23,6 +23,9 @@ if not defined:
 				action,button_text = Gtk.FileChooserAction.OPEN,Gtk.STOCK_OPEN
 			elif dialog_type == "save_file":
 				action,button_text = Gtk.FileChooserAction.SAVE,Gtk.STOCK_SAVE
+			elif dialog_type == "select_folder":
+				action,button_text = Gtk.FileChooserAction.SELECT_FOLDER,Gtk.STOCK_OPEN
+				filetypes=[]
 			else:
 				raise NotImplementedError("dialog type %s is not supported" % dialog_type)
 			
@@ -63,7 +66,7 @@ if not defined:
 			import tkinter as Tkinter
 			import tkinter.filedialog as FileDialog
 	except:
-		pass
+		print("no Tkinter/tkinter with FileDialog found")
 	else:
 		print("using Tkinter/tkinter")
 		defined = True
@@ -72,7 +75,9 @@ if not defined:
 			if dialog_type == "open_file":
 				dialog_function = FileDialog.askopenfilename
 			elif dialog_type == "save_file":
-				FileDialog.asksaveasfilename
+				dialog_function = FileDialog.asksaveasfilename
+			elif dialog_type == "select_folder":
+				dialog_function = FileDialog.askdirectory
 			else:
 				raise NotImplementedError("dialog type %s is not supported" % dialog_type)
 
@@ -94,6 +99,9 @@ def open_dialog(path,title="choose savegame to open",filetypes=DEFAULT_FILETYPES
 def save_dialog(path,title="create file for savegame",filetypes=DEFAULT_FILETYPES,defaultextension=DEFAULT_DEFAULTEXTENSION):
 	return _dialog(path, "save_file",title,filetypes,defaultextension)
 
+def folder_dialog(path,title="select folder"):
+	return _dialog(path, "select_folder",title,None,None)
+
 if not defined:
 	raise ImportError("no filedialog implementation found. Please install one of the following:\n"
 					  "- Tkinter/tkinter\n"
@@ -102,3 +110,4 @@ if not defined:
 if __name__ == "__main__":
 	print("open",open_dialog(".."))
 	print("save",save_dialog(".."))
+	print("dir" ,folder_dialog(".."))

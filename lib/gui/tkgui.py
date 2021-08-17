@@ -275,11 +275,42 @@ class GUI(object):
             self.serverconfig["resource_paths"] = self.serverconfig["resource_paths"] # to trigger save
             self.update_worldtypes()
 
-        resource_path_options = self.serverconfig["resource_path_options"]
-        for name in resource_path_options:
-            v = Tkinter.BooleanVar()
-            v.set(name in self.serverconfig["resource_paths"])
-            resourcepaths_menu.add_checkbutton(label=name, onvalue=True, offvalue=False, variable=v, command=lambda n=name, v=v:update_selection(n, v))
+        def add_path():
+            path = filedialog.folder_dialog(".","select resource folder")
+            if path == False:
+                return
+            if path not in self.serverconfig["resource_path_options"]:
+                self.serverconfig["resource_path_options"].append(path)
+                self.serverconfig["resource_path_options"] = self.serverconfig["resource_path_options"] # trigger save
+                update_resourcepaths_menu()
+            else:
+                print("path is already registered")
+
+        def remove_path(path):
+            if path in self.serverconfig["resource_path_options"]:
+                self.serverconfig["resource_path_options"].remove(path)
+                self.serverconfig["resource_path_options"] = self.serverconfig["resource_path_options"] # trigger save
+                if path in self.serverconfig["resource_paths"]:
+                    self.serverconfig["resource_paths"].remove(path)
+                    self.serverconfig["resource_paths"] = self.serverconfig["resource_paths"] # trigger save
+                    update_text()
+                update_resourcepaths_menu()
+            else:
+                print("warning: path couldn't be removed because it wasn't in there")
+
+        def update_resourcepaths_menu():
+            resourcepaths_menu.delete(0,"end")
+            removal_menu = Tkinter.Menu(resourcepaths_menu, tearoff=0)
+            for path in self.serverconfig["resource_path_options"]:
+                v = Tkinter.BooleanVar()
+                v.set(path in self.serverconfig["resource_paths"])
+                resourcepaths_menu.add_checkbutton(label=path, onvalue=True, offvalue=False, variable=v, command=lambda p=path, v=v:update_selection(p, v))
+                if path != "default":
+                    removal_menu.add_command(label=path, command=lambda p=path:remove_path(p))
+            resourcepaths_menu.add_separator()
+            resourcepaths_menu.add_command(label="add path", command=add_path)
+            resourcepaths_menu.add_cascade(label="remove path",menu=removal_menu)
+        update_resourcepaths_menu()
 
         resourcepaths_menubutton.grid(column = 1, columnspan=3, row = self.row, sticky = Tkinter.W+Tkinter.E)
         resourcepaths_menubutton.configure(takefocus=1)
