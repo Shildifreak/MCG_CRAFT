@@ -524,10 +524,12 @@ def load_resources_from(resource_paths):
         sys.path.append(structure_path)
         for directory in ("blocks","entities","items","commands"):
             path = os.path.join(PATH, ".." , "resources", resource_path, directory) #everything before resource_path is dropped in case of absolute path
+            sys.path.append(path)
             if os.path.isdir(path):
                 for fn in os.listdir(path):
                     if fn.endswith(".py") and not fn.startswith("_"):
                         imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+            sys.path.remove(path)
         sys.path.remove(structure_path)
 
     tp_compiler = TP_Compiler()
