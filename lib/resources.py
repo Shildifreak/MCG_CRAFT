@@ -266,14 +266,18 @@ class Entity(voxelengine.Entity):
     instances = []
 
     def __init__(self,*args,**kwargs):
-        super(Entity,self).__init__(*args,**kwargs)
+        super().__init__(*args,**kwargs)
 
         self["velocity"] = Vector([0,0,0])
         self["last_update"] = time.time()
+        self["flying"] = False
+        self["lives"] = 10
         self["ACCELERATION"] = 20
         self["SPEED"] = 10
         
         self.register_item_sanitizer(lambda v: Vector(v),"velocity")
+
+        self.ai_commands = collections.defaultdict(list)
 
         self.instances.append(self)
 
@@ -380,6 +384,60 @@ class Entity(voxelengine.Entity):
                     pos = new
         if pos != entity["position"]:
             entity["position"] = pos
+    
+    def execute_ai_commands(self):
+        jump   = bool(sum(self.ai_commands["jump"  ]))
+        shift  = bool(sum(self.ai_commands["shift" ]))
+        sprint = bool(sum(self.ai_commands["sprint"]))
+        x = sum(self.ai_commands["x"])
+        z = sum(self.ai_commands["z"])
+        self.ai_commands.clear()
+
+        nv = Vector(x,0,z)
+        speed_modifier = 2 if sprint else 1
+
+        # Flying
+        if self["flying"]:
+            if jump:
+                nv += (0, 1, 0)
+            if shift:
+                nv -= (0, 1, 0)
+            if nv != (0,0,0):
+                self["position"] += nv*self["FLYSPEED"]*speed_modifier*self.dt
+            self["velocity"] = (0,0,0)
+            return
+
+        # Walking
+        sv = self.horizontal_move(jump)
+
+        target_velocity = nv*self["SPEED"]*speed_modifier
+        ax, _, az = target_velocity - self["velocity"]
+        a_max = self["ACCELERATION"]
+        ax = max(-a_max, min(a_max, ax))
+        az = max(-a_max, min(a_max, az))
+        
+        self["velocity"] += (ax, 0, az)
+
+        # save previous velocity and onground
+        vy_vorher = self["velocity"][1]
+        onground_vorher = self.onground()
+        position_vorher = self["position"]
+        
+        # update position
+        self.update_position()
+        
+        # see if player hit the ground and calculate damage
+        onground_nachher = self.onground()
+        if (not onground_vorher) and onground_nachher:
+            # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
+            schaden = (-vy_vorher) -20
+            # HERZEN ANPASSEN
+            if schaden > 0:
+                self["lives"] -= 1
+        # reset position when shifting and leaving ground
+        if shift and onground_vorher and not onground_nachher:
+            self["position"] = position_vorher
+            self["velocity"] = Vector(0,0,0)
     
     def block_update(self):
         """called when block "near" entity is changed"""

@@ -9,7 +9,7 @@ class Schaf(Entity):
     instances = []
     
     def __init__(self):
-        super(Schaf,self).__init__()
+        super().__init__()
 
         self["texture"] = "SCHAF"
         self["SPEED"] = 10
@@ -25,10 +25,7 @@ class Schaf(Entity):
     def left_clicked(self, character):
         print("Maehhh")
 
-    def update(self):
-        if self["position"][1] < -100:
-            self.kill()
-            return
+    def update_ai(self):
         r = random.randint(0,200)
         if r < 1:
             self["turn"] = -5
@@ -48,23 +45,35 @@ class Schaf(Entity):
             self["turn"] = 0
             self["nod"] = True
         
-        self.update_dt()
-        nv = Vector([0,0,0])
-        sx,sy,sz = self.get_sight_vector()
+        sx, _, sz = self.get_sight_vector()
+        self.ai_commands["x"].append(sx * self["forward"])
+        self.ai_commands["z"].append(sz * self["forward"])
+
         if self["forward"]:
-            nv += Vector((sx,0,sz))*self["SPEED"]
             jump = self.world.blocks[(self["position"] + Vector(sx,-0.5,sz)).round()] != "AIR"
         else:
             jump = not random.randint(0,2000)
-        if self["nod"]:
-            p = (self["position"]+Vector(0,-2,0)).round()
-            if self.world.blocks[p] == "GRASS":
-                self.world.blocks[p] = "DIRT"
-        sv = self.horizontal_move(jump)
-        self["velocity"] += ((1,1,1)-sv)*nv
-        self.update_position()
+        if jump:
+            self.ai_commands["jump"].append(jump)
+
+    def update(self):
+        self.update_dt()
+
+        if self["position"][1] < -100:
+            self.kill()
+            return
+
+        self.update_ai()
+
+        self.execute_ai_commands()
+
         y, p = self["rotation"]
         dy = self["turn"]
         dp = -self["nod"]*50 - p
         if dy or dp:
             self["rotation"] = y+dy, p+dp
+
+        if p <= -50:
+            pos = (self["position"]+Vector(0,-2,0)).round()
+            if self.world.blocks[pos] == "GRASS":
+                self.world.blocks[pos] = "DIRT"
