@@ -1,29 +1,68 @@
-﻿Dinge die man in der AG machen könnte:
+﻿Zu sichten und sortieren:
+	Make passive mobs despawn if the are more than x blocks away from where they last saw a player - make normal mobs despawn if they are more than x blocks away from player
+	mine single double slabs
+	go up automatically when placing blocks or at least when placing slabs in oneselfs position
+	Parts of block/world state: Visible, invisible, reconstructable (from visible/invisible)
+	Anzuzeigende Chunks clientseitig berechnen. Funktionen zur Terraingenerierung teilen.
+	Entities und Blöcke getrennt speichern
+	MCGCraft online
+		socket connection
+	new block system
+	event system
+	Single Stepping Ticks
+	instead of durability for tools, just have stackable one time use tools
+	Redstone lamp with light level depending on signal strength
+	Slowsand
+	Kicking Player
+	Make focusedtests part of entity instead of player
+	improve movement calculation
+	Hitboxklasse
+	Click on entity
+	Infos zu fokusiertem Block
+	Daylight cycle
+	Blätter die despawnen
+	Bewegung von Blöcken
+	Blöcke droppen, aufnehmen
+	Whitelist
+	WebGL Client
+	Voicechat mit Entfernungsmessung
+	Unprojektion
+
+	Festkommazahlen für Entity Position
+	Attribute indizieren
+		auto git pull on server? + update script for client
+	Apache Proxy for ssh over http
+	PHP für mcgcraft website header
+	clean up geometry to be usable as standalone module
+	option to upload resource packs for terraintest
+	
+	respawn time depending on distance to spawn
+	writing ALL CAPS makes chat hearable from further away ;)
+	Blocks that cant be mined (or dont drop when mined) but pushed around
+	carving text into bark with sword
+	way to create gravity affected redstone blocks / every block
+	brew in cauldron by throwing items into water; with fire below; some way to stirr?
+	scaffolding block that breaks in bigger radius the longer it is mined (quick click = instamine one block, hold to break more/all connected blocks)
+	syncing stacks in mcgcraft
+	blockbench 3D pixel modeling software
+
+Dinge die man in der AG machen könnte:
 	Schafe:
 		ändern Textur wenn angeklickt und geben Wolle -> wächst nach wenn sie Gras fressen
 		suchen nach Grasblöcken in der Umgebung 
 		verschiedene AIs / Persönlichkeiten -> faul, quirlig, verfressen, anhänglich, ängstlich, ...
 
+	dna für Bäume -> ermöglicht züchten
 
 Bugs:
 	tnt crashes client
 	entities werden nicht ordentlich entfernt wenn server gestoppt wird
-	Blöcke können kein Inventar haben weil Observable nicht serialisierbar sind
-	yalready done!? <- BlockModels für Entities ermöglichen (oder ausschließen)
 	Zwei Fackeln nebeneinander freezen das Spiel, Update kann gepowerte Fackel wieder ausmachen :(
 
 Verbesserungskram:
-	restrict write access in block methods to own block
-	decorator um deterministische init function in terrain function umzuwandeln
-	scheduling Funktion -> instead use events
-	Türschwelle entfernen
-
-	Möglichkeit für den Clienten Texturepack selbst auszuwählen?
+	
 
 Plan:
-	display_as attribute für alternative textur/modell
-	Speichern sollte beinhalten: Weltgenerator?, Datum, Version, Entities
-	Block Movement
 	Blöcke Items droppen lassen (wenn nötig Entities optimieren mit callback von chunks(for changed blocks on their path ... so the ground they are lying upon))
 		-> Block-Entity-Updates -> called to entities in same chunk as changed block
 	Aufsammeln von Blöcken ermöglichen
@@ -35,7 +74,7 @@ Menü:
 	Speicherort (browse) (standartmäßig leer)
 	Weltgenerator(*)
 	whitelist (localhost / all / custom)
-	#Parole (erstmal nicht)
+	Parole
 	#Port
 	Start/Stop          Start&Play/Play
 	Stats**
