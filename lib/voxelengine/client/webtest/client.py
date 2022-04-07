@@ -1,4 +1,5 @@
 import sys, os, inspect, threading, time
+import random
 import http.server, webbrowser
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -13,4 +14,5 @@ if not args.server_location:
 
 url = "http://%s/webclient/latest" % args.server_location
 url += "?server=%s&name=%s&password=%s" %(args.server_location,args.name,args.password)
+url += "?rid=%i" %random.getrandbits(32) #avoid problems with browser caching
 webbrowser.open(url)
