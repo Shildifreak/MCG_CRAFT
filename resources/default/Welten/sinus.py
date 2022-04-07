@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 import math
 import random
 
@@ -8,7 +8,7 @@ spawnpoint = (0,20,0)
 
 
 
-# Das ist eine Funktion die Bäume erzeugt
+# Das ist eine Funktion die BÃ¤ume erzeugt
 def baum(position, size, direction):
     pass
 
