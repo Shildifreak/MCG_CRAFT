@@ -117,8 +117,9 @@ def generate_textures_file(texture_index, texture_directories):
 		print("unused_textures:\n\t"+"\n\t".join(unused_textures))
 	#get output size
 	output_size = tuple(map(max, *(texture_directory.read_texture(name).get_size()
+	                               for texture_directory in texture_directories
 	                               for name in texture_directory.list_textures() if name in used_textures
-	                               for texture_directory in texture_directories)))
+	                              )))
 	print("TEXTURE_SIZE:", output_size)
 	height = output_size[1]*TEXTURE_COUNT
 	textures = pygame.surface.Surface((output_size[0], height), pygame.SRCALPHA)
