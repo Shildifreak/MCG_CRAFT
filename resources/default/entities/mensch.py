@@ -43,9 +43,22 @@ class Mensch(Entity):
 
     def right_clicked(self, character):
         print("Oh no, that hurts!")
+        self.take_damage(1)
         
     def left_clicked(self, character):
         print("Just stop it already!")
 
     def update(self):
         pass
+
+
+    def take_damage(self, damage):
+        self["lives"] = self["lives"] - damage
+        if self["lives"] <= 0:
+            self.die_and_respawn()
+
+    def die_and_respawn(self):
+        # die
+        self["position"] = self.world.blocks.world_generator.spawnpoint
+        # respawn
+        self["lives"] = 9

@@ -400,7 +400,7 @@ class Player(voxelengine.Player):
         if self.was_pressed("inv"):
             self.inventory_display.toggle()
         if self.was_pressed("emote") or self.was_released("emote"):
-            pe.update_texture(show_emote=self.is_pressed("emote"))
+            pe["show_emote"] = self.is_pressed("emote")
 
         for inv_slot in range(10):
             if self.was_pressed("inv%i"%inv_slot):
