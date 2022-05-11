@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+# (c) 2018 Bennet & Edgar
+
 import math
 import random
 import tree

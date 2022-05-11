@@ -13,7 +13,7 @@ class Mensch(Entity):
     instances = []
     
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         self["skin"] = random.choice(self.LEGS)
         self["emote"] = self.EMOTES[0]
@@ -30,7 +30,7 @@ class Mensch(Entity):
         self["right_hand"] = {"id":"AIR"}
         self["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
         self["lives"] = 9
-        self["tags"] = {"random_tick_source"}
+        self["tags"] = {"random_tick_source","update"}
 
     def _update_texture(self, _):
         texture_mappings = {"<<random>>":self["skin"]}
@@ -49,8 +49,8 @@ class Mensch(Entity):
         print("Just stop it already!")
 
     def update(self):
-        pass
-
+        self.update_dt()
+        self.execute_ai_commands()
 
     def take_damage(self, damage):
         self["lives"] = self["lives"] - damage

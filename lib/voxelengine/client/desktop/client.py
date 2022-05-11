@@ -74,6 +74,8 @@ KEYMAP = [
     (("mouse", mouse.RIGHT),"right_hand"),
     (("key"  , key.F      ),"emote"     ),
     (("key"  , key.T      ),"chat"      ),
+    (("scroll","up"       ),"inv-"      ),
+    (("scroll","down"     ),"inv+"      ),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -1105,7 +1107,7 @@ class Window(pyglet.window.Window):
                 self.rotate(dyaw*k*dt, dpitch*k*dt)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        self.client.send(("scrolling",scroll_y))
+        #self.client.send(("scrolling",scroll_y))
         symbol_x = "right" if scroll_x>0 else "left"
         symbol_y = "up"    if scroll_y>0 else "down"
         print(symbol_x, symbol_y, KEYMAP)

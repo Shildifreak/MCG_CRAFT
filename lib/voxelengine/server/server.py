@@ -33,6 +33,8 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
         path = pathlib.Path(path).relative_to("/")
         if not path.parts:
             raise ValueError("There should be a redirection here")
+        elif len(path.parts) == 1 and path.parts[0] == "favicon.ico":
+            return os.path.join(VOXELENGINE_PATH, "client", "webtest", "favicon.ico")
         elif path.parts[0] == "webclient":
             webclient_relpath = path.relative_to("webclient")
             return os.path.join(VOXELENGINE_PATH, "client", "webtest", str(webclient_relpath))

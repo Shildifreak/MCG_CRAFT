@@ -300,7 +300,6 @@ class Player(voxelengine.Player):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.set_focus_distance(8)
-        self.flying = False
         self.inventory_display = InventoryDisplay(self)
         self.chat = ChatDisplay(self)
 
@@ -310,7 +309,7 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"RACKETENWERFER"},{"id":"DOORSTEP","count":1},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"},{"id":"GESICHT"}]
+        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"},{"id":"GESICHT"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
         character["left_hand"] = 0
@@ -396,7 +395,7 @@ class Player(voxelengine.Player):
         pe = self.entity
 
         if self.was_pressed("fly"):
-            self.flying = not self.flying
+            pe["flying"] = not pe["flying"]
         if self.was_pressed("inv"):
             self.inventory_display.toggle()
         if self.was_pressed("emote") or self.was_released("emote"):
@@ -469,61 +468,26 @@ class Player(voxelengine.Player):
                 if do_next:
                     action2()
 
-        speed_modifier = 2 if self.is_pressed("sprint") else 1
 
         # Movement
-        pe.update_dt()
         
-        nv = Vector([0,0,0])
+        nv = Vector(0,0,0)
         sx,sy,sz = pe.get_sight_vector()
         nv += Vector( sx,0, sz) * self.get_pressure("for")
         nv += Vector(-sx,0,-sz) * self.get_pressure("back")
         nv += Vector(-sz,0, sx) * self.get_pressure("right")
         nv += Vector( sz,0,-sx) * self.get_pressure("left")
         
-        # Flying
-        if self.flying:
-            if self.is_pressed("jump"):
-                nv += (0, 1, 0)
-            if self.is_pressed("shift"):
-                nv -= (0, 1, 0)
-            if nv != (0,0,0):
-                pe["position"] += nv*pe["FLYSPEED"]*speed_modifier*pe.dt
-            pe["velocity"] = (0,0,0)
-            return
-
-        # Walking
-        sv = pe.horizontal_move(self.is_pressed("jump"))
-
-        target_velocity = nv*pe["SPEED"]*speed_modifier
-        ax, _, az = target_velocity - pe["velocity"]
-        a_max = pe["ACCELERATION"]
-        ax = max(-a_max, min(a_max, ax))
-        az = max(-a_max, min(a_max, az))
+        if nv != (0,0,0):
+            pe.ai_commands["x"].append(nv[0])
+            pe.ai_commands["z"].append(nv[2])
         
-        pe["velocity"] += (ax, 0, az)
-
-        # save previous velocity and onground
-        vy_vorher = pe["velocity"][1]
-        onground_vorher = pe.onground()
-        position_vorher = pe["position"]
-        # update position
-        pe.update_position()
-        # see if player hit the ground and calculate damage
-        onground_nachher = pe.onground()
-        if (not onground_vorher) and onground_nachher:
-            # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
-            schaden = (-vy_vorher) -20
-            # HERZEN ANPASSEN
-            if schaden >0:
-                a = pe["lives"]
-                b = pe["lives"] - 1
-
-                pe["lives"] = b
-        # reset position when shifting and leaving ground
-        if self.is_pressed("shift") and onground_vorher and not onground_nachher:
-            pe["position"] = position_vorher
-            pe["velocity"] = Vector(0,0,0)
+        if self.is_pressed("jump"):
+            pe.ai_commands["jump"].append(1)
+        if self.is_pressed("shift"):
+            pe.ai_commands["shift"].append(1)
+        if self.is_pressed("sprint"):
+            pe.ai_commands["sprint"].append(1)
 
     def display_item(self,name,item,position,size,align):
         w, h = size

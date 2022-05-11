@@ -41,6 +41,8 @@ class RNG {
 		return options[i];
 	}
 }
+
+var random;
 if (Number.isInteger(seed) && (seed >= 0)) {
 	random = new RNG(seed || 1);
 }
@@ -66,6 +68,7 @@ const MapProxyHandler = {
 	},
 	set : function (obj, key, value) {
 		obj.set(key, value);
+		return true;
 	},
 };
 

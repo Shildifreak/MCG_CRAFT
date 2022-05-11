@@ -7,7 +7,7 @@ import tree
 def init(welt):
     pass
 
-@functools.lru_cached(1000)
+@functools.lru_cache(1000)
 def terrain(position):
     x,y,z = position
 

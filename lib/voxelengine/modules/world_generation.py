@@ -8,6 +8,9 @@ PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 sys.path.append(PATH)
 from voxelengine.modules.py_mini_racer import py_mini_racer
 
+from voxelengine.modules.frozen_dict import freeze
+
+
 warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
 
 class WorldGenerator(object):
@@ -46,6 +49,7 @@ class WorldGenerator(object):
 		else:
 			# overwrite methods for performance improvement of not calling js_context all the time
 			self.terrain = empty_terrain
+			self.client_terrain = empty_terrain
 			self.terrain_hint = empty_terrain_hint
 
 	def init(self, world):
@@ -57,14 +61,15 @@ class WorldGenerator(object):
 	def spawnpoint(self):
 		if hasattr(self.generator_module, "spawnpoint"):
 			return self.generator_module.spawnpoint
-		elif hasattr(self, "js_context") and self.js_context.eval("typeof spawnpoint !== undefined"):
+		elif hasattr(self, "js_context") and self.js_context.eval('typeof spawnpoint !== "undefined"'):
+			print(self.js_context.eval("typeof spawnpoint"))
 			return self.js_context.eval("spawnpoint")
 		else:
 			return (0,0,0)
 
 	@functools.lru_cache(10000)
 	def client_terrain(self, position):
-		block = self.terrain(position)
+		block = self._terrain(position)
 		if isinstance(block, str):
 			return block
 		else:
@@ -75,9 +80,15 @@ class WorldGenerator(object):
 			else:
 				return blockmodel
 
+	@functools.lru_cache(10000)
 	def terrain(self, position):
-		return self.js_context.call("terrain", position)
-	
+		return freeze(self._terrain(position))
+
+	def _terrain(self, position):
+		"""uncached version of terrain, replaced by array lookup during preload phase"""
+		blockdata = self.js_context.call("terrain", position)
+		return blockdata
+		
 	def terrain_hint(self, binary_box, tag):
 		return self.js_context.call("terrain_hint", binary_box, tag)
 
@@ -86,11 +97,11 @@ class WorldGenerator(object):
 		values = self.js_context.call("((positions)=>positions.map(terrain))", positions)
 		
 		# get stuff into cache
-		original_terrain_func = self.terrain
-		self.terrain = lambda position: value
+		original_terrain_func = self._terrain
+		self._terrain = lambda position: value
 		for position, value in zip(positions, values):
 			self.client_terrain(position)
-		self.terrain = original_terrain_func
+		self._terrain = original_terrain_func
 
 terrain_mapped_js = """
 function terrain_mapped(positions) {
