@@ -55,7 +55,37 @@ py_mini_racer binaries may only be compatible with 64bit systems
 
 ### tldr; youtube video (German)
 https://www.youtube.com/watch?v=ND9UUnEKVWU
- 
+
+## Client Features Comparison
+
+| Categorie      | Feature                    | Desktop Client      | Web Client             |
+|----------------|----------------------------|---------------------|------------------------|
+|                |                            |                     |                        |
+| Rendering      |                            | classic             | raytracing hybrid      |
+|                | Opaque Full Blocks         | ✔                   | ✔                      |
+|                | 3D Blockmodels             | ✔                   | ✔                      |
+|                | transparent Pixels         | ✔                   | ✔                      |
+|                | Semitransparency           | ❌                  | ✔ (Blocks only)        |
+|                | Reflections                | ❌                  | ✔ (Blocks only)        |
+|                | Fog Blocks                 | ❌                  | ✔                      |
+|                | Entities                   | ✔                   | ✔                      |
+|                |                            |                     |                        |
+| HUD            | In Game HUD                | ✔                   | ✔                      |
+|                | Drag & Drop Items          | ✔                   | ✔                      |
+|                |                            |                     |                        |
+| Chat & Debug   | Chat                       | ✔                   | ✔                      |
+|                | Coordinate Display         | ✔                   | ✔                      |
+|                | FPS Display                | ✔ (toggle with F3)  | ✔                      |
+|                |                            |                     |                        |
+| Inputs         | Controller Support         | ✔                   | ❌                     |
+|                | Configurable Keybindings   | ✔                   | ❌                     |
+|                | Gyroscope Camera Control   | ❌                  | ✔ (on some devices)    |
+|                | Touch Onscreen Controls    | ❌                  | ❌                     |
+|                |                            |                     |                        |
+| Technical      | use terrain hints          | ✔                   | ❌                     |
+|                | uses same code as server   | ✔                   | ❌                     |
+|                | multicore support          | ❌                  | ✔                      |
+|                | ambient occlusion lighting | ✔ (toggle with F4)  | ✔                      |
 
 ## Documentation
 
