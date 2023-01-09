@@ -745,21 +745,28 @@ class Model(object):
             vertex_list.delete()
 
     def set_hud(self,element_data,window_size):#id,texture,position,rotation,size,align
-        element_id,texture,position,rotation,size,align = element_data
+        element_id,texture,position,rotation_deg,rsize,align = element_data
         if element_id in self.hud_elements:
             self.del_hud(element_id)
         f = (max if OUTER & align else min)(window_size)
-        size = f*Vector(size)
+        size = f*Vector(rsize)
         center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
                             for pa,na,ws,xy,si in zip((RIGHT,TOP),(LEFT,BOTTOM),window_size,position,size)
-                            )
-        corners = tuple(xy + (k*si / 2)
-                        for ks in ((-1,-1),(1,-1),(1,1),(-1,1))
-                        for xy, si, k in zip(center_pos,size,ks)
+                            ) + (position[2],)
+        rotation_rad = math.radians(rotation_deg)
+        c = math.cos(rotation_rad)
+        s = math.sin(rotation_rad)
+        unitoffsets = (-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)
+        objoffsets = tuple((uo[0]*size[0],uo[1]*size[1]) for uo in unitoffsets)
+        screenoffsets = tuple((c*x - s*y, c*y + s*x) for x,y in objoffsets)
+
+        corners = tuple(c + o
+                        for offset in screenoffsets
+                        for c, o in zip(center_pos, offset+(0,))
                         )
-        i = iter(corners)
-        corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
-        #img = pygame.transform.rotate(img,rotation)
+        #i = iter(corners)
+        #corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
+
         if texture == "AIR":
             vertex_list = None
         elif not texture.startswith ("/"):
@@ -768,7 +775,7 @@ class Model(object):
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:
-            x,y = center_pos
+            x,y,z = center_pos
             text = texture[1:]
             if not "\n" in text:
                 label = pyglet.text.Label(text,x=x,y=y,
@@ -811,7 +818,7 @@ class Model(object):
                 label.end_update()
                 
             vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work
-        self.hud_elements[element_id] = (vertex_list,element_data,corners)
+        self.hud_elements[element_id] = (vertex_list,element_data,(center_pos, (c, s), size))
         
     def del_hud(self,element_id):
         vertex_list = self.hud_elements.pop(element_id,[None])[0]
@@ -1125,14 +1132,19 @@ class Window(pyglet.window.Window):
     def get_focused(self, x, y):
         focused = None
         z = float("-inf")
-        for _,element_data,corners in self.model.hud_elements.values():
+        for _,element_data,(center, (c,s), size) in self.model.hud_elements.values():
             name = element_data[0]
             if name.startswith("#"):
-                if corners[0] < x < corners[6]:
-                    if corners[1] < y < corners[7]:
-                        if corners[2] > z:
-                            focused = name
-                            z = corners[2]
+                print()
+                print(x,y, center)
+                dx, dy = x - center[0], y - center[1]
+                print(dx,dy)
+                drx, dry = c*dx + s*dy, c*dy - s*dx
+                print(drx,dry)
+                if abs(drx) < 0.5*size[0] and abs(dry) < 0.5*size[1]:
+                    if center[2] > z:
+                        focused = name
+                        z = center[2]
         return focused
 
     def on_mouse_press(self, x, y, button, modifiers):

@@ -188,8 +188,8 @@ class InventoryDisplay():
                                 continue
                         self.player.undisplay_item(name)
                 if inventory and self.is_open:
-                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
                     self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),180,size,INNER|CENTER)
                 else:
                     self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
                     self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
