@@ -3,11 +3,10 @@
 ![Screenshot](http://mcgcraft.de/screenshots/screenshot_mcgcraft_small.png)
 
 - multiplayer
-- easily create new features using plugins
+- easily create new features using Python and JavaScript plugins
 - arbitrary high (and deep) worlds
 - powerfull event system
-- open source
-- written in Python and JavaScript
+- 3D tag based index for block and entity selection
 
 ## Idea, Goals and History of the Project
 
@@ -23,39 +22,90 @@ These so called resource packs allow to add
 
 As part of making MCGCraft more accessible, some features can be tried online at http://mcgcraft.de  
 This includes:
-- MCGCraft WebClient - a fully functional MCGCraft client running javascript and webgl that can be used to join existing games (including custom local ones)
-- Demo Server
-- Editor with live preview for JavaScript based terrain generation
+- [Demo Server](http://play.mcgcraft.de) - try MCGCraft for yourself (on an unmoderated public multiplayer server with terrible latency)
+- [MCGCraft WebClient](http://mcgcraft.de/webclient/) - a fully functional MCGCraft client running javascript and webgl
+- [Tech Demo](https://mcgcraft.de/webclient/techdemo_2/) - standalone demo of the raytracing rendering used in the webclient
+- [TP Viewer](http://mcgcraft.de/webclient/tools/tp_viewer/) - inspect the texture pack provided by an MCGCraft server
+- [Terrain Editor](https://mcgcraft.de/webclient/latest/terraintest/) - edit and live preview JavaScript based terrain generation
 
 In the future we hope to add lots of Tutorials and maybe even an environment for collaborative coding and running mcgcraft servers.
 
 
-## Installation
+## Getting Started
 
-### Security Concerns
+### ⚠ Security Concerns ⚠
 Keep in mind that this is the result of a school project.  
 As stated in the licence agreement you are using this software at your own risk.  
 
 To minimize your risk:
 - **only use resource packs you trust!** (included code will be executed as part of the game)
-- **only connect to servers you trust!** (world generation code is sandboxed, but still)
+- **only connect to servers you trust!** (world generation code is supposedly sandboxed, but still)
 - **always run behind a firewall**
 
-### Requirements
-python >= 3.8 (Python 3.8 is currently used for development, older versions are not supported but may work, newer versions should work if not feel free to open an issue.)  
-pygame needs to be installed seperately and is available via pip or from pygame.org  
-py_mini_racer binaries may only be compatible with 64bit systems  
+### Requirements / Dependencies
+MCGCRAFT uses the following external programs and libraries. For step by step installation instructions go on to the section below.
 
-### Steps
-1. Install Python from python.org -	make sure to select pip and tkinter if the option is there
-2. Run python -m pip install pygame - on linux you may need to change python to python3 you may want to add --user to the options
-3. If your python didn't come with tkinter, on linux get python3-tk or pip install tk
-3. Download MCGCraft from github.com/Shildifreak/MCG_CRAFT - you can either click Code > Download Zip or clone the repository
-4. In the main MCGCraft Directory run launcher.py
+**Python** - [python.org](python.org)  
+Python3.8 is currently used for development. Older versions are not supported but may work. Newer versions should work, if not feel free to open an issue.
 
-### tldr; youtube video (German)
-https://www.youtube.com/watch?v=ND9UUnEKVWU
- 
+**Pygame** - [pygame.org](pygame.org)  
+Pygame is used by the server for image manipulation when compiling texture packs.
+
+**PyGlet** - [github.com/pyglet/pyglet](github.com/pyglet/pyglet)  
+Pyglet is the OpenGL library used for the MCGCraft Desktop Client.  
+MCGCraft comes with PyGlet built in. (for now)
+
+**PyMiniRacer** - [github.com/sqreen/PyMiniRacer](github.com/sqreen/PyMiniRacer)  
+MiniRacer is a python wrapper for the V8 JavaScript Engine. We use it to evaluate the terrain function. (Which is written in JS so we can have a webclient.)  
+MCGCraft comes with binaries for PyMiniRacer built in, but they are probably **only compatible with 64bit systems**.
+
+
+### Installation (Windows)
+[video guide (German)](https://www.youtube.com/watch?v=ND9UUnEKVWU)
+1. Install latest Python from [python.org](https://www.python.org/downloads/) -	make sure pip and tkinter are selected in the installation dialog as well as the add python to PATH option
+2. Open a command line and run `python -m pip install pygame` to install pygame
+
+### Installation (Linux Debian/Ubuntu)
+1. Install Python `apt install python3`
+2. Install Pygame `apt install python3-pygame` or `python3 -m pip install pygame`
+3. Install Tkinter `apt install python3-tk` or `python3 -m pip install tk`
+
+### Installation (Final Steps)
+4. Download MCGCraft from github.com/Shildifreak/MCG_CRAFT - you can either click Code > Download Zip or clone the repository
+5. In the main MCGCraft directory run launcher.py
+
+## Client Features Comparison
+
+| Categorie      | Feature                    | Desktop Client      | Web Client             |
+|----------------|----------------------------|---------------------|------------------------|
+|                |                            |                     |                        |
+| Rendering      |                            | classic             | raytracing hybrid      |
+|                | Opaque Full Blocks         | ✔                   | ✔                      |
+|                | 3D Blockmodels             | ✔                   | ✔                      |
+|                | transparent Pixels         | ✔                   | ✔                      |
+|                | Semitransparency           | ❌                  | ✔ (Blocks only)        |
+|                | Reflections                | ❌                  | ✔ (Blocks only)        |
+|                | Fog Blocks                 | ❌                  | ✔                      |
+|                | Entities                   | ✔                   | ✔                      |
+|                |                            |                     |                        |
+| HUD            | In Game HUD                | ✔                   | ✔                      |
+|                | Drag & Drop Items          | ✔                   | ✔                      |
+|                |                            |                     |                        |
+| Chat & Debug   | Chat                       | ✔                   | ✔                      |
+|                | Coordinate Display         | ✔                   | ✔                      |
+|                | FPS Display                | ✔ (toggle with F3)  | ✔                      |
+|                |                            |                     |                        |
+| Inputs         | Controller Support         | ✔                   | ❌                     |
+|                | Configurable Keybindings   | ✔                   | ❌                     |
+|                | Gyroscope Camera Control   | ❌                  | ✔ (on some devices)    |
+|                | Touch Onscreen Controls    | ❌                  | ❌                     |
+|                |                            |                     |                        |
+| Technical      | use terrain hints          | ✔                   | ❌                     |
+|                | uses same code as server   | ✔                   | ❌                     |
+|                | multicore support          | ❌                  | ✔                      |
+|                | ambient occlusion lighting | ✔ (toggle with F4)  | ✔                      |
+|                | join local or remote games | ✔                   | ✔                      |
+|                | secure websocket support   | ❌                  | ✔ (but server doesn't) |
 
 ## Documentation
 
