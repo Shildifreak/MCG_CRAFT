@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 import sys
 import inspect
-from collections import Mapping
+from collections.abc import Mapping
 
 from future.utils import PY3, exec_
 
