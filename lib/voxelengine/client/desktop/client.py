@@ -1296,6 +1296,9 @@ class Window(pyglet.window.Window):
     def on_text_motion(self, motion):
         """The user moved the text input cursor.
         """
+        if not self.chat_open:
+            return
+        
         l = len(self.chat_input_buffer)
 
         if motion == key.MOTION_BACKSPACE:
