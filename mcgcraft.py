@@ -234,8 +234,11 @@ class InventoryDisplay():
         else:
             k, direction = map(int,args)
             #inventory = self.inventory if k==0 else self.foreign_inventory
-            self.current_pages[k] = max(0,self.current_pages[k] + direction)
-            self.display()
+            self.scroll(k, direction)
+
+    def scroll(self, page, direction):
+        self.current_pages[page] = max(0,self.current_pages[page] + direction)
+        self.display()
     
     def handle_drag(self,button,from_element,to_element):
         if from_element and to_element and \
@@ -415,10 +418,13 @@ class Player(voxelengine.Player):
                 self.inventory_display.handle_drag(button, element_from, element_to)
         inv_inc = self.was_pressed("inv+") - self.was_pressed("inv-")
         if inv_inc != 0:
-            hand = "left_hand" if self.is_pressed("shift") else "right_hand"
-            inv_slot = pe[hand] + inv_inc
-            inv_slot %= 7
-            pe[hand] = inv_slot
+            if self.inventory_display.is_open:
+                self.inventory_display.scroll(0, inv_inc)
+            else:
+                hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+                inv_slot = pe[hand] + inv_inc
+                inv_slot %= 7
+                pe[hand] = inv_slot
             
                 
 
