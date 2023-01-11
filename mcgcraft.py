@@ -188,8 +188,8 @@ class InventoryDisplay():
                                 continue
                         self.player.undisplay_item(name)
                 if inventory and self.is_open:
-                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
                     self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),180,size,INNER|CENTER)
                 else:
                     self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
                     self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
@@ -309,7 +309,7 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"},{"id":"GESICHT"}]
+        character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
         character["left_hand"] = 0

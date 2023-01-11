@@ -92,19 +92,37 @@
             4,
             4
         ],
-        "dunkelgrau": [
+        "olive": [
+			5,
+			4
+			
+		],
+		"dunkelgrau": [
             6,
             4
-        ],
+        
+		],
         "lila": [
             7,
             4
-        ],
+        
+		],
         "grau": [
             8,
             4
-        ],
-        "rot": [
+        
+		],
+        "grau-braun": [
+			9,
+			4
+			
+		],
+		"mitteldunkellila": [
+			10,
+			4
+			
+		],
+		"rot": [
             11,
             4
         ],
@@ -116,15 +134,36 @@
             13,
             4
         ],
-        "schwarz": [
-            0,
-            3
-        ],
-        "braun": [
+        "semisolitude": [
+			14,
+			4
+			
+		],
+		"scharz": [
+			0,
+			3
+		
+		],
+		"hellschwarz": [
+			1,
+			3
+			
+		],
+		"dunkellila": [
+			2,
+			3
+			
+		],
+		"braun": [
             3,
             3
         ],
-        "orange": [
+        "hellbraun": [
+			3,
+			4
+			
+		],
+		"orange": [
             5,
             3
         ],
@@ -132,7 +171,27 @@
             6,
             3
         ],
-        "hellblau": [
+        "besch": [
+			7,
+			3
+			
+		],
+		"petrol": [
+			8,
+			3
+			
+		],
+		"dunkelblau": [
+			9,
+			3
+			
+		],
+		"blau": [
+			10,
+			3
+			
+		],
+		"hellblau": [
             11,
             3
         ],
@@ -144,7 +203,12 @@
             13,
             3
         ],
-        "muenze": [
+        "mittelgrau": [
+			14,
+			3
+			
+		],
+		"muenze": [
             6,
             12
         ],
@@ -292,7 +356,12 @@
             0,
             5
         ],
-        "repeater_off": [
+        "obenausgefahren_piston": [
+			1,
+			5
+			
+		],
+		"repeater_off": [
             6,
             5
         ],
@@ -635,6 +704,10 @@
         "door": [
             14,
             11
+        ],
+        "ARROW": [
+            7,
+            9
         ]
     }
 }
