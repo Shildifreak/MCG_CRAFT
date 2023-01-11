@@ -42,6 +42,18 @@ def skin(command):
 		return
 	command.entity["skin"] = block_name
 
+@register_command("give",1)
+def give(command):
+	"""/give block_name"""
+	block_name = command.arg_text.strip()
+	if any(map(str.isspace,block_name)):
+		command.send_feedback("command /skin: block_name must not contain whitespace characters")
+		return
+	if not command.entity:
+		command.send_feedback("command /skin: don't know which entity to target")
+		return
+	command.entity["inventory"].append({"id":block_name})
+
 @register_command("entity", 9)
 def entity(command):
 	"""/entity entity_id subcommand"""
