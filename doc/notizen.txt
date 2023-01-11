@@ -1,12 +1,19 @@
-﻿Zu sichten und sortieren:
+﻿AG 2022 Pläne und Ideen
+	Wie erstellt/bearbeitet man Texturen?
+	Schaftextur "verbessern"?
+	give command
+	nicht auf wasser laufen
+	Inventar verbessern
+	Crafting einführen
+	weniger buggy laden (größere chunks)
+	(((Shader)))
+
+Zu sichten und sortieren:
 	Make passive mobs despawn if the are more than x blocks away from where they last saw a player - make normal mobs despawn if they are more than x blocks away from player
 	mine single double slabs
 	go up automatically when placing blocks or at least when placing slabs in oneselfs position
 	Parts of block/world state: Visible, invisible, reconstructable (from visible/invisible)
-	Anzuzeigende Chunks clientseitig berechnen. Funktionen zur Terraingenerierung teilen.
-	Entities und Blöcke getrennt speichern
-	MCGCraft online
-		socket connection
+	Anzuzeigende Chunks clientseitig berechnen. Funktionen zur Terraingenerierung teilen.´
 	new block system
 	event system
 	Single Stepping Ticks
