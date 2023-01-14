@@ -142,12 +142,6 @@ class Block(voxelengine.Block):
         return BinaryBox(0, self.position).bounding_box()
     
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
-    def block_update(self,directions):
-        """directions indicates where update(s) came from... usefull for observer etc."""
-        """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
-
-    def random_ticked(self):
-        """spread grass etc"""
 
     def activated(self,character,face):
         """blocks like levers should implement this action. Return value signalizes whether to execute use action of hold item"""
@@ -164,6 +158,7 @@ class Block(voxelengine.Block):
         
 
     def handle_event_explosion(self,events):
+        """default implementation for handling explosion events"""
         for event in events: #M# could add up power of events or something
             #if isinstance(event.area, Sphere):
             #    position, power = event.area.center, event.area.radius
