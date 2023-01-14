@@ -1,4 +1,14 @@
-﻿Zu sichten und sortieren:
+﻿AG 2022 Pläne und Ideen
+	Wie erstellt/bearbeitet man Texturen?
+	Schaftextur "verbessern"?
+	give command
+	nicht auf wasser laufen
+	Inventar verbessern
+	Crafting einführen
+	weniger buggy laden (größere chunks)
+	(((Shader)))
+
+Zu sichten und sortieren:
 	
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header

@@ -1117,7 +1117,7 @@ class Window(pyglet.window.Window):
         #self.client.send(("scrolling",scroll_y))
         symbol_x = "right" if scroll_x>0 else "left"
         symbol_y = "up"    if scroll_y>0 else "down"
-        print(symbol_x, symbol_y, KEYMAP)
+        #print(symbol_x, symbol_y, KEYMAP)
         for e, action in KEYMAP:
             e_type, symbol = e
             if e_type == "scroll":
@@ -1125,7 +1125,6 @@ class Window(pyglet.window.Window):
                     for _ in range(math.ceil(abs(scroll_x))):
                         self.client.send(("press",action))
                 if symbol == symbol_y:
-                    print(symbol, math.ceil(abs(scroll_y)))
                     for _ in range(math.ceil(abs(scroll_y))):
                         self.client.send(("press",action))
         
@@ -1135,12 +1134,8 @@ class Window(pyglet.window.Window):
         for _,element_data,(center, (c,s), size) in self.model.hud_elements.values():
             name = element_data[0]
             if name.startswith("#"):
-                print()
-                print(x,y, center)
                 dx, dy = x - center[0], y - center[1]
-                print(dx,dy)
                 drx, dry = c*dx + s*dy, c*dy - s*dx
-                print(drx,dry)
                 if abs(drx) < 0.5*size[0] and abs(dry) < 0.5*size[1]:
                     if center[2] > z:
                         focused = name
