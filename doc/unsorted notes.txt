@@ -1,0 +1,46 @@
+﻿Zu sichten und sortieren:
+	
+	blockbench 3D pixel modeling software
+	PHP für mcgcraft website header
+	option to upload resource packs for terraintest
+
+	talk / philosophy
+		Minecraft eignet sich weil die Grundlegenden Spielmechaniken sehr einfach sind und es viel Freiheit gibt für neue Spielelemente gibt, aber klare Vorstellungen wie diese mit bereits existierenden Elementen interagieren
+		-> MCGCraft wird nie so performant sein wie das original Minecraft oder andere Clones (wie ... oder ...). Priorität ist, dass anhand einer soliden Implementierung eine Dokumentation (/Anleitung) aufgebaut wird die auf einfachem Level die Grundbestandteile eines Spiels beschreibt und auf Prinzipien wie Events, Zelluläre Automaten, Client-Server-Modell, etc. eingeht.
+		Intended game mechanics intended consequences, unintended consequences, valid states of the game, bugs, consequences of bugs
+			-> Consequences not all beeing known is part of the fun, but game should remain in a valid state
+		Concepts: 3D Cellular Automata, Raytracing on voxels, ...
+			strict cellular automata: all blocks only depend on their (26) neighbourcells, themselfes, and random
+		Doku
+			MCG Craft
+			- How to install / start game
+			- Overview of project structure
+			- creating a new block
+			- giving a block functionality
+			MCG Craft Online
+			- How to host a server
+			- creating worlds - Basics
+			- creating worlds - Terrain Relief
+			- creating worlds - Terrain Biomes
+			- creating worlds - Terrain Decorations
+			Überblick über das Projekt:
+			- Wie kam es dazu
+			- Was soll daraus werden
+			- MCGCraft, MCGCraftOnline, Kurse
+			- überblick über Stellen wo man als Schüler ansetzen kann
+			- Was für Videos man noch so erwarten kann (Server einrichten,
+		MCG Craft Kurse mit Skipistenfarben versehen
+
+
+	mcgcraft online
+		Platform that can configure/close/open server and pull source code from github -> paying for having server there, paying more for server that doesn't put adds on client?
+		increase number of workers
+		add ask if really want to exit page for editor
+		checken welche Browser funktionieren und entsprechend Hinweise geben
+		MCGCraft Online eine hübschere Seite verpassen
+		FOV
+		GUI Area Limiting
+		linear vs circular view angle interpolation
+		ScreenOrientation.onchange - Web APIs | MDN
+			https://developer.mozilla.org/en-US/docs/Web/API/ScreenOrientation/onchange
+		unify reflections of all fragments of pixel to keep pixely look?

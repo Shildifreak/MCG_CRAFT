@@ -56,7 +56,7 @@ client -> server
 	
 	press key
 		causes a key press event for this key (only recognizable with was_pressed, not is_pressed)
-		currently used for inv, chat_closed and all actions caused by mouse_scroll events
+		currently used for inv, chat_close and all actions caused by mouse_scroll events
 	
 	text msg
 		Nutzereingabe im Chat

@@ -5,7 +5,7 @@
 - multiplayer
 - easily create new features using Python and JavaScript plugins
 - arbitrary high (and deep) worlds
-- powerfull event system
+- powerful event system
 - 3D tag based index for block and entity selection
 
 ## Idea, Goals and History of the Project
