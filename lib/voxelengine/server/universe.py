@@ -13,8 +13,8 @@ class Universe(object):
 	def get_spawn_world(self):
 		return self.worlds[0]
 
-	def new_world(self,	data = voxelengine.server.world_data_template.data):
-		world = World(data)
+	def new_world(self,	data = voxelengine.server.world_data_template.data, WorldClass = World):
+		world = WorldClass(data)
 		self.worlds.append(world)
 		return world
 
