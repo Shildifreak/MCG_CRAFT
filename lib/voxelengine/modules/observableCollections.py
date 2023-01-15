@@ -22,13 +22,15 @@ def observable_from(data):
     return data
 
 class Observable(Serializable):
-    def __init__(self):
+    __slots__ = ("parent","parent_key","item_callbacks","callbacks","sanitizers","data","static_keys")
+    def __init__(self, data, static_keys):
         self.parent = None
         self.parent_key = None
         self.item_callbacks = collections.defaultdict(set)
         self.callbacks = set()
         self.sanitizers = dict()
-        self.data #define self.data in __init__ of subclass! (before calling Observable.__init__)
+        self.data = data
+        self.static_keys = static_keys
 
     def __serialize__(self):
         return self.data
@@ -110,10 +112,9 @@ class Observable(Serializable):
         return True
 
 class ObservableDict(Observable):
-    static_keys = True
+    __slots__ = ()
     def __init__(self,data={}):
-        self.data = {}
-        Observable.__init__(self)
+        super().__init__(data={}, static_keys=True)
         self.dict_update(data)
 
     def dict_update(self,data):
@@ -126,10 +127,9 @@ class ObservableDict(Observable):
         return self[key]
 
 class ObservableList(Observable):
-    static_keys = False
+    __slots__ = ()
     def __init__(self,data=[]):
-        self.data = []
-        Observable.__init__(self)
+        super().__init__(data=[], static_keys=False)
         self.extend(data)
 
     def extend(self,values):
