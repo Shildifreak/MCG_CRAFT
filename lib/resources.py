@@ -260,15 +260,21 @@ class Entity(voxelengine.Entity):
     LIMIT = 0
     instances = []
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-
-        self["velocity"] = Vector([0,0,0])
-        self["last_update"] = time.time()
-        self["flying"] = False
-        self["lives"] = 10
-        self["ACCELERATION"] = 20
-        self["SPEED"] = 10
+    def __init__(self, data = None):
+        data_defaults = {
+            "velocity" : Vector([0,0,0]),
+            "last_update" : time.time(),
+            "flying" : False,
+            "lives" : 10,
+            "ACCELERATION" : 20,
+            "SPEED" : 10,
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
+        
+        assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses or use EntityFactory
+        assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
         self.register_item_sanitizer(lambda v: Vector(v),"velocity")
 
@@ -299,17 +305,10 @@ class Entity(voxelengine.Entity):
 
     
     @classmethod
-    def try_to_spawn(cls, world):
-        x = random.randint(-40,40)
-        y = random.randint(-10,20)
-        z = random.randint(-40,40)
-        block = world.blocks[(x,y-3,z)]
-        area = cls.HITBOX+Vector(x,y,z)
-        if block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")):
-            print("spawning",cls,"at position",(x,y,z))
-            entity = cls()
-            entity.set_world(world,(x,y,z))
-            return entity
+    def test_spawn_conditions(cls, world, position):
+        block = world.blocks[position - (0,3,0)]
+        area = cls.HITBOX + position
+        return (block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")))
     
     def onground(entity):
         return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
@@ -561,6 +560,14 @@ def register_entity(name):
     return _register_entity
 
 register_command = Command.register_command
+
+def BlockFactory(*args, **kwargs):
+    return Block(*args, **kwargs) #M# change to directly initialize the correct block
+
+def EntityFactory(data):
+    entityType = data["type"]
+    EntityClass = entityClasses[entityType]
+    return EntityClass(data)
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name

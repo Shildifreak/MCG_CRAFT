@@ -308,15 +308,13 @@ class Player(voxelengine.Player):
 
     def create_character(self):
         world = self.universe.get_spawn_world()
-        character = resources.entityClasses["Mensch"]()
+        character = resources.EntityFactory({"type":"Mensch"})
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
         character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
-        character["left_hand"] = 0
-        character["right_hand"] = 16
 
         # inventory stuff
         for i in range(60):
@@ -523,8 +521,9 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 #blockread_counter = 0
 class World(voxelengine.World):
     def __init__(self,*args,**kwargs):
-        super(World,self).__init__(*args,**kwargs)
-        self.blocks.BlockClass = resources.Block
+        super(World,self).__init__(*args,**kwargs,
+                                   blockFactory=resources.BlockFactory,
+                                   entityFactory=resources.EntityFactory)
         
         self.set_requests = collections.defaultdict(list) # position: [Request,...]
         self.move_requests = [] # (position_from, position_to)
@@ -747,9 +746,15 @@ def run():
 
             #M# mob spawning
             if config["mobspawning"]:
-                for entity_class in resources.entityClasses.values():
+                for entity_type, entity_class in resources.entityClasses.items():
                     if len(entity_class.instances) < entity_class.LIMIT:
-                        entity_class.try_to_spawn(w)
+                        x = random.randint(-40,40)
+                        y = random.randint(-10,20)
+                        z = random.randint(-40,40)
+                        p = Vector(x,y,z)
+                        if entity_class.test_spawn_conditions(w, p):
+                            e = resources.EntityFactory({"type":entity_type})
+                            e.set_world(w,p)
 
             # entity update
             for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy

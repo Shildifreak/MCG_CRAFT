@@ -5,6 +5,8 @@ class Block(dict):
 	__slots__ = ("position","blockworld")
 	
 	def __init__(self, data, position=None, blockworld=None):
+		assert type(self) != Block #this is an abstract class, please instantiate specific subclasses
+
 		if isinstance(data, str):
 			data = {"id":data}
 		dict.__init__(self, data)
@@ -47,3 +49,6 @@ class Block(dict):
 	def save(self):
 		"""make changes that were applied to this Block persistent in the world"""
 		self.blockworld[self.position] = self
+
+class GenericBlock(Block):
+	__slots__ = ()

@@ -12,25 +12,29 @@ class Mensch(Entity):
     LIMIT = 0 # no natural Spawning of Player Characters ;)
     instances = []
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data = None):
+        data_defaults = {
+            "skin" : random.choice(self.LEGS),
+            "emote" : self.EMOTES[0],
+            "show_emote" : False,
+            "SPEED" : 11,
+            "FLYSPEED" : 11,
+            "JUMPSPEED" : 10,
+            "inventory" : [],
+            "left_hand" : 0,
+            "right_hand" : 1,
+            "open_inventory" : False, #set player.entity.foreign_inventory then trigger opening by setting this attribute
+            "lives" : 9,
+            "tags" : {"random_tick_source","update"},
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
 
-        self["skin"] = random.choice(self.LEGS)
-        self["emote"] = self.EMOTES[0]
-        self["show_emote"] = False
         self.register_item_callback(self._update_texture,"skin")
         self.register_item_callback(self._update_texture,"emote")
         self.register_item_callback(self._update_texture,"show_emote")
 
-        self["SPEED"] = 11
-        self["FLYSPEED"] = 11
-        self["JUMPSPEED"] = 10
-        self["inventory"] = []
-        self["left_hand"] = {"id":"AIR"}
-        self["right_hand"] = {"id":"AIR"}
-        self["open_inventory"] = False #set player.entity.foreign_inventory then trigger opening by setting this attribute
-        self["lives"] = 9
-        self["tags"] = {"random_tick_source","update"}
 
     def _update_texture(self, _):
         texture_mappings = {"<<random>>":self["skin"]}

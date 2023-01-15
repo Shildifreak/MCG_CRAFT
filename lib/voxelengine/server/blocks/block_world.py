@@ -4,16 +4,16 @@ from voxelengine.modules.world_generation import WorldGenerator
 from voxelengine.server.blocks.blockdata_encoder import BlockDataEncoder
 from voxelengine.server.blocks.block_storage import BlockStorage
 from voxelengine.server.blocks.block_world_index import BlockWorldIndex
-from voxelengine.server.blocks.block import Block
+from voxelengine.server.blocks.block import Block #this is only the base class, use BlockFactory for specific blocks
 from voxelengine.server.event_system import Event
 from voxelengine.modules.frozen_dict import freeze
 from voxelengine.modules.geometry import Vector, BinaryBox, Sphere
 from voxelengine.modules.serializableCollections import Serializable
 
 class BlockWorld(Serializable):
-	BlockClass = Block #access via self.BlockClass so that it can be overwritten on a per instance basis
-	def __init__(self, world, block_world_data, event_system, clock):
+	def __init__(self, world, block_world_data, event_system, clock, blockFactory):
 		self.event_system = event_system
+		self.BlockFactory = blockFactory
 		
 		block_codec_and_counter = [(freeze(block), count) for block, count in block_world_data["codec"]]
 		blocks = [(Vector(position), block_history) for position, block_history in block_world_data["blocks"]]
@@ -49,7 +49,7 @@ class BlockWorld(Serializable):
 	def __getitem__(self, position, t = 0, relative_timestep = True):
 		position = Vector(position)
 		blockdata = self._get_blockdata(position, t, relative_timestep)
-		block = self.BlockClass(blockdata, position=position, blockworld=self)
+		block = self.BlockFactory(blockdata, position=position, blockworld=self)
 		return block
 	
 	get = __getitem__
@@ -59,7 +59,7 @@ class BlockWorld(Serializable):
 			raise RuntimeError("Tried to set block in read only context.")
 		position = Vector(position)
 		# create a block object, or if already given one, make sure position and world match
-		block = self.BlockClass(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
+		block = self.BlockFactory(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
 		blockdata = freeze(block)
 		# check with terrain_generator to see if to delete
 		natural_blockdata = self.world_generator.terrain(position)
@@ -79,11 +79,11 @@ class BlockWorld(Serializable):
 		
 	@functools.lru_cache()
 	def _get_tags(self, blockdata):
-		return self.BlockClass(blockdata).get_tags()
+		return self.BlockFactory(blockdata).get_tags()
 
 	@functools.lru_cache()
 	def _client_version(self, blockdata):
-		return self.BlockClass(blockdata).client_version()
+		return self.BlockFactory(blockdata).client_version()
 
 	def get_tags(self, position):
 		return self._get_tags(self._get_blockdata(position))
