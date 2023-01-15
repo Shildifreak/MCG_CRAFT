@@ -753,7 +753,7 @@ def run():
                         z = random.randint(-40,40)
                         p = Vector(x,y,z)
                         if entity_class.test_spawn_conditions(w, p):
-                            e = resources.EntityFactory({"type":entity_type})
+                            e = resources.EntityFactory(entity_type)
                             e.set_world(w,p)
 
             # entity update

@@ -130,5 +130,8 @@ class Entity(ObservableDict):
 class GenericEntity(Entity):
     __slots__ = ()
 
+def EntityFactory(*args, **kwargs):
+    return GenericEntity(*args, **kwargs)
+
 if __name__ == "__main__":
-    e = GenericEntity()
+    e = EntityFactory()

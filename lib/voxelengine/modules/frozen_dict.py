@@ -25,7 +25,7 @@ class FrozenDict(dict):
 	clear = _not_allowed
 
 def freeze(obj):
-	if isinstance(obj, (str, int, float, frozenset, FrozenDict)):
+	if isinstance(obj, (str, int, float, type(None), bool, frozenset, FrozenDict)):
 		return obj
 	if isinstance(obj, (tuple, list)):
 		return tuple(freeze(e) for e in obj)

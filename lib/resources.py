@@ -24,14 +24,18 @@ class Block(voxelengine.Block):
                 "p_directions":(), # power solid blocks in these directions
                 "rotation":0,"base":"b"}
 
-    def __init__(self,*args,**kwargs):
-        super(Block,self).__init__(*args,**kwargs)
-        self._morph()
+    def __init__(self, data, *args,**kwargs):
+        default_data = self.defaults.copy()
+        default_data.update(data)
+        super().__init__(default_data, *args, **kwargs)
+        
+        assert type(self) != Block #this is an abstract class, please instantiate specific subclasses or use BlockFactory
+        assert blockClasses[self["id"]] == type(self) #blocks must have a matching type id
     
     def turn_into(self, new_block):
         self.clear()
         if isinstance(new_block, str):
-            super(Block,self).__setitem__("id", new_block)
+            super().__setitem__("id", new_block)
         else:
             self.update(new_block)
         self._morph()
@@ -40,18 +44,12 @@ class Block(voxelengine.Block):
         self.__class__ = blockClasses[self["id"]]
 
     def __getitem__(self, key):
-        try:
-            return super(Block, self).__getitem__(key)
-        except KeyError:
-            return self.defaults.get(key,None)
+        return self.get(key,None)
 
     def __setitem__(self, key, value):
         if value == self[key]:
             return
-        if value == self.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
-            super(Block,self).__delitem__(key)
-        else:
-            super(Block,self).__setitem__(key,value)
+        super().__setitem__(key,value)
         if key == "id":
             self._morph()
 
@@ -230,7 +228,7 @@ class Item(object):
 
         # check if block would collide with player
         blockdata = self.block_version_on_place(character,blockpos,face)
-        block = Block(blockdata, position=new_pos, blockworld=character.world.blocks)
+        block = BlockFactory(blockdata, position=new_pos, blockworld=character.world.blocks)
         if "solid" in block.get_tags():
             for entity in character.world.entities.find_entities(block.get_bounding_box()):
                 if block.collides_with( entity.HITBOX + entity["position"] ):
@@ -561,13 +559,19 @@ def register_entity(name):
 
 register_command = Command.register_command
 
-def BlockFactory(*args, **kwargs):
-    return Block(*args, **kwargs) #M# change to directly initialize the correct block
+def BlockFactory(data, *args, **kwargs):
+    if isinstance(data, str):
+        data = {"id":data}
+    block_type = data["id"]
+    blockClass = blockClasses[block_type]
+    return blockClass(data, *args, **kwargs) #M# change to directly initialize the correct block
 
 def EntityFactory(data):
-    entityType = data["type"]
-    EntityClass = entityClasses[entityType]
-    return EntityClass(data)
+    if isinstance(data, str):
+        data = {"type":data}
+    entity_type = data["type"]
+    entityClass = entityClasses[entity_type]
+    return entityClass(data)
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name

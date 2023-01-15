@@ -7,9 +7,7 @@ class Block(dict):
 	def __init__(self, data, position=None, blockworld=None):
 		assert type(self) != Block #this is an abstract class, please instantiate specific subclasses
 
-		if isinstance(data, str):
-			data = {"id":data}
-		dict.__init__(self, data)
+		super().__init__(data)
 		self.position = position
 		self.blockworld = blockworld
 
@@ -32,6 +30,7 @@ class Block(dict):
 	
 	def client_version(self):
 		orientation = self.get("base","")+str(self.get("rotation",""))
+		orientation = orientation.strip("b0")
 		blockmodel = self["id"]+self.get("state","")
 		if orientation:
 			return blockmodel+":"+orientation
@@ -52,3 +51,8 @@ class Block(dict):
 
 class GenericBlock(Block):
 	__slots__ = ()
+
+def BlockFactory(data, *args, **kwargs):
+    if isinstance(data, str):
+        data = {"id":data}
+    return GenericBlock(data, *args, **kwargs)
