@@ -7,6 +7,7 @@
 	Crafting einführen
 	weniger buggy laden (größere chunks)
 	(((Shader)))
+	Änderung der serverinfo in gui (zB. Speicherort) sollte reload triggern!
 
 Zu sichten und sortieren:
 	
