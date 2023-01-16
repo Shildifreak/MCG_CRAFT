@@ -9,6 +9,7 @@ from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
 from voxelengine.modules.geometry import Vector, Box, NOWHERE
 from voxelengine.server.entities.entity import Entity
+from voxelengine.server.players.block_messenger import BlockMessenger
 
 class Player(object):
 	"""a player/observer is someone how looks through the eyes of an entity"""
@@ -21,8 +22,10 @@ class Player(object):
 		self.monitored_area = NOWHERE
 		self.monitor_ticks = {0:0} # {m_id:gametick,...} gameticks when monitored area was changed 
 		self.outbox = MessageBuffer()
+		self.sendcount = 0 # acceptable number (remaining) of messages to send to client before next tick message
 		for msg in initmessages:
 			self.outbox.add(*msg)
+		self.block_outbox = BlockMessenger(self.outbox)
 		self.focus_distance = 0
 		self.action_states = {}
 		self.was_pressed_counter = collections.Counter()
@@ -117,7 +120,7 @@ class Player(object):
 			if event.tag == "block_update":
 				block = event.data
 				position = block.position
-				self.outbox.add("set", position, block.client_version())
+				self.block_outbox.set(position, block.client_version())
 			elif event.tag in ("entity_leave", "entity_enter", "entity_change"):
 				entity = event.data
 				entity_events[entity].add(event.tag)
@@ -141,7 +144,7 @@ class Player(object):
 				if entity.get("password",object()) == password:
 					break
 				else:
-					self.outbox.add("error", "Wrong password for controlling entity %s"%entity_id)
+					self.outbox.add("error", "Wrong password for controlling entity %s"%entity_id, True)
 					return
 		else:
 			#M# if settings["auto_create_entities_for_players"]
@@ -159,29 +162,28 @@ class Player(object):
 
 	def _update_area(self, area, since_tick):
 		"""when entering new world or walking around make sure to send list of modified blocks when compared to world at since_tick (use 0 for initial terrain generation)"""
-		if since_tick != 0 and not self.world.blocks.block_storage.valid_history(since_tick):
-			since_tick = 0
-			self.outbox.add("delarea", area)
 		# blocks
-		block_adder = self.outbox.get_block_adder(area)
+		bookmark = self.block_outbox.acquire_bookmark()
 		if self.DO_ASYNC_UPDATE:
 			old = self.area_updates.pop(repr(area), None) #M# hacky, think to make areas hashable
-			if old:
-				block_adder.close()
-				block_adder = old[3]
+			if old: # pending update exists
+				self.block_outbox.release_bookmark(bookmark)
+				bookmark = old[3]
 				since_tick = old[2]
-			self.area_updates[repr(area)] = (self.world, area, since_tick, block_adder) #M# is this thread save?
+			self.area_updates[repr(area)] = (self.world, area, since_tick, bookmark) #M# is this thread save?
 			self.new_area_updates_event.set()
 			self.new_area_updates_event.clear()
 		else:
-			self._async_update_area(self.world, area, since_tick, block_adder)
+			self._async_update_area(self.world, area, since_tick, bookmark)
 
-	@staticmethod
-	def _async_update_area(world, area, since_tick, block_adder, sleep=0):
+	def _async_update_area(self, world, area, since_tick, bookmark, sleep=0):
+		if since_tick != 0 and not world.blocks.block_storage.valid_history(since_tick):
+			since_tick = 0
+			self.block_outbox.delarea(area)
 		for position, block_client_version in world.blocks.list_changes(area, since_tick):
-			block_adder.add("set", position, block_client_version)
+			self.block_outbox.set(position, block_client_version, at_bookmark=bookmark)
 			time.sleep(sleep)
-		block_adder.close()
+		self.block_outbox.release_bookmark(bookmark)
 	
 	def _update_area_loop(self):
 		dt = 0.0001
@@ -219,7 +221,7 @@ class Player(object):
 		argsformat = deep_type(args)
 
 		if cmd == "tick" and argsformat == (int,):
-			self.outbox.reset_msg_counter(-args[0])
+			self.sendcount = args[0]
 
 		elif cmd == "rot" and argsformat == ((t_number,t_number),):
 			x,y = map(float,args[0])
@@ -295,12 +297,21 @@ class Player(object):
 		if new_world:
 			new_world.players.add(self)
 		self.world = new_world
-		self.monitored_area = NOWHERE
+		self._clear()
+	
+	def _clear(self):
+		# server side
+		self.monitored_area = NOWHERE # stop monitoring area
+		self.block_outbox.clear() # stop any still open bookmark from being used
+		#self.area_updates.clear() # discard any still open area updates (wouldn't go through block_outbox now anyway)
+		self.monitor_ticks = {0:0} # reset monitor ticks
+
+		# client side
 		generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
 							"seed"   : self.world.blocks.world_generator.generator_data["seed"],
 							"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
 		self.outbox.add("clear",generator_data)
-
+	
 	def _set_entity(self,entity):
 		priority = 1 if entity == self.entity else 0
 		self.outbox.add("setentity",hash(entity),entity["texture"],entity["position"],entity["rotation"], priority=priority)

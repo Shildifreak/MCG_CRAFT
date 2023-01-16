@@ -539,10 +539,6 @@ class Model(object):
 
     def monitor_around(self, position):
         """returns list of messages to be send to server in order to announce new monitoring area and required updates"""
-        if not hasattr(self, "world_generator"):
-            print("received goto before clear, fix message_buffer asap!")
-            self.monitor_after_clear = True
-            return
         center_chunk_position = position.round() >> CHUNKBASE
         added, removed = self.chunks.monitor_around(center_chunk_position)
         
@@ -1046,11 +1042,6 @@ class Window(pyglet.window.Window):
                 if test("clear",1):
                     generator_data, = args
                     self.model._clear(generator_data)
-                    if self.model.monitor_after_clear: #M# this is a hack
-                        for msg in self.model.monitor_around(self.position):
-                            self.client.send(msg)
-                        self.model.monitor_after_clear = False
-                    continue
                 elif test("del",1):
                     position, = args
                     position = Vector(position)
