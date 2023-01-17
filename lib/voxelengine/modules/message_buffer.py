@@ -35,12 +35,19 @@ class MessageBuffer(object):
         """Entities have 2 Priority Levels (0: normal, 1: the player himself) for now"""
         message_type = message[0]
         group = self.group_of[message_type][priority]
-        group.add(message)
         if message_type == "clear":
             self.block_group.clear()
             self.entity_group.clear()
             self.vip_entity_group.clear()
             self.goto_group.clear()
+            self.barrier()
+        group.add(message)
+    
+    def barrier(self):
+        """make sure all currently buffered messages are output before any future messages"""
+        msgs = tuple(self)
+        for msg in msgs:
+            self.priority_group.add(msg)
     
     def __iter__(self):
         # round robin
