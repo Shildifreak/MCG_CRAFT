@@ -9,15 +9,17 @@ class BlockMessenger(object):
         self.message_buffer = message_buffer
         
         self.dirty_positions = collections.OrderedDict() # {position: max_bookmark at time of insertion,...}
+        self.dirty_areas = [] # area, max_bookmark at time of insertion
         self.bookmarks = collections.Counter() # {bookmark_id: reference_counter,...}
         self.max_bookmark = 0
-        self.set_since_last_bookmark = False
+        self.set_since_last_bookmark = False #used by acquire to decide whether to reuse last bookmark or create new one
         self.last_clear = 0
         
         self._lock = threading.Lock()
 
     def acquire_bookmark(self):
-        assert len(self.bookmarks) < 10 # set this high enough to work but low enough to catch memory leaks
+        if len(self.bookmarks) > 10:
+            print("BlockMessenger:",len(self.bookmarks),"bookmarks - if this number keeps going up check for memory leaks!")
         with self._lock:
             if not self.set_since_last_bookmark:
                 bookmark = self.bookmarks[self.max_bookmark]
@@ -26,7 +28,6 @@ class BlockMessenger(object):
                 bookmark = self.max_bookmark
             self.bookmarks[bookmark] += 1
             self.set_since_last_bookmark = False
-            print(len(self.bookmarks))
             return bookmark
 
     def release_bookmark(self, bookmark):
@@ -35,21 +36,26 @@ class BlockMessenger(object):
                 self.bookmarks[bookmark] -= 1
             else:
                 del self.bookmarks[bookmark]
-                print(len(self.bookmarks))
                 # remove all dirty positions older than first bookmark
                 if self.bookmarks:
                     min_bookmark = min(self.bookmarks)
                     while len(self.dirty_positions) and (next(iter(self.dirty_positions))[1] < min_bookmark):
                         # pop position
                         self.dirty_positions.popitem(last=False)
+                    while len(self.dirty_areas) and self.dirty_areas[0][1] < min_bookmark:
+                        self.dirty_areas.pop(0)
                 else:
                     self.dirty_positions.clear()
+                    self.dirty_areas.clear()
 
     def set(self, position, block, at_bookmark=None):
         with self._lock:
             # abort if position changed since bookmark
             if at_bookmark:
                 last_changed = self.dirty_positions.get(position, self.last_clear)
+                for area, area_age in self.dirty_areas:
+                    if (area_age > last_changed) and (position in area):
+                        last_changed = area_age
                 if at_bookmark <= last_changed:
                     return
             else:
@@ -57,13 +63,14 @@ class BlockMessenger(object):
             # add message and update masks
             self.message_buffer.add("set", position, block)
             # update dirty_positions
-            if self.bookmarks: #otherwise no one will be interested anyway
+            if self.bookmarks and min(self.bookmarks) < at_bookmark: #otherwise no one will be interested anyway
                 self.set_since_last_bookmark = True
                 self.dirty_positions[position] = at_bookmark - 1
                 self.dirty_positions.move_to_end(position)
     
-    def delarea(self):
-        raise NotImplementedError()
+    def delarea(self, area):
+        if self.bookmarks:
+            self.dirty_areas.append((area, self.max_bookmark))
         self.message_buffer.add("delarea",area)
     
     def clear(self):
