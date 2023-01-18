@@ -7,13 +7,89 @@
 	Crafting einführen
 	weniger buggy laden (größere chunks)
 	(((Shader)))
-	Änderung der serverinfo in gui (zB. Speicherort) sollte reload triggern!
 
 Zu sichten und sortieren:
+	
+	todo:
+
+		optimizing set command in MessageBuffer
+			replace del by set None/null
+
+			group set commands by block
+
+			if only a few or spaced wide apart
+			-> set block <x y z>*
+			
+			alternatively use
+			-> setarea block x y z dx dy dz bitmap
+			(maybe wait if still growing to group even more?)
+
+			use goto location to inform order of block and entity messages
+
+		change to websocket implementation that supports compression
+		-> switch to websocket for desktop client too?
+		-> websockets seems to be the library to use, but it only really works with asyncio
+
+		Änderung der serverinfo in gui (zB. Speicherort) sollte reload triggern!
+
 	
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header
 	option to upload resource packs for terraintest
+
+	Block Processor
+		-> Block that can output or input redstone Signals on all 6 sides. Programmable via C/Lua/Python o.ä.
+		Have a way to create this block that can be automated and the better (faster?) you do it the better the block becomes (freq, mem, etc.)
+	tolerance setting for misbehaving clients: drop immediately / allow N malformed messages per time
+	inheritable permissions for players and command blocks
+		-> revoking rights from player also removes them from his command blocks and whomever he gave rights to
+	make player visible but invincible when logged off?
+	Icon/Thumbnail for Servers
+	use ternary encoding as base for chunk tree structure -> there is a center which means, no quadrants to think about
+		http://homepage.divms.uiowa.edu/~jones/ternary/bct.shtml
+	fix up and down arrows in MCGCraft
+	visual indicators for hands in inventory
+	autoclose inventory after item selection?
+	hold e to open inventory?
+	rethink hotbar -> links only? no hotbar? / ...? (find out if anyone is actually using it and how)
+	autocompletion for commands
+	global setting for custom config path (.\config / H:\ / ~ ...)
+	make chest drop items when broken
+	implement remote server config script
+	turn all worlds into js, deprecate python worlds -> warn if setup places large amount of blocks
+	activate always prefered when not shifting? need air or tool to break stuff?
+	number keys to activate items directly from hotbar?
+	rethink scrolling
+	make better plugin stuff for Air and SolidBlock etc.
+	find a way to stitch pngs without need for pygame
+		-> first outsource into (sub)module of tpmanager
+	block.save(event=BLOCKUPDATE)
+	tags dokumentieren: zB. solid marks blocks that implement a collide method that sometimes or always returns True
+	check out https://github.com/segonzal/pyVoxel
+	[item] entangler
+	use KNF/DNF for tags filtering
+	intersection and union of tags needed for that
+	create new BlockWorld that uses SQL database
+	mariaDB spatialindex/rtree
+	discard out of time entity movements instead of trying to keep up
+	test if require works in world file
+	add nether portal
+	lagesensoren zur Steuerung von MCGCraft auf mobilen geräten
+	Normal-/Reflektionmap, fogcolor
+	graphic settings menu (at least renderdistance, world buffer size would be great too)
+	read block skipping
+
+	Pressure Blocks
+		compression: only for air, increases/decreases when multiple air blocks are combined into one space 
+		pressure: pushing forces per face
+		drag: spreading force to neighbouring blocks, mostly for groups of blocks of same type
+		crosstalk: how much x, y, z axes influence each other (like air totally spreads out in all directions, whereas stone will only propagate force along the axis it came from
+		blocks can only ever go to where there is air with zero compression (vacuum)
+		Druckdifferenz -> Flowrate
+		Volume -> Pressure
+		Pressure -> Force
+		Force -> Movement
+		can count area / accumulate forces by constructing tree and passing values up and down
 
 	talk / philosophy
 		Minecraft eignet sich weil die Grundlegenden Spielmechaniken sehr einfach sind und es viel Freiheit gibt für neue Spielelemente gibt, aber klare Vorstellungen wie diese mit bereits existierenden Elementen interagieren
@@ -41,7 +117,7 @@ Zu sichten und sortieren:
 			- überblick über Stellen wo man als Schüler ansetzen kann
 			- Was für Videos man noch so erwarten kann (Server einrichten,
 		MCG Craft Kurse mit Skipistenfarben versehen
-
+		CoreServer - PluginLayer - Clients - Resourcepack
 
 	mcgcraft online
 		Platform that can configure/close/open server and pull source code from github -> paying for having server there, paying more for server that doesn't put adds on client?
