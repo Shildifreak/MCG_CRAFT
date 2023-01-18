@@ -62,9 +62,9 @@ class BlockWorld(Serializable):
 		block = self.BlockFactory(value, position=position, blockworld=self) #M# maybe don't create new block object if one is given
 		blockdata = freeze(block)
 		# check with terrain_generator to see if to delete
-		natural_blockdata = self.world_generator.terrain(position)
+		natural_block = self.BlockFactory(self.world_generator.terrain(position))
 		# translate to block_id (delete or set)
-		if block == natural_blockdata:
+		if block == natural_block:
 			block_id = self.block_storage.NO_BLOCK_ID
 		else:
 			block_id = self.blockdata_encoder.increment_count_and_get_id(blockdata)
