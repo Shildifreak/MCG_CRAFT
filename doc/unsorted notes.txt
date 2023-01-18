@@ -10,6 +10,9 @@
 
 Zu sichten und sortieren:
 	
+	bugs:
+		desktopclient fails to render 0,0,0 block if not visible a startup and unveiled without touching it
+	
 	todo:
 
 		optimizing set command in MessageBuffer
@@ -32,6 +35,8 @@ Zu sichten und sortieren:
 
 		Änderung der serverinfo in gui (zB. Speicherort) sollte reload triggern!
 
+		add ability to scroll foreign inventory with mousewheel/scroll keys?
+		-> have to send focused hud element with scroll
 	
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header

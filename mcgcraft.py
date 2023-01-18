@@ -77,7 +77,7 @@ class BlockInventoryWrapper(InventoryWrapper):
         if not self.open:
             self.changed = False
             self.block = self.world.blocks[self.position]
-            self.inventory = observable_from(self.block["inventory"])
+            self.inventory = observable_from(dict(self.block["inventory"]))
         # increment open counter
         self.open += 1
         

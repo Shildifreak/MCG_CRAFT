@@ -15,9 +15,9 @@ from voxelengine.modules.serializableCollections import Serializable
 def observable_from(data):
     if isinstance(data, Observable):
         return data
-    if isinstance(data, dict):
+    if isinstance(data, collections.abc.MutableMapping):
         return ObservableDict(data)
-    if isinstance(data, list):
+    if isinstance(data, collections.abc.MutableSequence):
         return ObservableList(data)
     return data
 
@@ -41,6 +41,9 @@ class Observable(Serializable):
     def __getitem__(self,key):
         return self.data[key]
 
+    def __iter__(self):
+        return iter(self.data)
+
     def get(self, key, default=None):
         try:
             return self.data[key]
@@ -63,6 +66,9 @@ class Observable(Serializable):
         value = self._adopted_value(value,static_key)
         self.data[key] = value
         self.trigger(static_key)
+    
+    def __delitem__(self,key):
+        raise NotImplementedError()
 
     def replace(self,key,value):
         prev_value = self[key]
@@ -111,7 +117,10 @@ class Observable(Serializable):
         #M# todo: test for inception
         return True
 
-class ObservableDict(Observable):
+    __hash__ = object.__hash__
+    __eq__ = object.__eq__
+
+class ObservableDict(Observable, collections.abc.MutableMapping):
     __slots__ = ()
     def __init__(self,data={}):
         super().__init__(data={}, static_keys=True)
@@ -126,7 +135,7 @@ class ObservableDict(Observable):
             self[key] = value
         return self[key]
 
-class ObservableList(Observable):
+class ObservableList(Observable, collections.abc.MutableSequence):
     __slots__ = ()
     def __init__(self,data=[]):
         super().__init__(data=[], static_keys=False)

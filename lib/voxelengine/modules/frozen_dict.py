@@ -2,39 +2,37 @@ import sys, os
 if __name__ == "__main__":
     sys.path.append(os.path.abspath("../.."))
     __package__ = "voxelengine.modules"
-from voxelengine.modules.serializableCollections import Serializable
+import collections.abc
 
-class FrozenDict(dict):
-	__slots__ = ()
+class FrozenDict(collections.abc.Mapping):
+	__slots__ = ("data")
+
+	def __init__(self, *args, **kwargs):
+		self.data = dict(*args, **kwargs)
+
+	def __getitem__(self, key):
+		return self.data.__getitem__(key)
+	def __iter__(self):
+		return self.data.__iter__()
+	def __len__(self):
+		return self.data.__len__()
 
 	def __hash__(self):
 		""" similar to tuple, frozendicts can have a hash if all their elements are hashable"""
 		return hash(frozenset(self.items())) #may fail if it contains unhashable values like lists or other dictionaries
-		#except:
-		#	return hash(frozenset(self.keys()))
-		#	return 0 #makes all of them land in same bucket, so speed goes down to linear, but let's just hope there are not that many of this kind
-	
-	def _not_allowed(self, *args):
-		raise AttributeError("'FrozenDict' object is immutable and therefore does not support this method")
-	__setitem__ = _not_allowed
-	__delitem__ = _not_allowed
-	pop = _not_allowed
-	popitem = _not_allowed
-	setdefault = _not_allowed
-	update = _not_allowed
-	clear = _not_allowed
 
 def freeze(obj):
+	"""
+	The freeze functions creates a hashable, immutable copy of an object.
+	"""
 	if isinstance(obj, (str, int, float, type(None), bool, frozenset, FrozenDict)):
 		return obj
-	if isinstance(obj, (tuple, list)):
+	if isinstance(obj, collections.abc.Sequence):
 		return tuple(freeze(e) for e in obj)
 	if isinstance(obj, set):
 		return frozenset(obj)
-	if isinstance(obj, dict):
+	if isinstance(obj, collections.abc.Mapping):
 		return FrozenDict({k:freeze(v) for k,v in obj.items()})
-	if isinstance(obj, Serializable):
-		return freeze(obj.__serialize__())
 	raise ValueError("can't freeze object of type %s : %s" %(type(obj), obj))
 
 if __name__ == "__main__":
