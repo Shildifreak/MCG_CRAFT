@@ -10,9 +10,6 @@
 
 Zu sichten und sortieren:
 	
-	bugs:
-		connecting with name and no passwort with webclient first and then desktop client on same server desktop client fails to connect with wrong password error
-	
 	todo:
 	
 		unimplemented code stuff on desktop client
