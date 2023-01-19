@@ -601,6 +601,8 @@ class Model(object):
         return color_corrections
 
     def update_visibility(self, position):
+        if position == (0,0,0):
+            print(self.blocks.get_block(position))
         for f in range(len(FACES_PLUS)):
             self.update_face(position,f)
 
@@ -620,17 +622,8 @@ class Model(object):
                 self.hide_face(position,face)
             
     def update_visibility_around(self,position):
-        #M# make better!
-        for x in (-1,0,1):
-            for y in (-1,0,1):
-                for z in (-1,0,1):
-                    v = Vector((x,y,z)) + position
-                    if v != (0,0,0):
-                        self.update_visibility(v)
-
-        #original:
-        #for f,fv in enumerate(FACES):
-        #    self.update_face(position+fv,(f+1-(2*(f%2))))
+        for f,fv in enumerate(FACES):
+            self.update_face(position-fv,f)
     
     def show_face(self,position,face):
         if (position,face) in self.shown:
@@ -1092,8 +1085,15 @@ class Window(pyglet.window.Window):
                 elif test("focushud",0):
                     self.set_exclusive_mouse(False)
                     self.hud_open = True
+                elif test("error",2):
+                    errmsg, is_fatal = args
+                    err = Exception(errmsg)
+                    if is_fatal:
+                        raise err
+                    else:
+                        warnings.warn(err)
                 else:
-                    print("unknown command", c)
+                    print("unknown command", command, args)
             self.model.process_queue()
             m = max(0, MSGS_PER_TICK - len(self.model.queue))
             self.client.send(("tick",m))

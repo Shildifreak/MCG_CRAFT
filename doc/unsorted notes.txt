@@ -11,9 +11,12 @@
 Zu sichten und sortieren:
 	
 	bugs:
-		desktopclient fails to render 0,0,0 block if not visible a startup and unveiled without touching it
+		connecting with name and no passwort with webclient first and then desktop client on same server desktop client fails to connect with wrong password error
 	
 	todo:
+	
+		unimplemented code stuff on desktop client
+			has_blocks_to_be_updated, get_block_to_be_updated
 
 		optimizing set command in MessageBuffer
 			replace del by set None/null
