@@ -13,7 +13,6 @@ from functools import reduce
 import operator
 import ast
 import threading
-import json
 import urllib.request
 import io
 import base64
@@ -80,7 +79,7 @@ KEYMAP = [
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
 configfn = os.path.join(configdir,"desktopclientsettings.py")
-print(configfn)
+print("client config location:",configfn)
 if os.path.exists(configfn):
     with open(configfn) as configfile:
         config = eval(configfile.read(),globals())
@@ -532,7 +531,6 @@ class Model(object):
             break
 
     def load_generator(self, generator_data):
-        #print(generator_data)
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
         self.blocks.set_terrain_function(self.world_generator.client_terrain)
         self.init_chunk_queue.terrain_preload = self.world_generator.preload
@@ -601,8 +599,6 @@ class Model(object):
         return color_corrections
 
     def update_visibility(self, position):
-        if position == (0,0,0):
-            print(self.blocks.get_block(position))
         for f in range(len(FACES_PLUS)):
             self.update_face(position,f)
 
@@ -1502,8 +1498,6 @@ def show_on_window(client):
         if args.name:
             entity_id = args.name
             password = args.password
-            if not args.password:
-                print("Consider setting a password when using a name.")
         else:
             entity_id = "tmp:" + hex(random.getrandbits(32))[2:]
             password = hex(random.getrandbits(32))[2:]
@@ -1541,6 +1535,5 @@ def main():
         run(serverinfo)
 
 args = client_utils.parser.parse_args()
-print(args)
 if __name__ == '__main__':
     main()

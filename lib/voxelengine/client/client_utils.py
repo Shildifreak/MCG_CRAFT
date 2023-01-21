@@ -38,7 +38,6 @@ def get_serverinfo(args):
 
     if args.server_location:
         url = "http://%s/info.json" %args.server_location
-        print(url)
         with urllib.request.urlopen(url) as infofile:
             serverinfo = json.loads(infofile.read().decode()) #specify encoding? (standart utf-8)
         servers = [serverinfo]

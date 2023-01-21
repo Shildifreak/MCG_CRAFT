@@ -10,7 +10,11 @@
 
 Zu sichten und sortieren:
 	
+	bug:
+		client_utils.py: select is not defined
+	
 	todo:
+		print("Consider setting a password when using a name.") -> move this to gui or server?
 	
 		unimplemented code stuff on desktop client
 			has_blocks_to_be_updated, get_block_to_be_updated
@@ -37,6 +41,8 @@ Zu sichten und sortieren:
 
 		add ability to scroll foreign inventory with mousewheel/scroll keys?
 		-> have to send focused hud element with scroll
+	
+		desktop client: make only one vertex list per entity model (or reuse them?)
 	
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header

@@ -16,6 +16,10 @@ class FrozenDict(collections.abc.Mapping):
 		return self.data.__iter__()
 	def __len__(self):
 		return self.data.__len__()
+	def __repr__(self):
+		return self.data.__repr__()
+	def __str__(self):
+		return self.data.__str__()
 
 	def __hash__(self):
 		""" similar to tuple, frozendicts can have a hash if all their elements are hashable"""
