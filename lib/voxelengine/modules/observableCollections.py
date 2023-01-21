@@ -15,20 +15,22 @@ from voxelengine.modules.serializableCollections import Serializable
 def observable_from(data):
     if isinstance(data, Observable):
         return data
-    if isinstance(data, dict):
+    if isinstance(data, collections.abc.MutableMapping):
         return ObservableDict(data)
-    if isinstance(data, list):
+    if isinstance(data, collections.abc.MutableSequence):
         return ObservableList(data)
     return data
 
 class Observable(Serializable):
-    def __init__(self):
+    __slots__ = ("parent","parent_key","item_callbacks","callbacks","sanitizers","data","static_keys")
+    def __init__(self, data, static_keys):
         self.parent = None
         self.parent_key = None
         self.item_callbacks = collections.defaultdict(set)
         self.callbacks = set()
         self.sanitizers = dict()
-        self.data #define self.data in __init__ of subclass! (before calling Observable.__init__)
+        self.data = data
+        self.static_keys = static_keys
 
     def __serialize__(self):
         return self.data
@@ -38,6 +40,9 @@ class Observable(Serializable):
 
     def __getitem__(self,key):
         return self.data[key]
+
+    def __iter__(self):
+        return iter(self.data)
 
     def get(self, key, default=None):
         try:
@@ -61,6 +66,9 @@ class Observable(Serializable):
         value = self._adopted_value(value,static_key)
         self.data[key] = value
         self.trigger(static_key)
+    
+    def __delitem__(self,key):
+        raise NotImplementedError()
 
     def replace(self,key,value):
         prev_value = self[key]
@@ -109,11 +117,13 @@ class Observable(Serializable):
         #M# todo: test for inception
         return True
 
-class ObservableDict(Observable):
-    static_keys = True
+    __hash__ = object.__hash__
+    __eq__ = object.__eq__
+
+class ObservableDict(Observable, collections.abc.MutableMapping):
+    __slots__ = ()
     def __init__(self,data={}):
-        self.data = {}
-        Observable.__init__(self)
+        super().__init__(data={}, static_keys=True)
         self.dict_update(data)
 
     def dict_update(self,data):
@@ -125,11 +135,10 @@ class ObservableDict(Observable):
             self[key] = value
         return self[key]
 
-class ObservableList(Observable):
-    static_keys = False
+class ObservableList(Observable, collections.abc.MutableSequence):
+    __slots__ = ()
     def __init__(self,data=[]):
-        self.data = []
-        Observable.__init__(self)
+        super().__init__(data=[], static_keys=False)
         self.extend(data)
 
     def extend(self,values):

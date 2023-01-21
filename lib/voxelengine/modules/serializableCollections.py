@@ -23,13 +23,13 @@ def serialize(obj, additional_literals=()):
         return obj
     if isinstance(obj, additional_literals):
         return obj
-    if isinstance(obj, collections.Mapping):
+    if isinstance(obj, collections.abc.Mapping):
         return {serialize(key,additional_literals): serialize(value,additional_literals) for key, value in obj.items()}
     if isinstance(obj, set):
         return set(serialize(element,additional_literals) for element in obj)
     if isinstance(obj, tuple):
         return tuple(serialize(element,additional_literals) for element in obj)
-    if isinstance(obj, collections.Iterable):
+    if isinstance(obj, collections.abc.Iterable):
         return [serialize(element,additional_literals) for element in obj]
     raise ValueError(obj,type(obj))
 

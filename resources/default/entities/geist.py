@@ -8,15 +8,18 @@ class Geist(Entity):
     LIMIT = 1
     instances = []
 
-    def __init__(self):
-        super(Geist,self).__init__()
-
-        self["texture"] = "GEIST"
-        self["SPEED"] = 1
-        self["JUMPSPEED"] = 10
-        self["forward"] = False
-        self["turn"] = 0
-        self["tags"] = {"update"}
+    def __init__(self, data = None):
+        data_defaults = {
+            "texture" : "GEIST",
+            "SPEED" : 1,
+            "JUMPSPEED" : 10,
+            "forward" : False,
+            "turn" : 0,
+            "tags" : {"update"},
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
 
     def update(self):
         if self["position"][1] < -100:

@@ -10,19 +10,25 @@ from voxelengine.modules.geometry import Vector, Point, Ray
 from voxelengine.server.event_system import Event
 
 class Entity(ObservableDict):
+    __slots__ = ("world","_position_buffer")
     HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
 
     def __init__(self,data = None):
-        ObservableDict.__init__(self,data if data != None else {})
-        self.world = None
-        self._old_position = None
-        
-        self.setdefault("position",(0,0,0))
-        self.setdefault("rotation",(0,0))
-        self.setdefault("texture",0)
-        self.setdefault("speed",5)
-        self.setdefault("tags",[])
+        assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses
 
+        data_defaults = {
+            "position" : (0,0,0),
+            "rotation" : (0,0),
+            "texture" : 0,
+            "tags" : [],
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
+
+        self.world = None
+        self._position_buffer = None
+        
         self.register_item_callback(self._on_position_change,"position")
         self.register_item_callback(self._on_tags_change,"tags")
         self.register_item_callback(self._on_visible_change,"rotation")
@@ -31,8 +37,8 @@ class Entity(ObservableDict):
 
     def _on_position_change(self, new_position):
         """set position of entity"""
-        old_position = self._old_position
-        self._old_position = new_position
+        old_position = self._position_buffer
+        self._position_buffer = new_position
 
         if self.world:
             # tell entity system that entity has moved
@@ -121,5 +127,11 @@ class Entity(ObservableDict):
         if self.world:
             self.world.event_system.add_event(Event("entity_change",self.HITBOX+self["position"],self))
 
+class GenericEntity(Entity):
+    __slots__ = ()
+
+def EntityFactory(*args, **kwargs):
+    return GenericEntity(*args, **kwargs)
+
 if __name__ == "__main__":
-    e = Entity()
+    e = EntityFactory()

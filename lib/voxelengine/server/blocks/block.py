@@ -5,9 +5,9 @@ class Block(dict):
 	__slots__ = ("position","blockworld")
 	
 	def __init__(self, data, position=None, blockworld=None):
-		if isinstance(data, str):
-			data = {"id":data}
-		dict.__init__(self, data)
+		assert type(self) != Block #this is an abstract class, please instantiate specific subclasses
+
+		super().__init__(data)
 		self.position = position
 		self.blockworld = blockworld
 
@@ -30,6 +30,7 @@ class Block(dict):
 	
 	def client_version(self):
 		orientation = self.get("base","")+str(self.get("rotation",""))
+		orientation = orientation.strip("b0")
 		blockmodel = self["id"]+self.get("state","")
 		if orientation:
 			return blockmodel+":"+orientation
@@ -47,3 +48,11 @@ class Block(dict):
 	def save(self):
 		"""make changes that were applied to this Block persistent in the world"""
 		self.blockworld[self.position] = self
+
+class GenericBlock(Block):
+	__slots__ = ()
+
+def BlockFactory(data, *args, **kwargs):
+    if isinstance(data, str):
+        data = {"id":data}
+    return GenericBlock(data, *args, **kwargs)

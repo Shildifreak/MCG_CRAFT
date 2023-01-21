@@ -76,6 +76,20 @@ class Vector(tuple):
     def __rxor__(self,other):
         return self^other
 
+
+    def __lt__(self, other):
+        return all(map(operator.lt, self, other))
+
+    def __le__(self, other):
+        return all(map(operator.le, self, other))
+
+    def __gt__(self, other):
+        return all(map(operator.gt, self, other))
+
+    def __ge__(self, other):
+        return all(map(operator.ge, self, other))
+
+
     def add_scalar(self, other):
         return Vector(i+other for i in self)
 
@@ -237,6 +251,10 @@ class Box(Area):
     def _distance_to_Ray(self, other):
         raise NotImplementedError()
     
+    def __contains__(self, position):
+        """ should do the same as implementation in parent class, but be faster """
+        return self.lower_bounds <= position <= self.upper_bounds
+
     def __repr__(self):
         return "Box" + repr((self.lower_bounds, self.upper_bounds)) # Box(lower_bounds, upper_bounds)
         
@@ -476,5 +494,6 @@ if __name__ == "__main__":
     test(Box(Vector((0,0,0)), Vector((1,1,1))), Sphere(Vector((  4,  5,0.5)),   6),-1)
 
     assert Vector(0,0,0) in Box(Vector(-1,-1,-1), Vector(1,1,1))
+    assert Vector(0,1,2) not in Box(Vector(-1,-1,-1), Vector(1,1,1))
     
     print("all tests passed")

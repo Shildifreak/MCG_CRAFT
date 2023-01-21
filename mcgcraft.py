@@ -77,7 +77,7 @@ class BlockInventoryWrapper(InventoryWrapper):
         if not self.open:
             self.changed = False
             self.block = self.world.blocks[self.position]
-            self.inventory = observable_from(self.block["inventory"])
+            self.inventory = observable_from(dict(self.block["inventory"]))
         # increment open counter
         self.open += 1
         
@@ -188,8 +188,8 @@ class InventoryDisplay():
                                 continue
                         self.player.undisplay_item(name)
                 if inventory and self.is_open:
-                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),0,size,INNER|CENTER)
                     self.player.set_hud("#inventory:(%s,%s)" %(k,+1),"ARROW",(0.8,k-0.4,0),0,size,INNER|CENTER)
+                    self.player.set_hud("#inventory:(%s,%s)" %(k,-1),"ARROW",(0.8,k-0.6,0),180,size,INNER|CENTER)
                 else:
                     self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
                     self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
@@ -234,8 +234,11 @@ class InventoryDisplay():
         else:
             k, direction = map(int,args)
             #inventory = self.inventory if k==0 else self.foreign_inventory
-            self.current_pages[k] = max(0,self.current_pages[k] + direction)
-            self.display()
+            self.scroll(k, direction)
+
+    def scroll(self, page, direction):
+        self.current_pages[page] = max(0,self.current_pages[page] + direction)
+        self.display()
     
     def handle_drag(self,button,from_element,to_element):
         if from_element and to_element and \
@@ -305,15 +308,13 @@ class Player(voxelengine.Player):
 
     def create_character(self):
         world = self.universe.get_spawn_world()
-        character = resources.entityClasses["Mensch"]()
+        character = resources.EntityFactory({"type":"Mensch"})
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"Repeater"},{"id":"FAN"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"WAND"},{"id":"BARRIER"},{"id":"LAMP"},{"id":"TORCH"},{"id":"Redstone","count":128},{"id":"CHEST"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"},{"id":"GESICHT"}]
+        character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
         for blockname in resources.blockClasses.keys():
             character["inventory"].append({"id":blockname})
-        character["left_hand"] = 0
-        character["right_hand"] = 16
 
         # inventory stuff
         for i in range(60):
@@ -415,10 +416,13 @@ class Player(voxelengine.Player):
                 self.inventory_display.handle_drag(button, element_from, element_to)
         inv_inc = self.was_pressed("inv+") - self.was_pressed("inv-")
         if inv_inc != 0:
-            hand = "left_hand" if self.is_pressed("shift") else "right_hand"
-            inv_slot = pe[hand] + inv_inc
-            inv_slot %= 7
-            pe[hand] = inv_slot
+            if self.inventory_display.is_open:
+                self.inventory_display.scroll(0, inv_inc)
+            else:
+                hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+                inv_slot = pe[hand] + inv_inc
+                inv_slot %= 7
+                pe[hand] = inv_slot
             
                 
 
@@ -517,8 +521,9 @@ Request = collections.namedtuple("RequestTuple",["block","priority","valid_tag",
 #blockread_counter = 0
 class World(voxelengine.World):
     def __init__(self,*args,**kwargs):
-        super(World,self).__init__(*args,**kwargs)
-        self.blocks.BlockClass = resources.Block
+        super(World,self).__init__(*args,**kwargs,
+                                   blockFactory=resources.BlockFactory,
+                                   entityFactory=resources.EntityFactory)
         
         self.set_requests = collections.defaultdict(list) # position: [Request,...]
         self.move_requests = [] # (position_from, position_to)
@@ -741,9 +746,15 @@ def run():
 
             #M# mob spawning
             if config["mobspawning"]:
-                for entity_class in resources.entityClasses.values():
+                for entity_type, entity_class in resources.entityClasses.items():
                     if len(entity_class.instances) < entity_class.LIMIT:
-                        entity_class.try_to_spawn(w)
+                        x = random.randint(-40,40)
+                        y = random.randint(-10,20)
+                        z = random.randint(-40,40)
+                        p = Vector(x,y,z)
+                        if entity_class.test_spawn_conditions(w, p):
+                            e = resources.EntityFactory(entity_type)
+                            e.set_world(w,p)
 
             # entity update
             for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy

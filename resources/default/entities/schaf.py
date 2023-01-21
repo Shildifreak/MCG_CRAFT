@@ -8,16 +8,19 @@ class Schaf(Entity):
     LIMIT = 5
     instances = []
     
-    def __init__(self):
-        super().__init__()
-
-        self["texture"] = "SCHAF"
-        self["SPEED"] = 10
-        self["JUMPSPEED"] = 10
-        self["forward"] = False
-        self["turn"] = 0
-        self["nod"] = False
-        self["tags"] = {"update"}
+    def __init__(self, data = None):
+        data_defaults = {
+            "texture" : "SCHAF",
+            "SPEED" : 10,
+            "JUMPSPEED" : 10,
+            "forward" : False,
+            "turn" : 0,
+            "nod" : False,
+            "tags" : {"update"},
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
 
     def right_clicked(self, character):
         self["texture"] = "SCHAF,GESCHOREN"

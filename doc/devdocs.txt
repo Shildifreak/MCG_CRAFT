@@ -1,0 +1,136 @@
+LAUNCHER
+	Name des Spiels (default = Benutzername + "s MCGCraftServer")
+	Speicherort (browse) (standartmäßig leer)
+	Weltgenerator(*)
+	whitelist (localhost / all / custom)
+	Parole
+	#Port
+	Start/Stop          Start&Play/Play
+	Stats**
+		TPS, Spieler, Entities, ...
+
+	*  ausgegraut wenn Speicherort schon existiert?
+	** leer wenn kein Spiel läuft?
+
+BLOCKS
+	DATA
+		id : str
+			identifies associated Block class and texture
+		state : str
+			extends texture name
+		base : ( "b" | "t" | "n" | "s" | "e" | "w" ) default "b"
+			which cardinal direction the base of the block model faces
+		rotation: int default 0
+			rotation around the axis defined by base
+		...
+		[custom attributes]
+
+	HOOKS
+		activated
+			someone wants to activate the block
+		mined
+			someone wants to mine the block
+		handle_event_<event_tag>
+			react to events with this tag intersecting this block
+			dont forget to also adjust get_tags
+		get_tags
+			which events should be listened to
+		collides_with
+			used for implementing hitboxes for non_full blocks like stairs
+		item_version
+			used to turn the block into an item
+		client_version
+			used to turn the block into a string send to the clients
+
+CONTROL
+					primary action				secondary action*
+	left hand		mine block / hit entity		use item in left hand (on entity / block / air)
+	right hand		activate block / entity		use item in right hand (on entity / block / air)
+
+	* If primary action and secondary action are bound to the same key / triggered in the same tick, 
+	  the secondary action is used only if the shift key is pressed or if the primary action failed.
+
+ITEMS
+	INVENTORY
+		open inventory with e
+		infinitely big, if you have no place in inventory but break a block your inventory grows
+		scrolling through possible, first 7 are hotbar
+		slots are made available for user by putting air in them
+		hands link to slots in the inventory
+		left/right clicking item assigns that item to the corresponding hand
+		drag an drop to move items around
+		items have counts on them that are ignored in creative
+	STORAGE
+		blocks can have inventory -> for instance chest
+	TRADING
+		use chests for now since there are no dropped items
+	CRAFTING
+		???
+PVP/PVE
+	all entities have a "lives" attribute that can be manipulated to damage or heal them
+
+REDSTONE
+	WIRING
+		blocks that act like redstone in real minecraft, but can be pushed around
+	BLOCK DATA
+		p_level : int default 0
+			redstone power level
+		p_stronglevel: int default None
+			only used by solid blocks and redstone dust
+			doesn't count power from redstone, so solid blocks powered by redstone don't power other redstone
+		p_ambient : bool default False
+			power nonsolid blocks in all directions
+		p_directions
+			power solid blocks in these directions
+
+	PISTONS (not implemented)
+		force in x y z -> sum of forces from around rounded to -1,0,1
+		if airblock: become block that gets pushed in
+
+		dont have real extension
+		push blocks (and items?) in front of them (up to 12) on rising edge
+		pull block in front of them on falling edge (all pistons are sticky?, but since they have no extension part it doesn't matter)
+
+	FANS
+
+WORLD GENERATION
+	initlevel convention: every chunk may require chunks around him to be at least his level - 1
+		inf (finished): finished, Entities may be here, can be send to client, ...
+		  4 (structs) : single-chunk-structures (postmulti)
+		  3 (structs) : multi-chunk-structures
+		  2 (structs) : single-chunk-structures (premulti)
+		  1 (terrain) : terrain build
+		  0 (plain)   : nothing generated yet
+		 -1 (vacuum)  : not even air
+
+UNIVERSE
+	Add Universe object to support multiple worlds but keep it lightweight
+
+WORLD
+	Clients decide which parts of the world they want to watch when adding area they can say that they want to get all changed blocks since n-th tick
+	Between gameticks phase for changing monitored area, etc.
+
+BLOCKWORLD
+	some (compressed) 3D Dictionary for block_history
+	- global block array with reference counters
+	- schedule updates for deleting entries if not changed within certain time
+	cached nonpersistent hierarchy for blocktags with invalidation on setblock
+	- asynchronous recalculation of invalidated cache entries
+	some way to differenciate between reproducable/nonpersistent and nonreproducable/persistent block states
+	- same for block changes ... some are deterministic, some not
+	- really only need generation rules, transformation rules and user/entity interaction history
+	- need way to save for which cached results an information was used (for history rewrite, for example when doing multiplayer)
+
+BLOCKWORLD INDEX
+	Property Hinting System for BinaryBlocks of MCGCraft Worlds (like no blocks in certain areas or no visible blocks etc)
+	potential_blocks_of_interest(binary_box area, string tag):
+		return iterator over positions including but not necessarily limited to all blocks in area that may have this tag
+
+EVENTSYSTEM
+	Event hat Ausdehnung, Blöcke nicht, weil sonst müsste man ja möglicherweise unbekannt große Teile der Welt laden
+	Global Events, for example inventory changed events
+	Block and Entity Updates could be highly parallelized using message passing for the Event System
+
+BLOCK UPDATES
+	setblocks are buffered so that all blocks see other blocks states from last tick so update order doesn't matter
+	when blocks are mined by pistons, explosions, endermen,... that counts as a special "mining kind"

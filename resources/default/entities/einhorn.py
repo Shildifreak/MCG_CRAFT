@@ -8,16 +8,20 @@ class Einhorn(Entity):
     LIMIT = 1
     instances = []
     
-    def __init__(self):
-        super(Einhorn,self).__init__()
+    def __init__(self, data = None):
+        data_defaults = {
+            "texture" : "EINHORN",
+            "SPEED" : 5,
+            "JUMPSPEED" : 10,
+            "sprint" : 20,
+            "forward" : False,
+            "turn" : 0,
+            "tags" : {"random_tick_source"},
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
         
-        self["texture"] = "EINHORN"
-        self["SPEED"] = 5
-        self["JUMPSPEED"] = 10
-        self["sprint"] = 20
-        self["forward"] = False
-        self["turn"] = 0
-        self["tags"] = {"random_tick_source"}
 
     def right_clicked(self, character):
         self["texture"] = "SCHAF"

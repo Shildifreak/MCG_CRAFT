@@ -1,15 +1,19 @@
 
-from voxelengine.server.entities.entity import Entity
+from voxelengine.server.entities.entity import Entity #this is only the base class, use EntityFactory for specific Entities
 from voxelengine.modules.geometry import EVERYWHERE
 from voxelengine.modules.serializableCollections import Serializable
 
 class EntityWorld(Serializable):
+	def __init__(self, world, data, entityFactory):
+		self.world = world
+		self.EntityFactory = entityFactory
 
-	def __init__(self, data):
 		self.next_id = data["next_id"]
 		self.entities = set()
-		for entity in data["entities"]:
-			self.entities.add(Entity(entity))
+		for entity_data in data["entities"]:
+			entity = self.EntityFactory(entity_data)
+			entity.world = self.world
+			self.add(entity)
 	
 	def __serialize__(self):
 		return {"next_id" : self.next_id,

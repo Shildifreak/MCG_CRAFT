@@ -3,10 +3,10 @@ all messages are json encoded lists with the first element being the command typ
 
 server -> client
 	clear generator_data
-		lösche alle Blöcke und Entities, setze monitored area zurück,
-                setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator
-	del <x y z>
-		lösche den Block
+		lösche alle Blöcke, gecachten Blöcke und Entities
+		setze monitored area und monitor id zurück
+		setze Position des Spielers auf unbekannt, initialisiere neuen terrain generator
+		HUD wird NICHT gecleared!
 	set <x y z> block
 		setze block an stelle x y z
 	goto <x y z>
@@ -28,10 +28,17 @@ server -> client
 		Client hat irgendwas falsch gemacht
 		fatality: False -> just display and move on, True -> shutdown/reconnect
 
-	deprecated, for now
-		setarea ... 
+	deprecated
+		del <x y z>
+			lösche den Block -> nutze stattdessen set
+
+	concept, work in progress
+		setarea <xmin ymin zmin> <xmax ymax zmax> block bitmap
+			setzt block an alle Stellen im Gebiet für die im bitmap eine 1 steht
+			i = (z-zmin)*dy*dx + (y-ymin)*dx + (x-xmin)
+			bitmap[i//8] == (1<<(i%8))
 		delarea <xmin ymin zmin> <xmax ymax zmax>
-				lösche alle Blöcke in dem Gebiet
+			setzt alle Blöcke in dem Gebiet auf ihren Wert in der Terrainfunktion zurück
 
 client -> server
 	tick
@@ -56,7 +63,7 @@ client -> server
 	
 	press key
 		causes a key press event for this key (only recognizable with was_pressed, not is_pressed)
-		currently used for inv, chat_closed and all actions caused by mouse_scroll events
+		currently used for inv, chat_close and all actions caused by mouse_scroll events
 	
 	text msg
 		Nutzereingabe im Chat

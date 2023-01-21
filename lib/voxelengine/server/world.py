@@ -16,6 +16,8 @@ from voxelengine.server.players.player_world import PlayerWorld
 
 from voxelengine.modules.serializableCollections import Serializable, serialize, extended_literal_eval
 from voxelengine.modules.geometry import Vector, Box, Sphere
+from voxelengine.server.blocks.block import BlockFactory
+from voxelengine.server.entities.entity import EntityFactory
 
 warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
@@ -35,12 +37,12 @@ class Clock(dict):
 		self.tick_event.set(); self.tick_event.clear()
 
 class World(Serializable):
-	def __init__(self, data):
+	def __init__(self, data, blockFactory=BlockFactory, entityFactory=EntityFactory):
 		self.data = data
 		self.clock        = data["metadata"]["clock"] = Clock(data["metadata"]["clock"])
 		self.event_system = data["events"]            = EventSystem(self, data["events"])
-		self.entities     = data["entities"]          = EntityWorld(data["entities"])
-		self.blocks       = data["block_world"]       = BlockWorld(self, data["block_world"], self.event_system, self.clock)
+		self.blocks       = data["block_world"]       = BlockWorld(self, data["block_world"], self.event_system, self.clock, blockFactory)
+		self.entities     = data["entities"]          = EntityWorld(self, data["entities"], entityFactory)
 		self.players                                  = PlayerWorld()
 	
 	def __serialize__(self):

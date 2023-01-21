@@ -214,11 +214,9 @@ class beacon():
                     msg, addr = self.info_socket.recvfrom(PACKAGESIZE)
                     if self.closed:
                         break
-                    print (repr(msg.decode()),repr("PING "+self.key))
+                    print ("info_socket:",repr(msg.decode()))
                     if msg.decode() == "PING "+self.key:
-                        print("ponging")
                         self.info_socket.sendto(("PONG %s %s" %(self.uid,self.info_data)).encode(),addr)
-                        print("gepongt")
             except Exception as e:
                 print (e, "in _info_thread")
         self.info_socket.close()

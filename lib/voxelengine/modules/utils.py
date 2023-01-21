@@ -51,7 +51,7 @@ def try_port(port):
 
 def try_ports(ports):
     """test single port or list of ports and return first one available, if none is available return False"""
-    if not isinstance(ports, collections.Iterable):
+    if not isinstance(ports, collections.abc.Iterable):
         ports = (ports,)
     for port in ports:
         port = try_port(port)

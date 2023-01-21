@@ -62,7 +62,6 @@ class WorldGenerator(object):
 		if hasattr(self.generator_module, "spawnpoint"):
 			return self.generator_module.spawnpoint
 		elif hasattr(self, "js_context") and self.js_context.eval('typeof spawnpoint !== "undefined"'):
-			print(self.js_context.eval("typeof spawnpoint"))
 			return self.js_context.eval("spawnpoint")
 		else:
 			return (0,0,0)

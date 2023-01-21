@@ -1,0 +1,31 @@
+
+
+MCG_CRAFT                           Das MCG-Craft Projekt
+  |
+  |-launcher.py                     Menü um unter anderem das Spiel zu starten
+  |-mcgcraft.py                     Hauptprogramm von MCGCRAFT
+  |
+  |-doc                             Dokumentation (siehe auch lib/voxelengine/doc)
+  |  |-devdocs.txt                  erste Ansätze einer Dokumentation für Developer
+  |  |-feature_ideas                Liste von Ideen wie man MCG-Craft erweitern könnte -> hier darf man sich gerne bedienen oder inspirieren lassen
+  |  |-filetree (was ist wo).txt    diese Datei
+  |  |-unsorted notes.txt           Notizen für die noch ein guter Platz gefunden werden muss
+  |
+  |-resources                       die meisten Schülerprojekte sollten sich mit Resource Packs lösen lassen
+  |  |-default                      Basis Resource Pack -> eigene RPs sollten sich hieran orientieren
+  |  |  |-blocks                    Klassen für die Beschreibung des Verhaltens von Blöcken
+  |  |  |-entities                  Klassen für die Beschreibung des Verhaltens von Entities
+  |  |  |-items                     Klassen für die Beschreibung des Verhaltens von Items
+  |  |  |-structures                Strukturen wie zB. Bäume die sowohl in blocks/entities/items als auch Welten benutzt werden können
+  |  |  |-commands                  Befehle die man im Spiel im Chat eingeben kann
+  |  |  |-textures                  Aussehen von Blöcken und Items
+  |  |  |  |-description.py         wie 2D Texturen zu Blöcken und Entity Modellen zusammengesetzt werden
+  |  |  |  |-textures.png           Texturatlas mit mehreren Texturen -> einfacher ist es am Anfang für jede Textur eine extra .png Datei zu benutzen
+  |  |  |  |-textures.json          Namen für die einzelnen Texturen in textures.png -> nicht nötig wenn die .png Datei nur eine Textur enthält
+  |  |  |-Welten                    Weltgeneratoren beschreiben wie neue Welten aussehen
+  |  |-weihnachtsdeko               ein RP dass einige Texturen durch Weihnachtsversion mit mehr Schnee ersetzt
+  |  |-tutorial                     das RP zu den Youtube Videos
+  |
+  |-lib                             
+  |  |-resources.py                 Basisklassen von denen neue Blöcke / Entities / Items erben sollten
+  |  |-voxelengine                  GameEngine auf der MCG-Craft aufbaut

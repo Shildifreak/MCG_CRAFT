@@ -225,7 +225,7 @@ class GameServer(object):
         for addr,player in self.players.items():
             for msg in player.outbox:
                 self.game_server.send(addr,msg)
-                if player.outbox.sentcount >= 0: #test after send, so at least one massage is sent anyway
+                if player.sendcount <= 0: #test after send, so at least one massage is sent anyway
                     break
         for player in self.get_players():
             player._update() #call to player._update() has to be before call to player._handle_input()

@@ -13,7 +13,6 @@ from functools import reduce
 import operator
 import ast
 import threading
-import json
 import urllib.request
 import io
 import base64
@@ -80,7 +79,7 @@ KEYMAP = [
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
 configfn = os.path.join(configdir,"desktopclientsettings.py")
-print(configfn)
+print("client config location:",configfn)
 if os.path.exists(configfn):
     with open(configfn) as configfile:
         config = eval(configfile.read(),globals())
@@ -532,17 +531,12 @@ class Model(object):
             break
 
     def load_generator(self, generator_data):
-        #print(generator_data)
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
         self.blocks.set_terrain_function(self.world_generator.client_terrain)
         self.init_chunk_queue.terrain_preload = self.world_generator.preload
 
     def monitor_around(self, position):
         """returns list of messages to be send to server in order to announce new monitoring area and required updates"""
-        if not hasattr(self, "world_generator"):
-            print("received goto before clear, fix message_buffer asap!")
-            self.monitor_after_clear = True
-            return
         center_chunk_position = position.round() >> CHUNKBASE
         added, removed = self.chunks.monitor_around(center_chunk_position)
         
@@ -624,17 +618,8 @@ class Model(object):
                 self.hide_face(position,face)
             
     def update_visibility_around(self,position):
-        #M# make better!
-        for x in (-1,0,1):
-            for y in (-1,0,1):
-                for z in (-1,0,1):
-                    v = Vector((x,y,z)) + position
-                    if v != (0,0,0):
-                        self.update_visibility(v)
-
-        #original:
-        #for f,fv in enumerate(FACES):
-        #    self.update_face(position+fv,(f+1-(2*(f%2))))
+        for f,fv in enumerate(FACES):
+            self.update_face(position-fv,f)
     
     def show_face(self,position,face):
         if (position,face) in self.shown:
@@ -745,21 +730,28 @@ class Model(object):
             vertex_list.delete()
 
     def set_hud(self,element_data,window_size):#id,texture,position,rotation,size,align
-        element_id,texture,position,rotation,size,align = element_data
+        element_id,texture,position,rotation_deg,rsize,align = element_data
         if element_id in self.hud_elements:
             self.del_hud(element_id)
         f = (max if OUTER & align else min)(window_size)
-        size = f*Vector(size)
+        size = f*Vector(rsize)
         center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
                             for pa,na,ws,xy,si in zip((RIGHT,TOP),(LEFT,BOTTOM),window_size,position,size)
-                            )
-        corners = tuple(xy + (k*si / 2)
-                        for ks in ((-1,-1),(1,-1),(1,1),(-1,1))
-                        for xy, si, k in zip(center_pos,size,ks)
+                            ) + (position[2],)
+        rotation_rad = math.radians(rotation_deg)
+        c = math.cos(rotation_rad)
+        s = math.sin(rotation_rad)
+        unitoffsets = (-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)
+        objoffsets = tuple((uo[0]*size[0],uo[1]*size[1]) for uo in unitoffsets)
+        screenoffsets = tuple((c*x - s*y, c*y + s*x) for x,y in objoffsets)
+
+        corners = tuple(c + o
+                        for offset in screenoffsets
+                        for c, o in zip(center_pos, offset+(0,))
                         )
-        i = iter(corners)
-        corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
-        #img = pygame.transform.rotate(img,rotation)
+        #i = iter(corners)
+        #corners = [a for b in zip(i,i,(position[2],)*4) for a in b]
+
         if texture == "AIR":
             vertex_list = None
         elif not texture.startswith ("/"):
@@ -768,7 +760,7 @@ class Model(object):
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:
-            x,y = center_pos
+            x,y,z = center_pos
             text = texture[1:]
             if not "\n" in text:
                 label = pyglet.text.Label(text,x=x,y=y,
@@ -811,7 +803,7 @@ class Model(object):
                 label.end_update()
                 
             vertex_list = label #of course the label isn't simply a vertex list, but it has a delete method, so it should work
-        self.hud_elements[element_id] = (vertex_list,element_data,corners)
+        self.hud_elements[element_id] = (vertex_list,element_data,(center_pos, (c, s), size))
         
     def del_hud(self,element_id):
         vertex_list = self.hud_elements.pop(element_id,[None])[0]
@@ -1039,11 +1031,6 @@ class Window(pyglet.window.Window):
                 if test("clear",1):
                     generator_data, = args
                     self.model._clear(generator_data)
-                    if self.model.monitor_after_clear: #M# this is a hack
-                        for msg in self.model.monitor_around(self.position):
-                            self.client.send(msg)
-                        self.model.monitor_after_clear = False
-                    continue
                 elif test("del",1):
                     position, = args
                     position = Vector(position)
@@ -1094,8 +1081,15 @@ class Window(pyglet.window.Window):
                 elif test("focushud",0):
                     self.set_exclusive_mouse(False)
                     self.hud_open = True
+                elif test("error",2):
+                    errmsg, is_fatal = args
+                    err = Exception(errmsg)
+                    if is_fatal:
+                        raise err
+                    else:
+                        warnings.warn(err)
                 else:
-                    print("unknown command", c)
+                    print("unknown command", command, args)
             self.model.process_queue()
             m = max(0, MSGS_PER_TICK - len(self.model.queue))
             self.client.send(("tick",m))
@@ -1110,7 +1104,7 @@ class Window(pyglet.window.Window):
         #self.client.send(("scrolling",scroll_y))
         symbol_x = "right" if scroll_x>0 else "left"
         symbol_y = "up"    if scroll_y>0 else "down"
-        print(symbol_x, symbol_y, KEYMAP)
+        #print(symbol_x, symbol_y, KEYMAP)
         for e, action in KEYMAP:
             e_type, symbol = e
             if e_type == "scroll":
@@ -1118,21 +1112,21 @@ class Window(pyglet.window.Window):
                     for _ in range(math.ceil(abs(scroll_x))):
                         self.client.send(("press",action))
                 if symbol == symbol_y:
-                    print(symbol, math.ceil(abs(scroll_y)))
                     for _ in range(math.ceil(abs(scroll_y))):
                         self.client.send(("press",action))
         
     def get_focused(self, x, y):
         focused = None
         z = float("-inf")
-        for _,element_data,corners in self.model.hud_elements.values():
+        for _,element_data,(center, (c,s), size) in self.model.hud_elements.values():
             name = element_data[0]
             if name.startswith("#"):
-                if corners[0] < x < corners[6]:
-                    if corners[1] < y < corners[7]:
-                        if corners[2] > z:
-                            focused = name
-                            z = corners[2]
+                dx, dy = x - center[0], y - center[1]
+                drx, dry = c*dx + s*dy, c*dy - s*dx
+                if abs(drx) < 0.5*size[0] and abs(dry) < 0.5*size[1]:
+                    if center[2] > z:
+                        focused = name
+                        z = center[2]
         return focused
 
     def on_mouse_press(self, x, y, button, modifiers):
@@ -1296,6 +1290,9 @@ class Window(pyglet.window.Window):
     def on_text_motion(self, motion):
         """The user moved the text input cursor.
         """
+        if not self.chat_open:
+            return
+        
         l = len(self.chat_input_buffer)
 
         if motion == key.MOTION_BACKSPACE:
@@ -1501,8 +1498,6 @@ def show_on_window(client):
         if args.name:
             entity_id = args.name
             password = args.password
-            if not args.password:
-                print("Consider setting a password when using a name.")
         else:
             entity_id = "tmp:" + hex(random.getrandbits(32))[2:]
             password = hex(random.getrandbits(32))[2:]
@@ -1540,6 +1535,5 @@ def main():
         run(serverinfo)
 
 args = client_utils.parser.parse_args()
-print(args)
 if __name__ == '__main__':
     main()

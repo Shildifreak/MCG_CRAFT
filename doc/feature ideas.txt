@@ -1,0 +1,141 @@
+
+------ Dinge die man in der AG machen könnte ------
+
+	Bäume:
+		Blätter: Setzlinge droppen lassen
+		Blätter: despawnen wenn kein Stamm mehr da
+		Setzling: Baumform (Höhe, Breite, Blattart) veränderlich mit DNA -> ermöglicht züchten
+		Apfelblock: generiert als Teil von Baum, dropt Äpfel
+		Apfel: essbar -> regeneriert Herzen, aber auch möglicher Ersatz für Setzling
+
+	Schafe:
+		ändern Textur wenn angeklickt und geben Wolle -> wächst nach wenn sie Gras fressen
+		suchen nach Grasblöcken in der Umgebung 
+		verschiedene AIs / Persönlichkeiten -> faul, quirlig, verfressen, anhänglich, ängstlich, ...
+
+	UFO Entity die nur über Kühen spawnen kann
+
+	Slimes:
+		größere Slimes zerfallen in viele kleine wenn man sie haut
+		kleine Slimes werden mit der Zeit wieder zu größeren
+
+	Blöcke:
+		Treppen
+		Stufen (aka Slabs):
+			Doppelstufen einzeln abbaubar machen
+			Wenn in Füßen von Entity plaziert diese nach oben schieben
+		Redstone Lampe mit Helligkeit abhängig von Signalstärke
+		Slowsand -> lässt Spieler langsamer laufen (Anspielung auf Soulsand)
+		Block der nicht abgebaut werden kann aber verschiebbar ist
+
+	Werkzeuge:
+		anstelle von Haltbarkeit einfach stackbare Werkzeuge
+		-> crafting erzeugt je nach Material unterschiedliche Anzahl von Einmalwerkzeugen
+
+	Welten:
+		Höhlen mit Erzen
+		Oberfläche mit Bäumen
+		ganz tief unten der Nether
+		weiße Blöcke als Wolken am Himmel
+
+
+
+------ Random Stuff (was sind gute Ideen?)   ------
+
+	drei Arten von Graß die sich gegenseitig aufessen
+	Noteblock making the block breaking sound of the block beneath it
+	Becher Block -> can be combined into one block and seperated by piston pushing/pulling vertically but not horizontally
+	create a furnace
+	brew in cauldron by throwing items into water; with fire below; some way to stirr?
+	rope?
+
+	respawn time depending on distance to spawn
+	Location based chat system
+		writing ALL CAPS makes chat hearable from further away ;)
+	some form of block able of clicking -> can activate everything that players can do (break blocks, set blocks, change lever state)
+	arrow remote right click with bound to it item
+
+	virtual Graffiti
+	way to craft every block into a gravity affected version
+	syncing stacks -> same item instance in multiple inventories / shadowtech
+	ingame resetpoint feature (using block history)
+	Blocks that dont have full Hitbox (like torches) can be combined as long as their hitboxes dont collide
+
+
+
+------ Dinge die etwas mehr Arbeit erfordern ------
+
+	Inventory
+		create Inventory class with utility functions for adding and removing items
+		limited and unlimited inventories -> furnace vs player inventory
+
+	Items:
+		Items?!
+			no item entities for blocks, so there is only one way to exist in the world for each item and one way to exist in the inventory (no need for dispensers vs droppers etc.)
+		carving text into bark with sword
+	
+	Blöcke:
+		scaffolding block that breaks in bigger radius the longer it is mined (quick click = instamine one block, hold to break more/all connected blocks) (not gravity affected)
+
+	Daylight cycle
+	
+	Mob despawning:
+		normal mobs:  despawn if more than x blocks away from player
+		passive mobs: despawn if more than x blocks away from where they last saw a player
+
+	Entity Movement:
+		walking up halfslabs, stairs, etc. without jumping
+
+	3rd Person Camera Client:
+		Player Control
+			do raytest with free mouse pointer, then have player look there from his position
+			movement is relative to camera angle not player view direction
+			there are pointer and camera, player always looks to pointer, pointer is always in center of camera in exclusive mode, can be moved freely when not in exclusive mode
+
+	Voicechat mit Entfernungsmessung
+
+	Referenz -> automatically changes when target is moved, gets callbacked when target changes
+		-> zB. für foreign inventory etc.
+
+	js bibo für terrainfunctions
+	distinguish between controllers only if multiple are connected
+	make ESC key reconfigurable
+	if two setblocks are scheduled for the same block then the one with a lower mining level/blast resistance is "mined" so it drops as an item or something similar
+
+
+
+------ Technisches Zeug und Debug            ------
+
+	Management
+		Whitelist
+		add command for kicking players
+		auto git pull on server? + update script for client
+		Servereinstellungen pro Welt
+			Unterschiedliche Ansicht für neue Welt und bestehende Welt
+			weltengenerator ausgrauen/ausblenden wenn welt datei existiert
+		add server description
+		Create ServerconfigEditor Script
+		Create ResetUsersettings Script
+		Automatic or at least support reload of serverconfig in startGame -> already done I think
+		
+	Optimierung
+		improve resources.Entity.update_position movement calculation by using raycasting
+		dont send update to client if clientversion of block didn't change
+		Festkommazahlen für Entity Position
+		server client connection
+			make clear delete any previous blockdata (server and client side, also add filter to async_blockadders)
+			reset chunk update list on clear
+			have chunk update list and chunk iterator
+		Chunkworker concept could be copied from webclient to desktop client, highly improving chunk loading performance
+		javascript calls could be grouped, highly improving desktop client performance -> is this done already?
+		Subchunk priorities hint
+	
+	Cleanup
+		make geometry usable as standalone module
+		get texturepack compiler to be silent if no inconsistencies arise
+
+	Debug
+		option für umschalten zwischen Systembibliotheken und mitgelieferten Bibliotheken
+		Infos zu fokusiertem Block
+		Github versionsnummer für MCGcraft benutzen -> so dass es eine versionsnummer für bugreports gibt
+		single stepping ticks (seperate for entity ticks and block ticks?)

@@ -24,14 +24,18 @@ class Block(voxelengine.Block):
                 "p_directions":(), # power solid blocks in these directions
                 "rotation":0,"base":"b"}
 
-    def __init__(self,*args,**kwargs):
-        super(Block,self).__init__(*args,**kwargs)
-        self._morph()
+    def __init__(self, data, *args,**kwargs):
+        default_data = self.defaults.copy()
+        default_data.update(data)
+        super().__init__(default_data, *args, **kwargs)
+        
+        assert type(self) != Block #this is an abstract class, please instantiate specific subclasses or use BlockFactory
+        assert blockClasses[self["id"]] == type(self) #blocks must have a matching type id
     
     def turn_into(self, new_block):
         self.clear()
         if isinstance(new_block, str):
-            super(Block,self).__setitem__("id", new_block)
+            super().__setitem__("id", new_block)
         else:
             self.update(new_block)
         self._morph()
@@ -40,18 +44,12 @@ class Block(voxelengine.Block):
         self.__class__ = blockClasses[self["id"]]
 
     def __getitem__(self, key):
-        try:
-            return super(Block, self).__getitem__(key)
-        except KeyError:
-            return self.defaults.get(key,None)
+        return self.get(key,None)
 
     def __setitem__(self, key, value):
         if value == self[key]:
             return
-        if value == self.defaults.get(key,(value,)): #(value,) is always != value, so if there is no default this defaults to false
-            super(Block,self).__delitem__(key)
-        else:
-            super(Block,self).__setitem__(key,value)
+        super().__setitem__(key,value)
         if key == "id":
             self._morph()
 
@@ -142,12 +140,6 @@ class Block(voxelengine.Block):
         return BinaryBox(0, self.position).bounding_box()
     
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
-    def block_update(self,directions):
-        """directions indicates where update(s) came from... usefull for observer etc."""
-        """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
-
-    def random_ticked(self):
-        """spread grass etc"""
 
     def activated(self,character,face):
         """blocks like levers should implement this action. Return value signalizes whether to execute use action of hold item"""
@@ -164,6 +156,7 @@ class Block(voxelengine.Block):
         
 
     def handle_event_explosion(self,events):
+        """default implementation for handling explosion events"""
         for event in events: #M# could add up power of events or something
             #if isinstance(event.area, Sphere):
             #    position, power = event.area.center, event.area.radius
@@ -235,7 +228,7 @@ class Item(object):
 
         # check if block would collide with player
         blockdata = self.block_version_on_place(character,blockpos,face)
-        block = Block(blockdata, position=new_pos, blockworld=character.world.blocks)
+        block = BlockFactory(blockdata, position=new_pos, blockworld=character.world.blocks)
         if "solid" in block.get_tags():
             for entity in character.world.entities.find_entities(block.get_bounding_box()):
                 if block.collides_with( entity.HITBOX + entity["position"] ):
@@ -265,15 +258,21 @@ class Entity(voxelengine.Entity):
     LIMIT = 0
     instances = []
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-
-        self["velocity"] = Vector([0,0,0])
-        self["last_update"] = time.time()
-        self["flying"] = False
-        self["lives"] = 10
-        self["ACCELERATION"] = 20
-        self["SPEED"] = 10
+    def __init__(self, data = None):
+        data_defaults = {
+            "velocity" : Vector([0,0,0]),
+            "last_update" : time.time(),
+            "flying" : False,
+            "lives" : 10,
+            "ACCELERATION" : 20,
+            "SPEED" : 10,
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
+        
+        assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses or use EntityFactory
+        assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
         self.register_item_sanitizer(lambda v: Vector(v),"velocity")
 
@@ -304,17 +303,10 @@ class Entity(voxelengine.Entity):
 
     
     @classmethod
-    def try_to_spawn(cls, world):
-        x = random.randint(-40,40)
-        y = random.randint(-10,20)
-        z = random.randint(-40,40)
-        block = world.blocks[(x,y-3,z)]
-        area = cls.HITBOX+Vector(x,y,z)
-        if block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")):
-            print("spawning",cls,"at position",(x,y,z))
-            entity = cls()
-            entity.set_world(world,(x,y,z))
-            return entity
+    def test_spawn_conditions(cls, world, position):
+        block = world.blocks[position - (0,3,0)]
+        area = cls.HITBOX + position
+        return (block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")))
     
     def onground(entity):
         return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
@@ -566,6 +558,20 @@ def register_entity(name):
     return _register_entity
 
 register_command = Command.register_command
+
+def BlockFactory(data, *args, **kwargs):
+    if isinstance(data, str):
+        data = {"id":data}
+    block_type = data["id"]
+    blockClass = blockClasses[block_type]
+    return blockClass(data, *args, **kwargs) #M# change to directly initialize the correct block
+
+def EntityFactory(data):
+    if isinstance(data, str):
+        data = {"type":data}
+    entity_type = data["type"]
+    entityClass = entityClasses[entity_type]
+    return entityClass(data)
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name
