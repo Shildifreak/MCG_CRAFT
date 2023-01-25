@@ -28,11 +28,6 @@
 #						 (0, 0, 0, 1)),
 #}
 
-#removed blocks:
-    #"GREEN" ,                  : {,       0, [( 0, 2)]],
-    #["HAUT"  ,                   False,       0, [(11,14)]],
-    #"WOLLE"                    : ( 8, 2)
-    #["OEL",                       False,       0, [( 1, 5)]],
 
 {
 "BLOCKS" : {
@@ -112,7 +107,7 @@
     "Schafbeine"               : {"faces":{"top":"weiss",       "bottom":"schwarz",        "other":"schafbeine"    }},
     "Menschenbeine"            : {"faces":{"top":"gesicht_top", "bottom":"gesicht_bottom", "other":"menschenbeine" }},
     "Damenbeine"               : {"faces":{"top":"hellgrau",    "bottom":"rot",            "other":"damenbeine"    }},
-
+    "HAUT"                     : {"faces":{"all":"HAUT"}},
     #Oberkoerper
     "Damenkoerper"             : {"faces":{"all":"damenkoerper"}},
 
@@ -163,7 +158,6 @@
     "Scheine"                  : {"icon":"schein"                },
     "Kredidtkarte"             : {"icon":"kredidtkarte"          },
     "ARROW"                    : {"icon":"ARROW"                 },
-    "ARROW2"                    : {"icon":"ARROW:2"                 },
     "TORCH"                    : {"icon":"torch_on"              },
     "LAMP"                     : {"icon":"lamp_off"              },
     "HERZ"                     : {"icon":"herz"                  },
