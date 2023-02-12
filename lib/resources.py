@@ -81,7 +81,15 @@ class Block(voxelengine.Block):
     def redstone_activated(self):
         for face in FACES:
             nachbarblock = self.relative[face]
-            if nachbarblock["p_level"]:
+            if nachbarblock["p_level"] > 0:
+                if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
+                    return True
+        return False
+
+    def bluestone_activated(self):
+        for face in FACES:
+            nachbarblock = self.relative[face]
+            if nachbarblock["p_level"] < 0:
                 if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
                     return True
         return False
@@ -190,16 +198,16 @@ class SolidBlock(Block):
         """directions indicates where update(s) came from... usefull for observer etc."""
         """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
         # redstone Zeug
-        level = 0
-        stronglevel = 0
+        levels = [0]
+        stronglevels = [0]
         for face in FACES:
             neighbour = self.relative[-face]
             if (face in neighbour["p_directions"]):
-                level = max(level, neighbour["p_level"])
+                levels.append(neighbour["p_level"])
                 if neighbour != "Redstone":
-                    stronglevel = max(stronglevel, neighbour["p_level"])
-        self["p_level"] = level
-        self["p_stronglevel"] = stronglevel
+                    stronglevels.append(neighbour["p_level"])
+        self["p_level"] = max(levels,key=abs)
+        self["p_stronglevel"] = max(stronglevels,key=abs)
         return False
 
     def get_tags(self):

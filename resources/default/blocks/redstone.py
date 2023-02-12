@@ -16,8 +16,9 @@ class Redstone(Block):
                 level = block["p_stronglevel"]
                 if level == None:
                     level = block["p_level"]
-                maxpower = max(maxpower, level)
-        p_level = maxpower - 1
+                if abs(level) > abs(maxpower):
+                    maxpower = level
+        p_level = maxpower - (1 if maxpower > 0 else -1)
         if self["p_level"] != p_level:
             self["p_level"] = p_level
             self["state"] = str(p_level)

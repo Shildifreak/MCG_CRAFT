@@ -93,36 +93,30 @@
             4
         ],
         "olive": [
-			5,
-			4
-			
-		],
-		"dunkelgrau": [
+            5,
+            4
+        ],
+        "dunkelgrau": [
             6,
             4
-        
-		],
+        ],
         "lila": [
             7,
             4
-        
-		],
+        ],
         "grau": [
             8,
             4
-        
-		],
+        ],
         "grau-braun": [
-			9,
-			4
-			
-		],
-		"mitteldunkellila": [
-			10,
-			4
-			
-		],
-		"rot": [
+            9,
+            4
+        ],
+        "mitteldunkellila": [
+            10,
+            4
+        ],
+        "rot": [
             11,
             4
         ],
@@ -135,35 +129,30 @@
             4
         ],
         "semisolitude": [
-			14,
-			4
-			
-		],
-		"scharz": [
-			0,
-			3
-		
-		],
-		"hellschwarz": [
-			1,
-			3
-			
-		],
-		"dunkellila": [
-			2,
-			3
-			
-		],
-		"braun": [
+            14,
+            4
+        ],
+        "scharz": [
+            0,
+            3
+        ],
+        "hellschwarz": [
+            1,
+            3
+        ],
+        "dunkellila": [
+            2,
+            3
+        ],
+        "braun": [
             3,
             3
         ],
         "hellbraun": [
-			3,
-			4
-			
-		],
-		"orange": [
+            3,
+            4
+        ],
+        "orange": [
             5,
             3
         ],
@@ -172,26 +161,22 @@
             3
         ],
         "besch": [
-			7,
-			3
-			
-		],
-		"petrol": [
-			8,
-			3
-			
-		],
-		"dunkelblau": [
-			9,
-			3
-			
-		],
-		"blau": [
-			10,
-			3
-			
-		],
-		"hellblau": [
+            7,
+            3
+        ],
+        "petrol": [
+            8,
+            3
+        ],
+        "dunkelblau": [
+            9,
+            3
+        ],
+        "blau": [
+            10,
+            3
+        ],
+        "hellblau": [
             11,
             3
         ],
@@ -204,11 +189,10 @@
             3
         ],
         "mittelgrau": [
-			14,
-			3
-			
-		],
-		"muenze": [
+            14,
+            3
+        ],
+        "muenze": [
             6,
             12
         ],
@@ -357,11 +341,10 @@
             5
         ],
         "obenausgefahren_piston": [
-			1,
-			5
-			
-		],
-		"repeater_off": [
+            1,
+            5
+        ],
+        "repeater_off": [
             6,
             5
         ],
@@ -708,6 +691,22 @@
         "ARROW": [
             7,
             9
+        ],
+        "bluestone_dust_0": [
+            0,
+            0
+        ],
+        "bluestone_dust_4": [
+            1,
+            0
+        ],
+        "bluestone_dust_8": [
+            2,
+            0
+        ],
+        "bluestone_dust_12": [
+            3,
+            0
         ]
     }
 }
