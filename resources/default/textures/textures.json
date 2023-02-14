@@ -132,7 +132,7 @@
             14,
             4
         ],
-        "scharz": [
+        "schwarz": [
             0,
             3
         ],
@@ -706,6 +706,142 @@
         ],
         "bluestone_dust_12": [
             3,
+            0
+        ],
+        "semisolitude": [
+            14,
+            4
+        ],
+        "its_lit_front_oven": [
+            0,
+            9
+        ],
+        "its_off_oven_sides_back": [
+            1,
+            9
+        ],
+        "jukebox_downside": [
+            4,
+            9
+        ],
+        "jukebox_front_sides_back": [
+            5,
+            9
+        ],
+        "jukebox_upside": [
+            6,
+            9
+        ],
+        "its_off_front": [
+            1,
+            10
+        ],
+        "workbench_front_back": [
+            4,
+            10
+        ],
+        "workbench_sides": [
+            5,
+            10
+        ],
+        "workbench_top": [
+            6,
+            10
+        ],
+        "duplixflave": [
+            13,
+            10
+        ],
+        "duplexgriseo": [
+            12,
+            10
+        ],
+        "smile_quadraticus": [
+            14,
+            10
+        ],
+        "acacia_wood": [
+            15,
+            10
+        ],
+        "black_oak_wood": [
+            15,
+            11
+        ],
+        "many_water": [
+            8,
+            12
+        ],
+        "not_many_water": [
+            9,
+            12
+        ],
+        "moosige_steinziegel": [
+            10,
+            15
+        ],
+        "heuballen_oben_unten": [
+            12,
+            12
+        ],
+        "spawner_ALLES": [
+            13,
+            12
+        ],
+        "Eisenblock": [
+            14,
+            12
+        ],
+        "birch_wood": [
+            15,
+            12
+        ],
+        "heuballen_forne_seiten_hinten": [
+            12,
+            13
+        ],
+        "Gew\u00e4sserlaterne": [
+            13,
+            13
+        ],
+        "komprimiertes_Eis": [
+            14,
+            13
+        ],
+        "jungle_wood": [
+            15,
+            13
+        ],
+        "Gl\u00fchstein": [
+            12,
+            14
+        ],
+        "wary_white": [
+            13,
+            14
+        ],
+        "Prismarin": [
+            14,
+            14
+        ],
+        "oak_wood": [
+            15,
+            14
+        ],
+        "Eis": [
+            13,
+            15
+        ],
+        "dunkles_Prismarin": [
+            14,
+            15
+        ],
+        "spruce_wood": [
+            15,
+            15
+        ],
+        "HAUT": [
+            5,
             0
         ]
     }

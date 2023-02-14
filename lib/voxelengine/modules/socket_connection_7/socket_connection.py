@@ -228,7 +228,9 @@ class beacon():
                                             "key"  : self.key,
                                             "value": self.info_data})
                 with urllib.request.urlopen("http://" + self.nameserveraddr + "/register.py?" + p) as f:
-                    print(f.read())
+                    reply = f.read()
+                    if reply.strip() != b"success":
+                        print("unexpected response from nameserver:",reply)
             except Exception as e:
                 print (e, "in _register_thread")
             time.sleep(self.nameserver_refresh_interval)
