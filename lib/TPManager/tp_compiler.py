@@ -120,6 +120,8 @@ if __name__ == "__main__":
 	
 	tp_compiler = TP_Compiler()
 	tp_compiler.add_textures_from(path)
+
+	print(tp_compiler.description["BLOCKS"].keys())
 	
 	tp_compiler.save_to("test")
 
