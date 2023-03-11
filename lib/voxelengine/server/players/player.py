@@ -2,7 +2,6 @@ import collections, itertools
 import _thread as thread
 import threading
 import time
-import json
 import base64
 
 from voxelengine.modules.message_buffer import MessageBuffer
@@ -202,6 +201,9 @@ class Player(object):
 
 	def _handle_input(self,msg):
 		"""do something so is_pressed and was_pressed work"""
+		if not isinstance(msg, collections.abc.Iterable):
+			print("invalid msg format", msg, "all messages must be json arrays")
+			return
 		cmd, *args = msg
 
 		def deep_type(obj):

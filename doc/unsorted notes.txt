@@ -16,6 +16,9 @@ Zu sichten und sortieren:
 		webdemo does not work from school -> probably a firewall issue -> detect better to at least show useful error message -> but it did show some messages going through websocket, so where exactly is the error?
 	
 	todo:
+		webclient renderdistance not diagonal (separate render distance from raytracing steps, so diagonals can be longer and reflections as well)
+		separate horizontal and vertical renderchunks and monitorchunks
+	
 		add F11 for fullscreen to desktop client
 		remove unimplemented code stuff on desktop client
 			has_blocks_to_be_updated, get_block_to_be_updated
