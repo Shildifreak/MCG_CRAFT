@@ -220,7 +220,7 @@ class WebsocketServerCodec(Codec):
             pass # see below if,elif,else construct
         elif opcode == OPCODE_PING:
             print("got pinged")
-            self.send_pong()
+            self.send_pong("")
             socket_buffer.read(2)
             return
         elif opcode == OPCODE_PONG:
