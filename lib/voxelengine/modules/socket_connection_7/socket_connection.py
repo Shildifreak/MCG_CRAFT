@@ -71,6 +71,16 @@ class template(object):
     def __exit__(self,*args):
         self.close()
 
+class InvalidMsg(object):
+    pass
+INVALID_MSG = InvalidMsg()
+
+def json_loads_or_INVALID_MSG (msg):
+    try:
+        return json.loads(msg)
+    except json.JSONDecodeError as e:
+        return INVALID_MSG
+
 class client(template):
     def __init__(self,serveraddr):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -86,7 +96,7 @@ class client(template):
         self.receive_buffer.extend(self.codec_socket.get_messages())
         while self.receive_buffer:
             msg = self.receive_buffer.pop(0)
-            yield json.loads(msg)
+            yield json_loads_or_INVALID_MSG(msg)
 
     def close(self):
         self.socket.close()
@@ -145,7 +155,7 @@ class server(template):
             try:
                 msgs = client_socket.get_messages()
                 msgs = list(msgs)
-                msgs = map(json.loads, msgs)
+                msgs = map(json_loads_or_INVALID_MSG, msgs)
                 msgs_with_addresses = zip(msgs, itertools.cycle((addr,)))
                 yield from msgs_with_addresses
             except Disconnect as e:

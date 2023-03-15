@@ -12,11 +12,15 @@ Zu sichten und sortieren:
 	
 	bug:
 		client_utils.py: select is not defined
+		webclient scroll does not work in inventory (or generally when not in exclusive mode)
+		webdemo does not work from school -> probably a firewall issue -> detect better to at least show useful error message -> but it did show some messages going through websocket, so where exactly is the error?
 	
 	todo:
-		print("Consider setting a password when using a name.") -> move this to gui or server?
+		webclient renderdistance not diagonal (separate render distance from raytracing steps, so diagonals can be longer and reflections as well)
+		separate horizontal and vertical renderchunks and monitorchunks
 	
-		unimplemented code stuff on desktop client
+		add F11 for fullscreen to desktop client
+		remove unimplemented code stuff on desktop client
 			has_blocks_to_be_updated, get_block_to_be_updated
 
 		optimizing set command in MessageBuffer
@@ -43,6 +47,8 @@ Zu sichten und sortieren:
 		-> have to send focused hud element with scroll
 	
 		desktop client: make only one vertex list per entity model (or reuse them?)
+
+		print("Consider setting a password when using a name.") -> move this to gui or server?
 	
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header
