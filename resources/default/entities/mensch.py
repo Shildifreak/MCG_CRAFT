@@ -1,6 +1,5 @@
 from resources import *
 import time, random
-import json
 
 @register_entity("Mensch")
 
@@ -14,6 +13,7 @@ class Mensch(Entity):
     
     def __init__(self, data = None):
         data_defaults = {
+            "texture" : "MENSCH",
             "skin" : random.choice(self.LEGS),
             "emote" : self.EMOTES[0],
             "show_emote" : False,
@@ -31,16 +31,16 @@ class Mensch(Entity):
             data_defaults.update(data)
         super().__init__(data_defaults)
 
-        self.register_item_callback(self._update_texture,"skin")
-        self.register_item_callback(self._update_texture,"emote")
-        self.register_item_callback(self._update_texture,"show_emote")
+        self.register_item_callback(self._update_modelmaps,"skin")
+        self.register_item_callback(self._update_modelmaps,"emote")
+        self.register_item_callback(self._update_modelmaps,"show_emote")
 
 
-    def _update_texture(self, _):
-        texture_mappings = {"<<random>>":self["skin"]}
+    def _update_modelmaps(self, _):
+        modelmaps = {"<<random>>":self["skin"]}
         if self["show_emote"]:
-            texture_mappings["GESICHT:2"] = self["emote"]
-        self["texture"] = "MENSCH:%s" % json.dumps(texture_mappings, separators=(',',':'))
+            modelmaps["GESICHT:2"] = self["emote"]
+        self["modelmaps"] = modelmaps
 
     def select_emote(self, index):
         self["emote"] = self.EMOTES[index%len(self.EMOTES)]

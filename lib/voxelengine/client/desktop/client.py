@@ -657,15 +657,10 @@ class Model(object):
         # ignores translation (4th column) of matrix and uses offset instead
         return [sum([vecs[c-(c%3)+r]*mat[r+4*(c%3)] for r in range(3)])+offset[c%3] for c,x in enumerate(vecs)]
 
-    def set_entity(self,entity_id,model_id,position,rotation):
+    def set_entity(self,entity_id,model_id,position,rotation,model_maps):
         self.del_entity(entity_id)
-        if model_id == "0":
+        if model_id == None:
             return
-        model_id, *model_maps = model_id.split(":",1)
-        if model_maps:
-            model_maps = ast.literal_eval(model_maps[0])
-        else:
-            model_maps = {}
         vertex_lists=[]
         model = ENTITY_MODELS[model_id]
         # transformationsmatrix bekommen
@@ -1055,13 +1050,13 @@ class Window(pyglet.window.Window):
                 elif test("focusdist",1):
                     focus_distance, = args
                     assert isinstance(focus_distance, (int, float))
-                elif test("setentity",4):
-                    entity_id, model, position, rotation = args
-                    assert type(entity_id) == int
-                    assert type(model) == str
+                elif test("setentity",5):
+                    entity_id, model, position, rotation, modelmaps = args
+                    assert type(entity_id) == int or print(entity_id)
+                    assert isinstance(model, (str, type(None))) or print(model)
                     position = Vector(position)
                     rotation = Vector(rotation)
-                    self.model.set_entity(entity_id,model,position,rotation)
+                    self.model.set_entity(entity_id,model,position,rotation, modelmaps)
                 elif test("delentity",1):
                     entity_id, = args
                     self.model.del_entity(entity_id)
