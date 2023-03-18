@@ -9,16 +9,16 @@ class Redstone(Block):
     def handle_event_block_update(self,event):
         connections = FACES[:]
         # hier weitere verbindungen einfügen (für diagonalen)
-        maxpower = 1
+        pla = PowerLevelAccumulator()
         for dpos in connections:
-            block = self.world.blocks[dpos+self.position]
+            block = self.relative[dpos]
             if block["p_ambient"] or -dpos in block["p_directions"]:
                 level = block["p_stronglevel"]
                 if level == None:
                     level = block["p_level"]
-                if abs(level) > abs(maxpower):
-                    maxpower = level
-        p_level = maxpower - (1 if maxpower > 0 else -1)
+                pla.add(level)
+        maxpower = pla.level
+        p_level = maxpower - (maxpower > 0) + (maxpower < 0)
         if self["p_level"] != p_level:
             self["p_level"] = p_level
             self["state"] = str(p_level)
@@ -44,14 +44,14 @@ class Repeater(Block):
         d = self.get_front_facing_vector()
         self["p_directions"] = (d,)
         
-        source = self.world.blocks[self.position - d]
-        if source["p_level"] and (source["p_ambient"] or (d in source["p_directions"])):
+        source = self.world.blocks.get(self.position - d, t=-1)
+        source_level = source["p_level"] if (source["p_ambient"] or (d in source["p_directions"])) else 0
+        new_p_level = 15 * ((source_level > 0) - (source_level < 0))
+        if new_p_level != self["p_level"]:
+            self["p_level"] = new_p_level
             self["state"] = ""
-            self["p_level"] = 15
-        else:
-            self["state"] = ""
-            self["p_level"] = 0
-        return True
+            return True
+        return False
 
     #def activated(self,character,face):
     #    d = self.get_front_facing_vector()

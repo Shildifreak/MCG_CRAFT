@@ -15,6 +15,19 @@ GRAVITY = 35
 AIRSLIDING = 1
 SLIDING = 0.000001
 
+class PowerLevelAccumulator(object):
+    __slots__ = ("level", "abs_level")
+    def __init__(self):
+        self.level = 0
+        self.abs_level = 0
+    def add(self, level):
+        abs_level = abs(level)
+        if abs_level >= self.abs_level:
+            if abs_level == self.abs_level and level != self.level: #same power but different sign
+                self.level = 0
+            else:
+                self.level = level
+            self.abs_level = abs_level
 
 class Block(voxelengine.Block):
     blast_resistance = 0
@@ -78,21 +91,30 @@ class Block(voxelengine.Block):
         return any_changed
 
     # helper functions
-    def redstone_activated(self):
+    def ambient_power_level(self):
+        ambient_power = PowerLevelAccumulator()
         for face in FACES:
-            nachbarblock = self.relative[face]
-            if nachbarblock["p_level"] > 0:
-                if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
-                    return True
-        return False
+            neighbour = self.relative[-face]
+            if neighbour["p_ambient"] or (face in neighbour["p_directions"]):
+                ambient_power.add(neighbour["p_level"])
+        return ambient_power.level
+    
+    def power_levels(self):
+        power = PowerLevelAccumulator()
+        strong_power = PowerLevelAccumulator()
+        for face in FACES:
+            neighbour = self.relative[-face]
+            if face in neighbour["p_directions"]:
+                power.add(neighbour["p_level"])
+                if neighbour != "Redstone":
+                    strong_power.add(neighbour["p_level"])
+        return power.level, strong_power.level
+    
+    def redstone_activated(self):
+        return self.ambient_power_level() > 0
 
     def bluestone_activated(self):
-        for face in FACES:
-            nachbarblock = self.relative[face]
-            if nachbarblock["p_level"] < 0:
-                if nachbarblock["p_ambient"] or -face in nachbarblock["p_directions"]:
-                    return True
-        return False
+        return self.ambient_power_level() < 0
 
     def block_to_world_vector(self, vector):
         def r_x(v):
@@ -198,17 +220,12 @@ class SolidBlock(Block):
         """directions indicates where update(s) came from... usefull for observer etc."""
         """for pure cellular automata action make sure to not set any blocks but only return new state for this block (use schedule to do stuff that effects other blocks)"""
         # redstone Zeug
-        levels = [0]
-        stronglevels = [0]
-        for face in FACES:
-            neighbour = self.relative[-face]
-            if (face in neighbour["p_directions"]):
-                levels.append(neighbour["p_level"])
-                if neighbour != "Redstone":
-                    stronglevels.append(neighbour["p_level"])
-        self["p_level"] = max(levels,key=abs)
-        self["p_stronglevel"] = max(stronglevels,key=abs)
-        return False
+        prev_levels = self["p_level"], self["p_stronglevel"]
+        p_levels = self.power_levels()
+        if p_levels != prev_levels:
+            self["p_level"], self["p_stronglevel"] = p_levels
+            return True
+        return True
 
     def get_tags(self):
         return super(SolidBlock, self).get_tags().union({"block_update"})
