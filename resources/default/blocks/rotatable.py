@@ -1,5 +1,6 @@
 from resources import *
 
+@register_item("STONESLAB")
 @register_item("HERZ")
 @register_item("GESICHT")
 @register_item("HEBEL")
