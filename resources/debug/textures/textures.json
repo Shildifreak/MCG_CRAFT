@@ -1,0 +1,32 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "testblock_xp": [
+            0,
+            0
+        ],
+        "testblock_xn": [
+            1,
+            0
+        ],
+        "testblock_yp": [
+            2,
+            0
+        ],
+        "testblock_yn": [
+            3,
+            0
+        ],
+        "testblock_zp": [
+            4,
+            0
+        ],
+        "testblock_zn": [
+            5,
+            0
+        ]
+    }
+}
