@@ -316,7 +316,7 @@ class Player(object):
 	
 	def _set_entity(self,entity):
 		priority = 1 if entity == self.entity else 0
-		self.outbox.add("setentity",hash(entity),entity["texture"],entity["position"],entity["rotation"], priority=priority)
+		self.outbox.add("setentity",id(entity),entity["texture"],entity["position"],entity["rotation"],dict(entity["modelmaps"]), priority=priority)
 
 	def _del_entity(self,entity):
-		self.outbox.add("delentity",hash(entity))
+		self.outbox.add("delentity",id(entity))

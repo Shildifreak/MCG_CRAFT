@@ -13,14 +13,14 @@ server -> client
 		setze Kameraposition, starte Neuberechnung von monitored area
 	focusdist n
 		setze Distanz bis zu der Blöcke anvisiert werden
-	setentity id model <x y z> <yaw pitch>
+	setentity uid model_id <x y z> <yaw pitch> modelmaps
 		zeige/update Entity
-	delentity id
+	delentity uid
 		lösche Entity
-	sethud id texture <x y z> rotation <w h> align
+	sethud uid texture <x y z> rotation <w h> align
 		zeige HUD Element
 		anklickbar wenn id mit # beginnt
-	delhud id
+	delhud uid
 		lösche HUD Element
 	focushud
 		bringe Client in Mausmodus

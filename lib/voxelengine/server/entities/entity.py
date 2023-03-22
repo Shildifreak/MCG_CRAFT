@@ -19,7 +19,8 @@ class Entity(ObservableDict):
         data_defaults = {
             "position" : (0,0,0),
             "rotation" : (0,0),
-            "texture" : 0,
+            "texture" : None,
+            "modelmaps" : {},
             "tags" : [],
         }
         if data != None:
@@ -33,6 +34,7 @@ class Entity(ObservableDict):
         self.register_item_callback(self._on_tags_change,"tags")
         self.register_item_callback(self._on_visible_change,"rotation")
         self.register_item_callback(self._on_visible_change,"texture")
+        self.register_item_callback(self._on_visible_change,"modelmaps")
         self.register_item_sanitizer(lambda pos: Vector(pos),"position")
 
     def _on_position_change(self, new_position):

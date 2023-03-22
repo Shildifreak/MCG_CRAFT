@@ -312,10 +312,6 @@
             11,
             2
         ],
-        "torch_on": [
-            7,
-            6
-        ],
         "torch_off": [
             7,
             5
@@ -339,10 +335,6 @@
         "repeater_off": [
             6,
             5
-        ],
-        "repeater_on": [
-            6,
-            6
         ],
         "racketenwerfer_side": [
             15,
@@ -624,30 +616,6 @@
             10,
             2
         ],
-        "testblock_xp": [
-            8,
-            0
-        ],
-        "testblock_xn": [
-            9,
-            0
-        ],
-        "testblock_yp": [
-            10,
-            0
-        ],
-        "testblock_yn": [
-            11,
-            0
-        ],
-        "testblock_zp": [
-            12,
-            0
-        ],
-        "testblock_zn": [
-            13,
-            0
-        ],
         "HALM": [
             8,
             11
@@ -699,10 +667,6 @@
         "bluestone_dust_12": [
             3,
             0
-        ],
-        "semisolitude": [
-            14,
-            4
         ],
         "its_lit_front_oven": [
             0,
@@ -839,6 +803,22 @@
         "schwarz": [
             0,
             3
+		],
+        "torch_blue": [
+            7,
+            0
+        ],
+        "torch_red": [
+            7,
+            6
+        ],
+        "repeater_red": [
+            6,
+            6
+        ],
+        "repeater_blue": [
+            6,
+            0
         ]
     }
 }

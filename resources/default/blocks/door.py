@@ -7,6 +7,8 @@ class Door(Block):
     #offset = -1 / 1      # y offset to get to other half of door
     
     def activated(self,character,face):
+        if self.ambient_power_level() != 0:
+            return
         new_state = "" if self["state"] else "OPEN"
         self.relative[(0,self.offset_top   ,0)] = {"id":"DOORTOP"   , "state":new_state}
         self.relative[(0,self.offset_bottom,0)] = {"id":"DOORBOTTOM", "state":new_state}
@@ -16,9 +18,30 @@ class Door(Block):
         self.relative[(0,self.offset_bottom,0)] = "AIR"
         super().mined(character, face)
 
+    def ambient_power_level(self):
+        ambient_power = PowerLevelAccumulator()
+        for face in FACES:
+            for offset in [self.offset_top, self.offset_bottom]:
+                neighbour = self.relative[-face+(0,offset,0)]
+                if neighbour["p_ambient"] or (face in neighbour["p_directions"]):
+                    ambient_power.add(neighbour["p_level"])
+        return ambient_power.level
+
+    def handle_event_block_update(self,event):
+        power = self.ambient_power_level()
+        if power != 0:
+            new_state = "OPEN" if power > 0 else ""
+            if new_state != self["state"]:
+                self["state"] = new_state
+                return True
+        return False
+
     def item_version(self):
         """use the output of this function when turning the block into an item"""
         return {"id":"DOOR","count":1}
+
+    def get_tags(self):
+        return super().get_tags() | {"block_update"}
 
     def collides_with(self,area):
         return self["state"] != "OPEN"
