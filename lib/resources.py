@@ -119,7 +119,7 @@ class Block(voxelengine.Block):
     def block_to_world_vector(self, vector):
         def r_x(v):
             x, y, z = v
-            return Vector((  x, -z,  y)) #maybe need to swap sign on z,y
+            return Vector((  x, -z,  y))
             
         def r_y(v):
             x, y, z = v

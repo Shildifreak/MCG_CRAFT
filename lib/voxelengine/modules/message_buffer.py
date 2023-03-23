@@ -24,6 +24,7 @@ class MessageBuffer(object):
                          "set":(self.block_group,), "delarea":(self.block_group,),
                          "clear":(self.priority_group,), "error":(self.priority_group,),
                          "focusdist":(self.type_group,), "focushud":(self.type_group,),
+                         "textsuggestions":(self.type_group,),
                          "sethud":(self.hud_group,), "delhud":(self.hud_group,),
                         }
         self.groups = (self.goto_group, self.entity_group, self.vip_entity_group, self.block_group,

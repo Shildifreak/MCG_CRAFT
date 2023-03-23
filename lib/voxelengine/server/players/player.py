@@ -134,6 +134,8 @@ class Player(object):
 			else:
 				self._set_entity(entity)
 				
+	def autocomplete(self, msg):
+		return ["test1","test2","test3"]
 
 	### it follows a long list of private methods that make sure a player acts like one ###
 
@@ -277,6 +279,10 @@ class Player(object):
 
 		elif cmd == "press" and argsformat == (str,):
 			self.was_pressed_counter[str(args[0])] += 1
+		
+		elif cmd == "autocomplete" and argsformat == (str,):
+			suggestions = self.autocomplete(args[0])
+			self.outbox.add("textsuggestions",suggestions)
 		
 		elif cmd in self.CUSTOM_COMMANDS:
 			self.new_custom_commands_dict[cmd].append(args)
