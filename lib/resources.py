@@ -604,9 +604,10 @@ def EntityFactory(data):
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name
+tp_compiler = None # initialized in load_resources_from
 
 def load_resources_from(resource_paths):
-    global blockClasses, itemClasses, entityClasses
+    global blockClasses, itemClasses, entityClasses, tp_compiler
 
     blockClasses  = collections.defaultdict(lambda:SolidBlock)
     itemClasses   = collections.defaultdict(lambda:Item)
@@ -632,3 +633,5 @@ def load_resources_from(resource_paths):
             print(textures_path)
             tp_compiler.add_textures_from(textures_path)
     tp_compiler.save_to(texturepackPath)
+
+    

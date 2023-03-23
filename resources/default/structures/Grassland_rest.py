@@ -158,7 +158,7 @@
             for N_ in range(9):
                 x += 1
                 self.add_block((x,y,z),"Eichenbretter")
-            # bis hier Wände von Haus
+            # bis hier WÃ¤nde von Haus
             y -= 2
             x -= 2
             z += 1

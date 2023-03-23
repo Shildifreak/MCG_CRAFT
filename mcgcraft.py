@@ -313,8 +313,13 @@ class Player(voxelengine.Player):
 
         # just for testing:
         character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
-        for blockname in resources.blockClasses.keys():
+        functional_blocks = resources.blockClasses.keys()
+        all_blocks = resources.tp_compiler.description["BLOCKS"].keys()
+        for blockname in functional_blocks: # with class in resourcepack/blocks
             character["inventory"].append({"id":blockname})
+        for blockname in all_blocks: # blocks only mentioned in description.py
+            if blockname not in functional_blocks:
+                character["inventory"].append({"id":blockname})
 
         # inventory stuff
         for i in range(60):
