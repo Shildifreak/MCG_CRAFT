@@ -348,6 +348,16 @@ class Player(voxelengine.Player):
                 other_events.append(event)
         super().handle_events(other_events)
 
+    def autocomplete(self, msg):
+        if msg.startswith("/"):
+            return resources.Command.autocomplete(msg)
+        else:
+            return ["Hi",
+                    "😀","😁","😅","😇","😉","😊","😋","😍","😎",
+                    "😐","😓","😕","😚","😛","😜","😟","😠","😢",
+                    "😤","😭","😯","😳","😴","🙁","🙂","🙃","🙄",
+                    ]
+
     def _open_inventory_callback(self, boolean):
         if boolean:
             self.inventory_display.open(self.entity.foreign_inventory)

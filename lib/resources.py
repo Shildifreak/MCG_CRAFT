@@ -500,6 +500,10 @@ class Command(object):
 			return command
 		return _register_command
 
+	@classmethod
+	def autocomplete(cls, msg):
+		return ["/"+command_name for command_name in cls.commands]
+
 	def __init__(self, originator, command_text):
 		self.originator = originator
 		self.command_text = command_text
