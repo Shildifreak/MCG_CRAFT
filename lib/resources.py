@@ -475,89 +475,222 @@ class Entity(voxelengine.Entity):
         return True
 
 
-
+class CommandException(Exception):
+    pass
 
 class Command(object):
-	"""
-	permission_level:
-		  -1 - no commands allowed
-		   0 - commands with no effects in game (whisper, help, log, etc.)
-		   1 - commands with negative effects to originator (kill, ...)
-		   2 - commands with slight positive effects (goto)
-		   3 - commands with great positive effect (give)
-		   9 - commands that directly affect other entities (entity, setblock, ...)
-		  90 - commands that effect players (kick, ban, timeout, ...)
-		 900 - commands that effect permissions (op, deop, ...)
-		9000 - server level commands (restart, stop, etc.)
-	"""
-	commands = {} # {name: command_func}
+    """
+    permission_level:
+          -1 - no commands allowed
+           0 - commands with no effects in game (whisper, help, log, etc.)
+           1 - commands with negative effects to originator (kill, ...)
+           2 - commands with slight positive effects (goto)
+           3 - commands with great positive effect (give)
+           9 - commands that directly affect other entities (entity, setblock, ...)
+          90 - commands that effect players (kick, ban, timeout, ...)
+         900 - commands that effect permissions (op, deop, ...)
+        9000 - server level commands (restart, stop, etc.)
+    """
+    commands = {} # {name: command_func}
 
-	@classmethod
-	def register_command(cls, name, permission_level=9000):
-		def _register_command(command):
-			cls.commands[name] = command
-			command.permission_level = permission_level
-			return command
-		return _register_command
+    @classmethod
+    def register_command(cls, name, permission_level=9000):
+        def _register_command(command):
+            cls.commands[name] = command
+            command.permission_level = permission_level
+            return command
+        return _register_command
 
-	@classmethod
-	def autocomplete(cls, msg):
-		return ["/"+command_name for command_name in cls.commands]
+    class COMMAND(object):
+        @staticmethod
+        def parse(self, context):
+            command = Command.commands.get(self, None)
+            if command == None:
+                raise CommandException("unknown command name ",repr(self))
+            return command
 
-	def __init__(self, originator, command_text):
-		self.originator = originator
-		self.command_text = command_text
+        @staticmethod
+        def autocomplete(self, context):
+            return [
+                command_name + (" " if len(Command.get_arg_layout(command_func)) else "")
+                for command_name, command_func in Command.commands.items()
+                if context.permission_level >= command_func.permission_level \
+                and command_name.startswith(self)
+            ]
 
-		if isinstance(self.originator, voxelengine.Player):
-			self.originator_name = "Player " + repr(self.originator)
-			if self.originator.entity:
-				self.originator_name += " [%s]" % self.originator.entity["id"]
-			self.permission_level = 3
-			self.universe = self.originator.universe
-			self.player = self.originator
-			self.entity = self.originator.entity #may still be None
-		elif isinstance(self.originator, voxelengine.Universe):
-			self.originator_name = "Server"
-			self.permission_level = 9000
-			self.universe = self.originator
-			self.player = None
-			self.entity = None
-		else:
-			raise NotImplementedError()
+    @staticmethod
+    def get_arg_layout(command_func):
+        fas = inspect.getfullargspec(command_func)
+        return [(a, fas.annotations[a])
+            for a in fas.args[1:] # ignore first argument which should always be CommandContext
+            if a in fas.annotations
+        ]
 
-		if self.entity:
-			self.world = self.entity.world
-			self.position = self.entity["position"]
-		else:
-			self.world = None
-			self.position = None
+    class BLOCKNAME(object):
+        @staticmethod
+        def parse(self, context):
+            if any(map(str.isspace,self)):
+                raise CommandException("blockname must not contain whitespace characters")
+            return str(self)
 
-	def send_feedback(self, feedback):
-		if isinstance(self.originator, voxelengine.Player):
-			self.originator.chat.add_message(feedback)
-		print(feedback)
+        @staticmethod
+        def autocomplete(self, context):
+            return [
+                blockname
+                for blockname in allBlocknames
+                if blockname.startswith(self)
+            ]
 
-	def execute_subcommand(self, subcommand):
-		self.command_text = subcommand
-		self.execute()
+    class ENTITY(object):
+        @staticmethod
+        def parse(self, context):
+            for world in context.universe.worlds:
+                try:
+                    return world.entities[self]
+                except KeyError:
+                    pass
+            raise CommandException("no entity with id <%s> found" % self)
+            
+        @staticmethod
+        def autocomplete(self, context):
+            entity_ids = []
+            for world in context.universe.worlds:
+                for entity in world.entities.entities:
+                    entity_id = entity.get("id",None)
+                    if entity_id and entity_id.startswith(self):
+                        entity_ids.append(entity_id)
+            return entity_ids
+    
+    class FLOAT(object):
+        @staticmethod
+        def parse(self, context):
+            try:
+                return float(self)
+            except:
+                raise CommandException(f"{self} is not a valid number")
+        
+        @staticmethod
+        def autocomplete(self, context):
+            return [self+" "] if len(self) else ["0 "] 
+    
+    class SUBCOMMAND(object):
+        @staticmethod
+        def parse(self, context):
+            return self
+        
+        @staticmethod
+        def autocomplete(self, context):
+            return context.autocomplete(self)
+    
+    class FREETEXT(object):
+        @staticmethod
+        def parse(self, context):
+            return self
+        @staticmethod
+        def autocomplete(self, context):
+            return []
 
-	def execute(self):
-		command_name, self.arg_text, *_ = self.command_text.split(" ",1) + [""]
-		command_name = command_name.lstrip("/")
-		command_func = self.commands.get(command_name, None)
-		if command_func:
-			# ensure permission
-			if self.permission_level < command_func.permission_level:
-				self.send_feedback("command /%s: insufficient permission level" % command_name)
-				return
-			# call command_function
-			command_func(self)
-		else:
-			self.send_feedback("Command /%s is not defined" % command_name)
+class CommandContext(object):
+    @property
+    def entity(self):
+        if self._entity == None:
+            raise CommandException("don't know which entity to target")
+        return self._entity
+    @entity.setter
+    def entity(self, entity):
+        self._entity = entity
+
+    def __init__(self, originator):
+        self.originator = originator
+
+        if isinstance(self.originator, voxelengine.Player):
+            self.originator_name = "Player " + repr(self.originator)
+            if self.originator.entity:
+                self.originator_name += " [%s]" % self.originator.entity["id"]
+            self.permission_level = 3
+            self.universe = self.originator.universe
+            self.player = self.originator
+            self.entity = self.originator.entity #may still be None
+        elif isinstance(self.originator, voxelengine.Universe):
+            self.originator_name = "Server"
+            self.permission_level = 9000
+            self.universe = self.originator
+            self.player = None
+            self.entity = None
+        else:
+            raise NotImplementedError()
+
+        if self._entity:
+            self.world = self.entity.world
+            self.position = self.entity["position"]
+        else:
+            self.world = None
+            self.position = None
+
+    def send_feedback(self, feedback):
+        if isinstance(self.originator, voxelengine.Player):
+            self.originator.chat.add_message(feedback)
+            print(feedback)
+        elif isinstance(self.originator, voxelengine.Universe):
+            print(feedback)
+        else:
+            raise NotImplementedError()
+
+    def autocomplete(self, command_text):
+        print("command_text", command_text)
+        command_name, arg_text, *_ = command_text.split(" ",1) + [None]
+        if arg_text == None:
+            return Command.COMMAND.autocomplete(command_name, self)
+        else:
+            try:
+                command_func = Command.COMMAND.parse(command_name, self)
+            except CommandException:
+                return []
+            print("command_func", command_func)
+            arg_layout = Command.get_arg_layout(command_func)
+            print("arg_layout", arg_layout)
+            # return autocompletion by type of last argument that is currently available
+            l = len(arg_layout)
+            args = arg_text.split(" ", l-1)
+            i = len(args) - 1 # last of args but not necessarily the last of arg_layout
+            print("args",args)
+            print(arg_layout[i][1], args[i])
+            last_arg_suggestions = arg_layout[i][1].autocomplete(args[i], self)
+            print("last_arg_suggestions",last_arg_suggestions)
+            command_except_last_arg = command_text[:len(command_text)-len(args[i])]
+            return [command_except_last_arg + las for las in last_arg_suggestions] 
+
+    def execute(self, command_text):
+        try:
+            command_text = command_text.rstrip(" ")
+            print("command_text", command_text)
+            command_name, arg_text, *_ = command_text.split(" ",1) + [""]
+            command_func = Command.COMMAND.parse(command_name, self)
+            print("command_func", command_func)
+            # ensure permission
+            if self.permission_level < command_func.permission_level:
+                raise CommandException("insufficient permission level")
+            # parse args
+            arg_layout = Command.get_arg_layout(command_func)
+            l = len(arg_layout)
+            if l > 0:
+                args = arg_text.split(" ", l-1)
+                if len(args) != l: # should check against number of args without default value to be more precise
+                    raise CommandException("wrong number of arguments")
+                kwargs = {a:t.parse(args[i],self) for i,(a,t) in enumerate(arg_layout)}
+                # call command_function
+                command_func(self, **kwargs)
+            else:
+                command_func(self)
+        except CommandException as e:
+            error_msg = " ".join(str(a) for a in e.args)
+            self.send_feedback(f"Command {command_name}: {error_msg}")
+
 
 blockClasses    = None # initialized in load_resources_from
 itemClasses     = None # initialized in load_resources_from
 entityClasses   = None # initialized in load_resources_from
+allBlocknames   = None # initialized in load_resources_from
 
 def register_item(name):
     def _register_item(item_subclass):
@@ -607,7 +740,7 @@ texturepackPath = texturepackDirectory.name
 tp_compiler = None # initialized in load_resources_from
 
 def load_resources_from(resource_paths):
-    global blockClasses, itemClasses, entityClasses, tp_compiler
+    global blockClasses, itemClasses, entityClasses, tp_compiler, allBlocknames
 
     blockClasses  = collections.defaultdict(lambda:SolidBlock)
     itemClasses   = collections.defaultdict(lambda:Item)
@@ -634,4 +767,4 @@ def load_resources_from(resource_paths):
             tp_compiler.add_textures_from(textures_path)
     tp_compiler.save_to(texturepackPath)
 
-    
+    allBlocknames = tuple(tp_compiler.description["BLOCKS"].keys())

@@ -314,10 +314,9 @@ class Player(voxelengine.Player):
         # just for testing:
         character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
         functional_blocks = resources.blockClasses.keys()
-        all_blocks = resources.tp_compiler.description["BLOCKS"].keys()
         for blockname in functional_blocks: # with class in resourcepack/blocks
             character["inventory"].append({"id":blockname})
-        for blockname in all_blocks: # blocks only mentioned in description.py
+        for blockname in resources.allBlocknames: # includes blocks only mentioned in description.py
             if blockname not in functional_blocks:
                 character["inventory"].append({"id":blockname})
 
@@ -355,7 +354,11 @@ class Player(voxelengine.Player):
 
     def autocomplete(self, msg):
         if msg.startswith("/"):
-            return resources.Command.autocomplete(msg)
+            command_text = msg.removeprefix("/")
+            ctx = resources.CommandContext(self)
+            suggestions = ctx.autocomplete(command_text)
+            print(suggestions)
+            return ["/"+s for s in suggestions]
         else:
             return ["Hi",
                     "😀","😁","😅","😇","😉","😊","😋","😍","😎",
@@ -390,8 +393,9 @@ class Player(voxelengine.Player):
                     name = self.entity.get("id",name)
                 print("[%s][%s] %s" % (time.strftime("%Z %Y-%m-%d %T"), name, msg))
                 if msg.startswith("/"):
-                    cmd = resources.Command(self, msg)
-                    cmd.execute()
+                    command_text = msg.removeprefix("/")
+                    ctx = resources.CommandContext(self)
+                    ctx.execute(command_text)
                     #self.chat.add_message(msg)
                 else:
                     if self.world:
@@ -741,8 +745,14 @@ def run():
                     else:
                         print("use like this: play clienttype [username] [password]")
                 elif command.startswith("/"):
-                    cmd = resources.Command(u, command)
-                    cmd.execute()
+                    print(repr(command))
+                    cmd = command.removeprefix("/")
+                    ctx = resources.CommandContext(u)
+                    if cmd.endswith("\t"):
+                        cmd = cmd.rstrip("\t")
+                        print("\n".join("/"+s for s in ctx.autocomplete(cmd)))
+                    else:
+                        ctx.execute(cmd)                        
                 else:
                     print("valid commands include: quit, kill, save, reload, stats, /help")
             
@@ -863,7 +873,7 @@ else: #Linux
         while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
             line = sys.stdin.readline()
             if line:
-                yield line.rstrip()
+                yield line.rstrip("\r\n")
             else: # an empty line means EOF
                 yield "quit"
                 return
