@@ -43,7 +43,7 @@ class CommandHandler(object):
 
     def start_game(self):
         path = os.path.join(PATH, "..", "mcgcraft.py")
-        python = "python" if sys.platform == "win32" else "python3"
+        python = sys.executable
         command = [python, path, serverconfigfn,"--stats-port=%i"%stats_port]
         self.game_process = subprocess.Popen(command,stdin=subprocess.PIPE)
 

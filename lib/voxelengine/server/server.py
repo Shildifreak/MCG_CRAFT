@@ -240,7 +240,7 @@ class GameServer(object):
         if not os.path.exists(path):
             print("no matching call for selected client type", client_type)
             return
-        python = "python" if sys.platform == "win32" else "python3"
+        python = sys.executable
         command = [python,
                    path,
                    "%s:%i" % (self.host, self.http_port),
