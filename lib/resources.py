@@ -235,9 +235,14 @@ class SolidBlock(Block):
 class Item(object):
     # Init function, don't care too much about this
     def __init__(self,item):
+        if isinstance(item, Item):
+            self.item = item.item
+            return
         self.item = item
         self.tags = item.setdefault("tags",{})
         self.item.setdefault("count",1)
+
+        assert itemClasses[self.item["id"]] == type(self) #item class must match id
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_version(self):
@@ -246,6 +251,9 @@ class Item(object):
     
     def block_version_on_place(self, character, blockpos, face):
         return self.block_version()
+
+    def entity_blockmodel(self):
+        return self.item["id"]
     
     def use_on_block(self,character,blockpos,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
@@ -311,21 +319,11 @@ class Entity(voxelengine.Entity):
     
     def right_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
-
-        r = character.get_sight_vector()
-        self["velocity"] = Vector(r)*(20,0,20) + Vector((0,15,0))
+        pass
 
     def left_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
-
-        a = character["lives"]
-
-        if a<20:
-
-            b = character["lives"] + 1
-
-            character["lives"] = b
-
+        pass
     
     @classmethod
     def test_spawn_conditions(cls, world, position):
@@ -333,8 +331,15 @@ class Entity(voxelengine.Entity):
         area = cls.HITBOX + position
         return (block != "AIR" and not any(True for _ in world.blocks.find_blocks(area, "solid")))
     
-    def onground(entity):
-        return entity.bool_collide_difference(entity["position"]+(0,-0.2,0),entity["position"])
+    def onground(entity,vel_pos_pair=None):
+        if vel_pos_pair == None:
+            position = entity["position"]
+            velocity = entity["velocity"]
+        else:
+            velocity, position = vel_pos_pair
+        if velocity[1] > 0:
+            return False
+        return entity.bool_collide_difference(position+(0,-0.2,0),position)
 
     def collide_blocks(entity):
         """blocks entity collides with"""
@@ -386,19 +391,27 @@ class Entity(voxelengine.Entity):
         entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
         entity["last_update"] = time.time()
 
-    def update_position(entity):
+    def update_position(entity, sneak=False):
         #M# todo: cast ray from each point to detect collision and so on !!!
         steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
         pos = entity["position"]
+        velocity = entity["velocity"]
+        sneak = sneak and entity.onground() #can't sneak if not on ground to begin with
         for step in range(steps):
             for i in range(DIMENSION):
                 mask          = Vector([int(i==j) for j in range(DIMENSION)])
                 inverted_mask = Vector([int(i!=j) for j in range(DIMENSION)])
-                new = pos + entity["velocity"]*entity.dt*mask*(1.0/steps)
-                if entity.bool_collide_difference(new,pos):
-                    entity["velocity"] *= inverted_mask
+                new = pos + velocity*entity.dt*mask*(1.0/steps)
+                if entity.bool_collide_difference(new,pos) or (sneak and not entity.onground((velocity,new))):
+                    velocity *= inverted_mask
                 else:
                     pos = new
+        if velocity != entity["velocity"]:
+            dv = (velocity - entity["velocity"]).length()
+            # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
+            if dv > 20:
+                entity.take_damage(1)
+            entity["velocity"] = velocity
         if pos != entity["position"]:
             entity["position"] = pos
     
@@ -435,32 +448,25 @@ class Entity(voxelengine.Entity):
         
         self["velocity"] += (ax, 0, az)
 
-        # save previous velocity and onground
-        vy_vorher = self["velocity"][1]
+        # save previous position and onground
         onground_vorher = self.onground()
         position_vorher = self["position"]
         
         # update position
-        self.update_position()
-        
-        # see if player hit the ground and calculate damage
-        onground_nachher = self.onground()
-        if (not onground_vorher) and onground_nachher:
-            # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
-            schaden = (-vy_vorher) -20
-            # HERZEN ANPASSEN
-            if schaden > 0:
-                self["lives"] -= 1
-        # reset position when shifting and leaving ground
-        if shift and onground_vorher and not onground_nachher:
-            self["position"] = position_vorher
-            self["velocity"] = Vector(0,0,0)
-    
+        self.update_position(shift)
+
     def block_update(self):
         """called when block "near" entity is changed"""
         pass
 
+    def take_damage(self, damage):
+        self["lives"] -= damage
+        if self["lives"] < 0:
+            self.kill()
+        
     def pickup_item(self,item):
+        if isinstance(item, Item):
+            item = item.item
         a = False
         i_air = None
         for i,inv_item in enumerate(self["inventory"]):
@@ -734,6 +740,13 @@ def EntityFactory(data):
     entity_type = data["type"]
     entityClass = entityClasses[entity_type]
     return entityClass(data)
+
+def ItemFactory(data):
+    if isinstance(data, str):
+        data = {"id":data}
+    item_type = data["id"]
+    itemClass = itemClasses[item_type]
+    return itemClass(data)
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name

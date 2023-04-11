@@ -37,9 +37,10 @@ class Mensch(Entity):
 
 
     def _update_modelmaps(self, _):
-        modelmaps = {"<<random>>":self["skin"]}
+        modelmaps = {"<<body>>":self["skin"],
+                     "<<head>>":"GESICHT:2"}
         if self["show_emote"]:
-            modelmaps["GESICHT:2"] = self["emote"]
+            modelmaps["<<head>>"] = self["emote"]
         self["modelmaps"] = modelmaps
 
     def select_emote(self, index):

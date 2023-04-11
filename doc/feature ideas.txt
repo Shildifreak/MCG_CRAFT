@@ -109,7 +109,6 @@
 	Management
 		Whitelist
 		add command for kicking players
-		auto git pull on server? + update script for client
 		Servereinstellungen pro Welt
 			Unterschiedliche Ansicht für neue Welt und bestehende Welt
 			weltengenerator ausgrauen/ausblenden wenn welt datei existiert

@@ -11,13 +11,29 @@
 Zu sichten und sortieren:
 	
 	bug:
+		items fail to render some block models on desktop client
+		items kill performance when bouncing is enabled (feels like a problem with message buffer)
 		client_utils.py: select is not defined
-		webclient scroll does not work in inventory (or generally when not in exclusive mode)
+		webclient scroll does not work in inventory (or generally when not in exclusive mode), neither esc nor e do work to close inventory
 		webdemo does not work from school -> probably a firewall issue -> detect better to at least show useful error message -> but it did show some messages going through websocket, so where exactly is the error?
+		entities without texture are still sent to client (consider the case where a texture is changed to be None but was visible before!)
 	
 	todo:
-		webclient renderdistance not diagonal (separate render distance from raytracing steps, so diagonals can be longer and reflections as well)
-		separate horizontal and vertical renderchunks and monitorchunks
+		add portal
+	
+		display emotes on hud too
+	
+		in sethud command have a seperate clickable argument instead of using # in id
+		-> maybe also draggable and at this point we may combine that into a flags int (add align argument there too)
+		remove password from control command, add authentication command instead -> so players can have priviledges independent of controlled entities
+		
+		move settings menu from index.html and terraintest/index.html into script used by both
+	
+		fix glitches when adjusting bounds of world buffer
+			-> separate render distance from raytracing steps?
+			-> lower and upper bounds that exclude currently loading chunks?
+			-> bitmap containing info about which chunks are currently loading / already valid?
+			-> immediately zero fill reused buffer areas?
 	
 		add F11 for fullscreen to desktop client
 		remove unimplemented code stuff on desktop client
@@ -37,10 +53,6 @@ Zu sichten und sortieren:
 
 			use goto location to inform order of block and entity messages
 
-		change to websocket implementation that supports compression
-		-> switch to websocket for desktop client too?
-		-> websockets seems to be the library to use, but it only really works with asyncio
-
 		Änderung der serverinfo in gui (zB. Speicherort) sollte reload triggern!
 
 		add ability to scroll foreign inventory with mousewheel/scroll keys?
@@ -50,13 +62,24 @@ Zu sichten und sortieren:
 
 		print("Consider setting a password when using a name.") -> move this to gui or server?
 	
+	Block Processor
+		-> Block that can output or input redstone Signals on all 6 sides. Programmable via C/Lua/Python o.ä.
+		Have a way to create this block that can be automated and the better (faster?) you do it the better the block becomes (freq, mem, etc.)
+	Peristaltik Item Container
+		-> contract when provided with a redstone signal
+		   forcing items to spill into neighbouring containers with free slots or into the world
+		-> make work with signal blocks
+	Signal Block
+		-> redstone signal will trigger a spike followed by a regeneration period before it can trigger again
+	
+	scoreboard for crashing demo server: name -> no. crashes (count when online and active just before crash)
+	make it possible to select as which entity to spawn -> default to Mensch obviously, but also allow Sheep, etc.
+		-> spawn command? -> instead of just control command
+
 	blockbench 3D pixel modeling software
 	PHP für mcgcraft website header
 	option to upload resource packs for terraintest
 
-	Block Processor
-		-> Block that can output or input redstone Signals on all 6 sides. Programmable via C/Lua/Python o.ä.
-		Have a way to create this block that can be automated and the better (faster?) you do it the better the block becomes (freq, mem, etc.)
 	tolerance setting for misbehaving clients: drop immediately / allow N malformed messages per time
 	inheritable permissions for players and command blocks
 		-> revoking rights from player also removes them from his command blocks and whomever he gave rights to
@@ -69,7 +92,6 @@ Zu sichten und sortieren:
 	autoclose inventory after item selection?
 	hold e to open inventory?
 	rethink hotbar -> links only? no hotbar? / ...? (find out if anyone is actually using it and how)
-	autocompletion for commands
 	global setting for custom config path (.\config / H:\ / ~ ...)
 	make chest drop items when broken
 	implement remote server config script
@@ -81,6 +103,7 @@ Zu sichten und sortieren:
 	find a way to stitch pngs without need for pygame
 		-> first outsource into (sub)module of tpmanager
 	block.save(event=BLOCKUPDATE)
+		-> or for event handler, return BLOCKUPDATE instead of True
 	tags dokumentieren: zB. solid marks blocks that implement a collide method that sometimes or always returns True
 	check out https://github.com/segonzal/pyVoxel
 	[item] entangler

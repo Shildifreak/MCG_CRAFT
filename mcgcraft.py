@@ -457,7 +457,7 @@ class Player(voxelengine.Player):
             hand_name = {"left_hand": "left_hand", "right_hand":"right_hand"}[event_name]
             item_index = pe[hand_name]
             item_data = pe["inventory"][item_index]
-            return resources.itemClasses[item_data["id"]](item_data)
+            return resources.ItemFactory(item_data)
 
         for event_name in ("left_hand", "right_hand"):
             if self.was_pressed(event_name):

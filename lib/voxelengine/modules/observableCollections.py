@@ -100,7 +100,7 @@ class Observable(Serializable):
         except (KeyError, IndexError):
             pass
         else:
-            self[key] = sanitizer(value)
+            self[key] = value #will be sanitized by reassignment now that sanitizer is in place
 
     def trigger(self,key):
         for callback in self.item_callbacks[key]:
