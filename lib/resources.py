@@ -269,6 +269,9 @@ class Item(object):
 
         # place block in world and decrease item count
         block.save()
+        self.decrease_count()
+    
+    def decrease_count(self):
         self.item["count"] -= 1
         if self.item["count"] <= 0:
             parent_key = self.item.parent.index(self.item)
@@ -285,6 +288,12 @@ class Item(object):
     def use_on_air(self,character):
         """whatever this item should do when clicked into air"""
         return True
+
+class UnplacableItem(Item):
+    def use_on_block(self,character,blockpos,face):
+        """whatever this item should do when click on a block... default is to place a block with same id"""
+        return self.use_on_air(character)
+
 
 class Entity(voxelengine.Entity):
     HITBOX = Hitbox(0,0,0)

@@ -4,10 +4,8 @@ import random
 
 @register_item("Muenzen")
 @register_item("Scheine")
-class notPlacable(Item):
-    def use_on_block(self,character,blockpos,face):
-        """whatever this item should do when click on a block... default is to place a block with same id"""
-        return self.use_on_air(character)
+class Geld(UnplacableItem):
+    pass
 
 class Kreditkarteninventar(ObservableDict):
     def may_contain(self, item):
@@ -17,7 +15,7 @@ class Kreditkarteninventar(ObservableDict):
             return False
 
 @register_item("Kredidtkarte")
-class Kredidtkarte(notPlacable):
+class Kredidtkarte(UnplacableItem):
      def use_on_air(self, character):
         # open inventory
         #if not "inventory" in self.item:

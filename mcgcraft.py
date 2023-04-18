@@ -312,7 +312,7 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"WAND"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+        character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
         functional_blocks = resources.blockClasses.keys()
         for blockname in functional_blocks: # with class in resourcepack/blocks
             character["inventory"].append({"id":blockname})
@@ -383,7 +383,7 @@ class Player(voxelengine.Player):
         for x in range(lives,10):
             self.del_hud("heart"+str(x))
         for x in range(lives):
-            self.set_hud("heart"+str(x),"HERZ",Vector((-0.97+x/10.0,0.95,0)),0,(0.05,0.05),INNER|CENTER)
+            self.set_hud("heart"+str(x),"HERZ",Vector((-0.95+x/10.0,0.95,0)),0,(0.05,0.05),INNER|LEFT)
 
     def update(self):
         for msg in self.new_chat_messages():
@@ -556,19 +556,19 @@ class World(voxelengine.World):
         super(World,self).tick()
         self.handle_block_requests()
 
-    def random_ticks_at(self, position):
-        radius = 10 #M# increase later but for now this would cause too much lag
+    def random_ticks_at(self, position, radius = 10, tries = 1):
         #rate = 0.01
         #tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
         #for block in tickable_blocks:
         #    if random.random() < rate:
-        #        tick_position = block.position
-        tries = 1
+        #        self.random_tick_at(block.position)
         for _ in range(tries):
-                tick_position = position + Vector([(random.random()*2-1)*radius for _ in range(DIMENSION)])
-        
-                random_tick = Event("random_tick", Point(tick_position))
-                self.event_system.add_event(random_tick)
+            tick_position = position + Vector([(random.random()*2-1)*radius for _ in range(DIMENSION)])
+            self.random_tick_at(tick_position)
+    
+    def random_tick_at(self, position):
+        random_tick = Event("random_tick", Point(position))
+        self.event_system.add_event(random_tick)
 
     def handle_block_requests(self):
         # translate move_requests

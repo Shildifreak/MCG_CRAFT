@@ -175,6 +175,7 @@
     "LAMP"                     : {"icon":"lamp_off"              },
     "HERZ"                     : {"icon":"herz"                  },
     "DOOR"                     : {"icon":"door"                  },
+    "Fertilizer"               : {"icon":"fairy_dust"            },
     },
 
 #{

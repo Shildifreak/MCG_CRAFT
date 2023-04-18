@@ -803,7 +803,7 @@
         "schwarz": [
             0,
             3
-		],
+        ],
         "torch_blue": [
             7,
             0
@@ -819,6 +819,10 @@
         "repeater_blue": [
             6,
             0
+        ],
+        "fairy_dust": [
+            9,
+            11
         ]
     }
 }
