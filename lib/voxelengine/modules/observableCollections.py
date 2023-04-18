@@ -13,10 +13,6 @@ import collections, itertools
 from voxelengine.modules.serializableCollections import Serializable
 
 def observable_from(data):
-    if isinstance(data, Observable):
-        if data.parent != None:
-            raise ValueError(data, "is already part of another observable structure:", data.parent)
-        return data
     if isinstance(data, collections.abc.MutableMapping):
         return ObservableDict(data)
     if isinstance(data, collections.abc.MutableSequence):
