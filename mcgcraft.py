@@ -557,12 +557,17 @@ class World(voxelengine.World):
         self.handle_block_requests()
 
     def random_ticks_at(self, position):
-        radius = 2 #M# increase later but for now this would cause too much lag
-        rate = 0.5
-        tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
-        for block in tickable_blocks:
-            if random.random() < rate:
-                random_tick = Event("random_tick", Point(block.position))
+        radius = 10 #M# increase later but for now this would cause too much lag
+        #rate = 0.01
+        #tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
+        #for block in tickable_blocks:
+        #    if random.random() < rate:
+        #        position = block.position
+        tries = 1
+        for _ in range(tries):
+                position = Vector([(random.random()*2-1)*radius for _ in range(DIMENSION)])
+        
+                random_tick = Event("random_tick", Point(position))
                 self.event_system.add_event(random_tick)
 
     def handle_block_requests(self):

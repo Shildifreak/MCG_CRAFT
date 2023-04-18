@@ -1,7 +1,9 @@
 from resources import *
 
+import random
+
 @register_block("LAUB")
-class Redstone(Block):
+class Laub(Block):
     defaults = Block.defaults.copy()
     defaults["d_wood"] = 0
     MAXDISTANCE = 10
@@ -25,9 +27,14 @@ class Redstone(Block):
     def handle_event_random_tick(self, event):
         if self["d_wood"] >= self.MAXDISTANCE:
             self.turn_into("AIR")
-            e = EntityFactory({"type":"Item","item":{"id":"GRASS"}})
+            itemid = random.choices(["LAUB","Setzling"],[10,1])[0]
+            e = EntityFactory({"type":"Item","item":{"id":itemid}})
             e.set_world(self.world,self.position)
+            e["velocity"] = (random.normalvariate(0,2),
+                             random.normalvariate(10,2),
+                             random.normalvariate(0,2))
             return True
+        return False
 
     def get_tags(self):
         return super().get_tags() | {"block_update", "random_tick"}

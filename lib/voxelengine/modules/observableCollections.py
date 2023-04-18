@@ -14,6 +14,8 @@ from voxelengine.modules.serializableCollections import Serializable
 
 def observable_from(data):
     if isinstance(data, Observable):
+        if data.parent != None:
+            raise ValueError(data, "is already part of another observable structure:", data.parent)
         return data
     if isinstance(data, collections.abc.MutableMapping):
         return ObservableDict(data)
@@ -54,11 +56,9 @@ class Observable(Serializable):
         value = self.sanitizers.get(static_key,lambda x:x)(value)
         value = observable_from(value)
         if isinstance(value,Observable):
-            if value.parent == None:
-                value.parent = self
-                value.parent_key = static_key
-            else:
-                assert (value.parent == self) and (value.parent_key == static_key)
+            assert value.parent == None
+            value.parent = self
+            value.parent_key = static_key
         return value
 
     def __setitem__(self,key,value):
@@ -179,3 +179,11 @@ if __name__ == "__main__":
     print(type(root["c"]), root["c"])
     a = observable_from({1:2})
     b = observable_from({1:2})
+
+    print("----")
+    x = observable_from({"test":[1,2,3]})
+    dict_containing_child_of_other_observable = {"aha": x["test"]}
+    try:
+        y = observable_from(dict_containing_child_of_other_observable)
+    except ValueError as e:
+        print("Expected Error:", e)

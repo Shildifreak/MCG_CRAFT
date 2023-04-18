@@ -690,11 +690,12 @@ class Model(object):
         glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
         glPopMatrix()
         for modelpart in ("body","head","legl","legr"):
-            for relpos,offset,size,texture in model[modelpart]:
+            for relpos,offset,size,block_name in model[modelpart]:
                 offset = offset if modelpart in ("head","legl","legr") else relpos
-                texture = model_maps.get(texture, texture) #replace texture if in model_maps
-                blockmodel = BLOCKMODELS[texture] # using blockmodels here seems strange :(
-                for face in range(len(FACES)):
+                block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
+                blockmodel = BLOCKMODELS[block_name]
+                group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
+                for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
                     #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     vertex_data = [x*size[c%3]+offset[c%3] for c,x in enumerate(vertex_data)]
@@ -709,7 +710,7 @@ class Model(object):
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     try:
-                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, self.textured_normal_group,
+                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, group,
                             ('v3f/static', vertex_data),
                             ('t2f/static', texture_data),
                             ('c3f/static', color_data)))
