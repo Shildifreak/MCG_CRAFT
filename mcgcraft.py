@@ -562,12 +562,12 @@ class World(voxelengine.World):
         #tickable_blocks = self.blocks.find_blocks(Sphere(position, radius), "random_tick")
         #for block in tickable_blocks:
         #    if random.random() < rate:
-        #        position = block.position
+        #        tick_position = block.position
         tries = 1
         for _ in range(tries):
-                position = Vector([(random.random()*2-1)*radius for _ in range(DIMENSION)])
+                tick_position = position + Vector([(random.random()*2-1)*radius for _ in range(DIMENSION)])
         
-                random_tick = Event("random_tick", Point(position))
+                random_tick = Event("random_tick", Point(tick_position))
                 self.event_system.add_event(random_tick)
 
     def handle_block_requests(self):
