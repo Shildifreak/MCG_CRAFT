@@ -396,11 +396,16 @@ class Entity(voxelengine.Entity):
         pass
 
     def update_dt(entity):
+        """call in update first"""
         entity.dt = time.time()-entity["last_update"]
         entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
         entity["last_update"] = time.time()
 
     def update_position(entity, sneak=False):
+        """
+        apply velocity to position
+        call in update after update_dt
+        """
         #M# todo: cast ray from each point to detect collision and so on !!!
         steps = int(math.ceil(max(map(abs,entity["velocity"]*entity.dt))*10)) # 10 steps per block
         pos = entity["position"]
@@ -425,11 +430,16 @@ class Entity(voxelengine.Entity):
             entity["position"] = pos
     
     def execute_ai_commands(self):
+        """
+        call in update after update_dt, automatically calls update_position
+        """
         jump   = bool(sum(self.ai_commands["jump"  ]))
         shift  = bool(sum(self.ai_commands["shift" ]))
         sprint = bool(sum(self.ai_commands["sprint"]))
         x = sum(self.ai_commands["x"])
         z = sum(self.ai_commands["z"])
+        d_yaw = sum(self.ai_commands["yaw"])/(len(self.ai_commands["yaw"]) or 1)
+        d_pitch = sum(self.ai_commands["pitch"])/(len(self.ai_commands["pitch"]) or 1)
         self.ai_commands.clear()
 
         nv = Vector(x,0,z)
@@ -457,9 +467,9 @@ class Entity(voxelengine.Entity):
         
         self["velocity"] += (ax, 0, az)
 
-        # save previous position and onground
-        onground_vorher = self.onground()
-        position_vorher = self["position"]
+        if d_yaw or d_pitch:
+            yaw, pitch = self["rotation"]
+            self["rotation"] = (yaw + d_yaw, pitch + d_pitch)
         
         # update position
         self.update_position(shift)

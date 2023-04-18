@@ -58,7 +58,7 @@ class Mensch(Entity):
         self.execute_ai_commands()
 
     def take_damage(self, damage):
-        self["lives"] = self["lives"] - damage
+        self["lives"] -= damage
         if self["lives"] <= 0:
             self.die_and_respawn()
 

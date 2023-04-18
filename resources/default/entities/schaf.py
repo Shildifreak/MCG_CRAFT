@@ -1,8 +1,53 @@
 from resources import *
 import random
 
-@register_entity("Schaf")
+class SchafAI(object):
+    def __init__(self, entity):
+        self.entity = entity
+        self.state = {
+            "forward" : False,
+            "turn" : 0,
+            "nod" : False,
+        }
+    
+    def update(self):
+        r = random.randint(0,200)
+        if r < 1:
+            self.state["turn"] = -5
+            self.state["nod"] = False
+        elif r < 2:
+            self.state["turn"] = 5
+            self.state["nod"] = False
+        elif r < 3:
+            self.state["forward"] = True
+            self.state["turn"] = 0
+            self.state["nod"] = False
+        elif r < 5:
+            self.state["forward"] = False
+            self.state["nod"] = False
+        elif r < 7:
+            self.state["forward"] = False
+            self.state["turn"] = 0
+            self.state["nod"] = True
+        
+        sx, _, sz = self.entity.get_sight_vector()
+        self.entity.ai_commands["x"].append(sx * self.state["forward"])
+        self.entity.ai_commands["z"].append(sz * self.state["forward"])
 
+        if self.state["forward"]:
+            jump = self.entity.world.blocks[(self.entity["position"] + Vector(sx,-0.5,sz)).round()] != "AIR"
+        else:
+            jump = not random.randint(0,2000)
+        if jump:
+            self.entity.ai_commands["jump"].append(jump)
+        
+        y, p = self.entity["rotation"]
+        dy = self.state["turn"]
+        dp = -self.state["nod"]*50 - p
+        self.entity.ai_commands["yaw"].append(dy)
+        self.entity.ai_commands["pitch"].append(dp)        
+
+@register_entity("Schaf")
 class Schaf(Entity):
     HITBOX = Hitbox(0.6,1.5,1)
     LIMIT = 5
@@ -13,51 +58,18 @@ class Schaf(Entity):
             "texture" : "SCHAF",
             "SPEED" : 10,
             "JUMPSPEED" : 10,
-            "forward" : False,
-            "turn" : 0,
-            "nod" : False,
             "tags" : {"update"},
         }
         if data != None:
             data_defaults.update(data)
         super().__init__(data_defaults)
+        self.ai = SchafAI(self)
 
     def right_clicked(self, character):
         self["texture"] = "SCHAF,GESCHOREN"
         
     def left_clicked(self, character):
         print("Maehhh")
-
-    def update_ai(self):
-        r = random.randint(0,200)
-        if r < 1:
-            self["turn"] = -5
-            self["nod"] = False
-        elif r < 2:
-            self["turn"] = 5
-            self["nod"] = False
-        elif r < 3:
-            self["forward"] = True
-            self["turn"] = 0
-            self["nod"] = False
-        elif r < 5:
-            self["forward"] = False
-            self["nod"] = False
-        elif r < 7:
-            self["forward"] = False
-            self["turn"] = 0
-            self["nod"] = True
-        
-        sx, _, sz = self.get_sight_vector()
-        self.ai_commands["x"].append(sx * self["forward"])
-        self.ai_commands["z"].append(sz * self["forward"])
-
-        if self["forward"]:
-            jump = self.world.blocks[(self["position"] + Vector(sx,-0.5,sz)).round()] != "AIR"
-        else:
-            jump = not random.randint(0,2000)
-        if jump:
-            self.ai_commands["jump"].append(jump)
 
     def update(self):
         self.update_dt()
@@ -66,16 +78,10 @@ class Schaf(Entity):
             self.kill()
             return
 
-        self.update_ai()
-
+        self.ai.update()
         self.execute_ai_commands()
 
         y, p = self["rotation"]
-        dy = self["turn"]
-        dp = -self["nod"]*50 - p
-        if dy or dp:
-            self["rotation"] = y+dy, p+dp
-
         if p <= -50:
             pos = (self["position"]+Vector(0,-2,0)).round()
             if self.world.blocks[pos] == "GRASS":
