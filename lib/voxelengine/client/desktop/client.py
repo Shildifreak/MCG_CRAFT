@@ -618,8 +618,15 @@ class Model(object):
                 self.hide_face(position,face)
             
     def update_visibility_around(self,position):
+        # faces with visibility influenced
+        #for f,fv in enumerate(FACES):
+            #self.update_face(position-fv,f)
+        
+        # faces with lighting influenced
         for f,fv in enumerate(FACES):
-            self.update_face(position-fv,f)
+            ranges = [range(max(0,fv[i])-1, min(0,fv[i])+2) for i in range(DIMENSION)]
+            for offset in itertools.product(*ranges):
+                self.update_face(position+offset-fv,f)
     
     def show_face(self,position,face):
         if (position,face) in self.shown:
