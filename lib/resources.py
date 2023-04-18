@@ -322,9 +322,12 @@ class Entity(voxelengine.Entity):
 
         self.instances.append(self)
 
-    def kill(self):
-        self.instances.remove(self)
-        self.set_world(None, Vector((0,0,0)))
+    def kill(self, verbose = True):
+        if self in self.instances:
+            self.instances.remove(self)
+            self.set_world(None, Vector((0,0,0)))
+        elif verbose:
+            print("this entity is already dead")
     
     def right_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
@@ -481,8 +484,8 @@ class Entity(voxelengine.Entity):
     def take_damage(self, damage):
         self["lives"] -= damage
         if self["lives"] < 0:
-            self.kill()
-        
+            self.kill(verbose=False)
+
     def pickup_item(self,item):
         if isinstance(item, Item):
             item = item.item

@@ -5,8 +5,9 @@ import time, random
 
 class ItemEntity(Entity):
     HITBOX = Hitbox(0.4, 0.4, 0.4)
-    LIMIT = 5 # no natural Spawning of Item Entities
+    LIMIT = 0 # no natural Spawning of Item Entities
     instances = []
+    TTL = 10
     
     def __init__(self, data = None):
         data_defaults = {
@@ -14,7 +15,7 @@ class ItemEntity(Entity):
             "show_emote" : False,
             "lives" : 1,
             "tags" : {"update"},
-            "item" : {"id":"GRASS"},
+            "item" : {"id":"missing_texture"},
         }
         if data != None:
             data_defaults.update(data)
@@ -44,3 +45,4 @@ class ItemEntity(Entity):
         else:
             self["velocity"] -= (0,1,0)
             self.update_position()
+        self.take_damage(self.dt/self.TTL)
