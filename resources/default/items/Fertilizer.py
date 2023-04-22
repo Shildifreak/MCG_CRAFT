@@ -7,6 +7,10 @@ class Fertilizer(Item):
         character.world.random_tick_at(blockpos)
         self.decrease_count()
 
+    def use_on_entity(self, character, entity):
+        character.world.random_tick_at(entity["position"])
+        self.decrease_count()
+    
     def use_on_air(self, character):
         radius = 8
         blockworld = character.world.blocks

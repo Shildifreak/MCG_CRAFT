@@ -42,6 +42,9 @@ class EntityWorld(Serializable):
 	def notice_move(self, entity, old_position, new_position):
 		pass
 
+	def change_tags(self, entity):
+		pass
+
 	def add(self, entity):
 		self.entities.add(entity)
 

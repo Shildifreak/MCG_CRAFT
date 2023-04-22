@@ -328,6 +328,20 @@ class Entity(voxelengine.Entity):
         elif verbose:
             print("this entity is already dead")
     
+    def handle_event_default(self, events):
+        tag = events.pop().tag
+        print("No handler for event", event.tag)
+
+    def handle_events(self, events):
+        """API for event system"""
+        grouped_events = collections.defaultdict(set)
+        for event in events:
+            grouped_events[event.tag].add(event)
+        for tag, events in grouped_events.items():
+            f_name = "handle_event_"+tag
+            f = getattr(self, f_name, self.handle_event_default)
+            f(events)
+    
     def right_clicked(self, character):
         """whatever this entity should do when being right clicked by entity"""
         pass

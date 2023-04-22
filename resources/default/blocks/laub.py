@@ -30,9 +30,7 @@ class Laub(Block):
             itemid = random.choices(["LAUB","Setzling"],[10,1])[0]
             e = EntityFactory({"type":"Item","item":{"id":itemid}})
             e.set_world(self.world,self.position)
-            e["velocity"] = (random.normalvariate(0,2),
-                             random.normalvariate(10,2),
-                             random.normalvariate(0,2))
+            e.add_random_velocity()
             return True
         return False
 
