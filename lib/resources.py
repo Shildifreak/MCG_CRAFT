@@ -521,14 +521,26 @@ class Command(object):
     """
     permission_level:
           -1 - no commands allowed
-           0 - commands with no effects in game (whisper, help, log, etc.)
-           1 - commands with negative effects to originator (kill, ...)
-           2 - commands with slight positive effects (goto)
-           3 - commands with great positive effect (give)
+        no effect
+           0 - commands with no effects in game (whisper, help, log, ...)
+        cosmetic
+           1 - commands with cosmetic effect (skin, ...)
+        negative to self
+           2 - negative effects to originator (kill, damage, ...)
+        insight
+           3 - commands with slight insight (locate, ...)
+        positive to self
+           4.1 - commands with slight positive effects (goto, ...)
+           4.2 - commands with great positive effect (give, ...)
+           4.9 - commands with creative power (gamemode, ...)
+        directly affect world and other entities
            9 - commands that directly affect other entities (entity, setblock, ...)
+        affect other players
           90 - commands that effect players (kick, ban, timeout, ...)
+        permissions
          900 - commands that effect permissions (op, deop, ...)
-        9000 - server level commands (restart, stop, etc.)
+        server
+        9000 - server level commands (restart, stop, ...)
     """
     commands = {} # {name: command_func}
 
@@ -565,20 +577,26 @@ class Command(object):
             if a in fas.annotations
         ]
 
-    class BLOCKNAME(object):
-        @staticmethod
-        def parse(self, context):
-            if any(map(str.isspace,self)):
-                raise CommandException("blockname must not contain whitespace characters")
-            return str(self)
+    class AbstractENUM_STRING(object):
+        @classmethod
+        def parse(cls, value, context):
+            if value not in cls.values():
+                raise CommandException("invalid argument value: "+repr(value))
+            return str(value)
 
-        @staticmethod
-        def autocomplete(self, context):
+        @classmethod
+        def autocomplete(cls, value, context):
             return [
-                blockname
-                for blockname in allBlocknames
-                if blockname.startswith(self)
+                suggestion+" "
+                for suggestion in cls.values()
+                if suggestion.startswith(value)
             ]
+
+    class BLOCKNAME(AbstractENUM_STRING):
+        values = lambda:allBlocknames
+
+    class GAMEMODE(AbstractENUM_STRING):
+        values = lambda:("creative", "survival")
 
     class ENTITY(object):
         @staticmethod
@@ -610,7 +628,21 @@ class Command(object):
         
         @staticmethod
         def autocomplete(self, context):
-            return [self+" "] if len(self) else ["0 "] 
+            return [self.rstrip()+" "] if len(self) else ["0 "] 
+
+    class INT(object):
+        def __init__(self, /, default=0):
+            self.default = default
+
+        @staticmethod
+        def parse(value, context):
+            try:
+                return int(value)
+            except:
+                raise CommandException(f"{value} is not a valid whole number")
+        
+        def autocomplete(self, value, context):
+            return [value.rstrip()+" "] if len(value) else [str(self.default)+" "] 
     
     class SUBCOMMAND(object):
         @staticmethod
