@@ -359,7 +359,6 @@ class Player(voxelengine.Player):
             command_text = msg.removeprefix("/")
             ctx = resources.CommandContext(self)
             suggestions = ctx.autocomplete(command_text)
-            print(suggestions)
             return ["/"+s for s in suggestions]
         else:
             return ["Hi",

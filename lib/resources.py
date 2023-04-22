@@ -678,7 +678,7 @@ class CommandContext(object):
             self.originator_name = "Player " + repr(self.originator)
             if self.originator.entity:
                 self.originator_name += " [%s]" % self.originator.entity["id"]
-            self.permission_level = 3
+            self.permission_level = 5
             self.universe = self.originator.universe
             self.player = self.originator
             self.entity = self.originator.entity #may still be None
@@ -708,7 +708,6 @@ class CommandContext(object):
             raise NotImplementedError()
 
     def autocomplete(self, command_text):
-        print("command_text", command_text)
         command_name, arg_text, *_ = command_text.split(" ",1) + [None]
         if arg_text == None:
             return Command.COMMAND.autocomplete(command_name, self)
@@ -717,27 +716,20 @@ class CommandContext(object):
                 command_func = Command.COMMAND.parse(command_name, self)
             except CommandException:
                 return []
-            print("command_func", command_func)
             arg_layout = Command.get_arg_layout(command_func)
-            print("arg_layout", arg_layout)
             # return autocompletion by type of last argument that is currently available
             l = len(arg_layout)
             args = arg_text.split(" ", l-1)
             i = len(args) - 1 # last of args but not necessarily the last of arg_layout
-            print("args",args)
-            print(arg_layout[i][1], args[i])
             last_arg_suggestions = arg_layout[i][1].autocomplete(args[i], self)
-            print("last_arg_suggestions",last_arg_suggestions)
             command_except_last_arg = command_text[:len(command_text)-len(args[i])]
             return [command_except_last_arg + las for las in last_arg_suggestions] 
 
     def execute(self, command_text):
         try:
             command_text = command_text.rstrip(" ")
-            print("command_text", command_text)
             command_name, arg_text, *_ = command_text.split(" ",1) + [""]
             command_func = Command.COMMAND.parse(command_name, self)
-            print("command_func", command_func)
             # ensure permission
             if self.permission_level < command_func.permission_level:
                 raise CommandException("insufficient permission level")
