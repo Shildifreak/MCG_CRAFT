@@ -31,9 +31,14 @@ class Clock(dict):
 	def __init__(self, data):
 		super().__init__(data)
 		self.tick_event = threading.Event()
-	current_gametick = property(lambda self:self["gametick"], lambda self, value:self.__setitem__("gametick",value))
-	def tick(self):
-		self.current_gametick += 1
+		self.dt = 0
+	current_gametick = property(lambda self:self["gametick"])
+	time = property(lambda self:self["gametick"])
+	
+	def tick(self, dt):
+		self.dt = dt
+		self["time"] += dt
+		self["gametick"] += 1
 		self.tick_event.set(); self.tick_event.clear()
 
 class World(Serializable):
@@ -56,12 +61,12 @@ class World(Serializable):
 		warnings.warn(DeprecationWarning("use world.blocks[...] instead of world[...]"))
 		self.blocks.__setitem__(*args,**kwargs)
 
-	def tick(self):
+	def tick(self, dt):
 		# process pending events
 		self.event_system.process_events()
 		# tick
 		self.event_system.tick()
-		self.clock.tick()
+		self.clock.tick(dt)
 
 	@staticmethod
 	def parse_data_from_string(string):

@@ -54,7 +54,6 @@ class Mensch(Entity):
         print("Just stop it already!")
 
     def update(self):
-        self.update_dt()
         self.execute_ai_commands()
 
     def take_damage(self, damage):

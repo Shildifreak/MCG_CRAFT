@@ -72,7 +72,6 @@ class Schaf(Entity):
         print("Maehhh")
 
     def update(self):
-        self.update_dt()
 
         if self["position"][1] < -100:
             self.kill()

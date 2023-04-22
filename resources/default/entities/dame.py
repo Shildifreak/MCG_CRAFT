@@ -24,8 +24,6 @@ class Dame(Entity):
     #    print "Maehhh"
 
     def update(self):
-        self.update_dt()
-
         if self.world.players:
             player = random.choice(tuple(self.world.players))
             richtung = player.entity["position"] - self["position"]

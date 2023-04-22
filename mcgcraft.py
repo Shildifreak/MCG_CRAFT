@@ -552,9 +552,10 @@ class World(voxelengine.World):
     #    blockread_counter += 1
     #    return super(World,self).get_block(position,*args,**kwargs)
 
-    def tick(self):
-        super(World,self).tick()
+    def tick(self, dt):
+        super(World,self).tick(dt)
         self.handle_block_requests()
+        self.event_system.process_events() # again for events triggered by block requests
 
     def random_ticks_at(self, position, radius = 10, tries = 1):
         #rate = 0.01
@@ -620,9 +621,9 @@ class Timer(object):
         self.dt_work = None
         self.dt_idle = None
     def tick(self, TPS):
-        mspt = 1.0/TPS
+        spt = 1.0/TPS
         self.dt_work = time.time() - self.t #time since last tick
-        self.dt_idle = max(0, mspt - self.dt_work)
+        self.dt_idle = max(0, spt - self.dt_work)
         time.sleep(self.dt_idle)
         self.dt = time.time() - self.t
         self.t += self.dt
@@ -767,39 +768,46 @@ def run():
             # to idle or not to idle
             TPS = config["tps"] if g.get_players() else config["idle_tps"]
             if TPS == 0:
-                time.sleep(1)
+                timer.tick(2)
                 continue
 
             # player update
             for player in g.get_players():
                 player.update()
 
-            #M# mob spawning
-            if config["mobspawning"]:
-                for entity_type, entity_class in resources.entityClasses.items():
-                    if len(entity_class.instances) < entity_class.LIMIT:
-                        x = random.randint(-40,40)
-                        y = random.randint(-10,20)
-                        z = random.randint(-40,40)
-                        p = Vector(x,y,z)
-                        if entity_class.test_spawn_conditions(w, p):
-                            e = resources.EntityFactory(entity_type)
-                            e.set_world(w,p)
+            # worlds
+            for w in u.get_loaded_worlds():
+                # mob spawning
+                if config["mobspawning"]:
+                    for entity_type, entity_class in resources.entityClasses.items():
+                        if len(entity_class.instances) < entity_class.LIMIT:
+                            x = random.randint(-40,40)
+                            y = random.randint(-10,20)
+                            z = random.randint(-40,40)
+                            p = Vector(x,y,z)
+                            if entity_class.test_spawn_conditions(w, p):
+                                e = resources.EntityFactory(entity_type)
+                                e.set_world(w,p)
 
-            # entity update
-            for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
-                entity.update()
+                # entity update
+                for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
+                    entity.update()
 
-            # random ticks
-            for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
-                w.random_ticks_at(random_tick_source["position"])
+                # random ticks
+                for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):
+                    w.random_ticks_at(random_tick_source["position"])
 
-            # tick worlds (only the ones with players in them?)
-            stats.set("events",sum(map(len, w.event_system.event_queue)))
-            u.tick()
+                stats.set("events",sum(map(len, w.event_system.event_queue)))
+
+            # tick
+            timer.tick(TPS)
+            dt = timer.dt
+            if dt > 1:
+                print(f"Lag! Last tick took {dt}s. Slowing down game to avoid physics simulation problems at large time delta.")
+                dt = 1/TPS
+            u.tick(dt)
             
             # Stats
-            timer.tick(TPS)
             zeitstats(timer)
             blockread_counter = 0
             #stats.set("block reads", blockread_counter)

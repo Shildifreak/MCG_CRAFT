@@ -25,8 +25,6 @@ class Geist(Entity):
         if self["position"][1] < -100:
             self.kill()
             return
-
-        self.update_dt()
        
         vx,vy,vz=self["velocity"]
 

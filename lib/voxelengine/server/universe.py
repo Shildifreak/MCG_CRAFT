@@ -13,11 +13,14 @@ class Universe(object):
 	def get_spawn_world(self):
 		return self.worlds[0]
 
+	def get_loaded_worlds(self):
+		return [w for w in self.worlds if w.players]
+
 	def new_world(self,	data = voxelengine.server.world_data_template.data, WorldClass = World):
 		world = WorldClass(data)
 		self.worlds.append(world)
 		return world
 
-	def tick(self): #M# add option to only tick worlds with players in them?
-		for world in self.worlds:
-			world.tick()
+	def tick(self, dt):
+		for world in self.get_loaded_worlds():
+			world.tick(dt)

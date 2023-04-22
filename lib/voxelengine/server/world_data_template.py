@@ -2,6 +2,7 @@ data = {
 	"metadata":{
 		"clock":{
 			"gametick":0,
+			"time":0,
 		},
 	},
 	"block_world":{

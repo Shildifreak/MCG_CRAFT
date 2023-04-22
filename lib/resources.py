@@ -303,7 +303,6 @@ class Entity(voxelengine.Entity):
     def __init__(self, data = None):
         data_defaults = {
             "velocity" : Vector([0,0,0]),
-            "last_update" : time.time(),
             "flying" : False,
             "lives" : 10,
             "ACCELERATION" : 20,
@@ -398,11 +397,9 @@ class Entity(voxelengine.Entity):
     def update(self):
         pass
 
-    def update_dt(entity):
-        """call in update first"""
-        entity.dt = time.time()-entity["last_update"]
-        entity.dt = min(entity.dt,1) # min slows time down for players if server is pretty slow
-        entity["last_update"] = time.time()
+    @property
+    def dt(self):
+        return self.world.clock.dt if self.world else 0
 
     def update_position(entity, sneak=False):
         """

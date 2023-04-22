@@ -38,7 +38,6 @@ class ItemEntity(Entity):
             self.kill()
 
     def update(self):
-        self.update_dt()
         if self.onground():
             #self["velocity"] += (0,10,0)
             self["velocity"] = (0,0,0)
