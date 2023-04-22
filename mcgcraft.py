@@ -305,6 +305,7 @@ class Player(voxelengine.Player):
         self.set_focus_distance(8)
         self.inventory_display = InventoryDisplay(self)
         self.chat = ChatDisplay(self)
+        self.gamemode = config["gamemode"]
 
     def create_character(self):
         world = self.universe.get_spawn_world()
@@ -312,13 +313,14 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         # just for testing:
-        character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
-        functional_blocks = resources.blockClasses.keys()
-        for blockname in functional_blocks: # with class in resourcepack/blocks
-            character["inventory"].append({"id":blockname})
-        for blockname in resources.allBlocknames: # includes blocks only mentioned in description.py
-            if blockname not in functional_blocks:
+        if self.gamemode == "creative":
+            character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+            functional_blocks = resources.blockClasses.keys()
+            for blockname in functional_blocks: # with class in resourcepack/blocks
                 character["inventory"].append({"id":blockname})
+            for blockname in resources.allBlocknames: # includes blocks only mentioned in description.py
+                if blockname not in functional_blocks:
+                    character["inventory"].append({"id":blockname})
 
         # inventory stuff
         for i in range(60):
@@ -415,7 +417,10 @@ class Player(voxelengine.Player):
         pe = self.entity
 
         if self.was_pressed("fly"):
-            pe["flying"] = not pe["flying"]
+            if self.gamemode == "creative":
+                pe["flying"] = not pe["flying"]
+            else:
+                self.chat.add_message("Flying is only allowed in creative mode.")
         if self.was_pressed("inv"):
             self.inventory_display.toggle()
         if self.was_pressed("emote") or self.was_released("emote"):

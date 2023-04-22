@@ -170,6 +170,22 @@ class GUI(object):
         mobspawning_checkbutton = Tkinter.Checkbutton(self.root, variable = mobspawningvar)
         mobspawning_checkbutton.grid(column = 1, row = self.row, sticky = Tkinter.W)
         self.row += 1
+    
+    def addwidgets_gamemode(self):
+        # Client type
+        def setgamemode(*args):
+            self.serverconfig["gamemode"] = gamemodevar.get()        
+        gamemodevar = Tkinter.StringVar(self.root)
+        gamemodevar.set(self.serverconfig["gamemode"])
+        gamemodevar.trace("w",setgamemode)
+        
+        gamemode_button_creative = Tkinter.Radiobutton(text = "Creative", variable = gamemodevar, value = "creative")
+        gamemode_button_creative.grid(column = 1, row = self.row, sticky = Tkinter.W)
+        gamemode_button_survival = Tkinter.Radiobutton(text = "Survival", variable = gamemodevar, value = "survival")
+        gamemode_button_survival.grid(column = 2, row = self.row, sticky = Tkinter.W, columnspan = 2)
+
+        self.add_label("Gamemode")
+        self.row += 1
         
     def addwidgets_whitelist(self):
         # Whitelist
@@ -458,6 +474,7 @@ class ServerGUI(GUI):
         self.addwidgets_resourcepaths()
         self.addwidgets_worldtype()
         self.addwidgets_mobspawning()
+        self.addwidgets_gamemode()
         self.addwidgets_whitelist()
         self.addwidgets_server_parole()
         self.addwidgets_username_password()
@@ -479,6 +496,7 @@ if __name__ == "__main__":
                 "file"     : "",
                 "worldtype": "Colorland",
                 "mobspawning": False,
+                "gamemode" : "creative",
                 "whitelist": "127.0.0.1",
                 "parole"   : "",
                 "resource_paths": ["default"],

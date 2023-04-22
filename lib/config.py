@@ -57,10 +57,9 @@ default_serverconfig = {
             "mobspawning": True,
             "whitelist"  : "127.0.0.1",
             "parole"     : "",
-
-            # To Be Exposed via GUI
             "resource_paths": ["default"],
             "resource_path_options": [],
+            "gamemode"   : "creative",
 
             # Hidden
             "auto_create_entities_for_players" : True,

@@ -62,6 +62,14 @@ Zu sichten und sortieren:
 
 		print("Consider setting a password when using a name.") -> move this to gui or server?
 	
+	Survival Progression
+		-> add survival mode gamesetting
+		Sticks -> from Leaves (no tool)
+		Stone -> from naturally generated Cobblestone
+		String -> Vines? Grass? Flux? Spiderwebs?
+		Stone Tools -> Sticks + Stones + String/Glue
+		Wood -> Tree + Stone Axe
+	
 	Block Processor
 		-> Block that can output or input redstone Signals on all 6 sides. Programmable via C/Lua/Python o.ä.
 		Have a way to create this block that can be automated and the better (faster?) you do it the better the block becomes (freq, mem, etc.)
