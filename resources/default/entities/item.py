@@ -14,7 +14,7 @@ class ItemEntity(Entity):
             "texture" : "ITEM",
             "show_emote" : False,
             "lives" : 1,
-            "tags" : {"update"},
+            "tags" : {"update", "entity_enter"},
             "item" : {"id":"missing_texture"},
         }
         if data != None:
@@ -38,7 +38,7 @@ class ItemEntity(Entity):
             self.kill()
     
     def add_random_velocity(self):
-        self["tags"] = {"update"}
+        self["tags"] = {"update", "entity_enter"}
         self["velocity"] += (random.normalvariate(0,2),
                              random.normalvariate(10,2),
                              random.normalvariate(0,2))
@@ -47,12 +47,19 @@ class ItemEntity(Entity):
         self.add_random_velocity()
 
     def handle_event_block_update(self, events):
-        self["tags"] = {"update"}
+        self["tags"] = {"update", "entity_enter"}
+
+    def handle_event_entity_enter(self, events):
+        for event in events:
+            entity = event.data
+            if entity["type"] == "Mensch":
+                self.collect_by(entity)
+                return
 
     def update(self):
         if self.onground():
             self["velocity"] = (0,0,0)
-            self["tags"] = {"block_update", "random_tick"}
+            self["tags"] = {"block_update", "random_tick", "entity_enter"}
         else:
             self["velocity"] -= (0,1,0)
             self["rotation"] = (self["rotation"][0]+10, 0)
