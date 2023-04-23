@@ -65,10 +65,6 @@ def generate_description(texture_index, normalized_universal_description):
 		icon = blockdata["icon"]
 		description["icons"][blockname] = texture_index[icon]
 	
-	# ITEMS
-	for itemname, itemdata in normalized_universal_description["ITEMS"].items():
-		icon = itemdata["icon"]
-		description["icons"][itemname] = texture_index[icon]
 		
 	# BLOCK MODELS
 	blockmodelnames = blocknames + [n for n in normalized_universal_description["BLOCK_MODELS"].keys() if n not in blocknames] #same order as blocknames

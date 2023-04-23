@@ -15,7 +15,7 @@ FACES = {"top","bottom","front","back","left","right"}
 
 class TP_Compiler(object):
 	def __init__(self):
-		self.description = {"BLOCKS":{},"BLOCK_MODELS":{},"ITEMS":{},"ENTITY_MODELS":{}}
+		self.description = {"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{}}
 		self.texture_directories = []
 	
 	def add_textures_from(self, path):
@@ -78,6 +78,17 @@ class TP_Compiler(object):
 						blockmodel["faces"]["inside"].extend(blockmodel["faces"].pop(face))
 				description["BLOCK_MODELS"][blockname] = blockmodel
 		
+		# add blockmodels for items
+		for itemname, itemdata in description["ITEMS"].items():
+			icon = itemdata["icon"]
+			blockmodel = {"icon" : icon,
+						  "transparent": True,
+						  "connecting": False,
+						  "faces": {"inside": [(((0,0,0.5),(0,1,0.5),(1,1,0.5),(1,0,0.5)),icon)],
+								   }
+						 }
+			description["BLOCK_MODELS"][itemname] = blockmodel
+
 		for blockmodelname, blockmodel in description["BLOCK_MODELS"].items():
 			if not "icon" in blockmodel:
 				blockmodel["icon"] = "missing_texture"
@@ -96,7 +107,7 @@ class TP_Compiler(object):
 				faces[face] = new_facedata
 		
 		# update self.description
-		for section in description:
+		for section in self.description:
 			for name in description[section]:
 				if name in self.description[section]:
 					print("overwriting existing entry for",section,name)

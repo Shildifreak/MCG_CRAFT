@@ -18,15 +18,6 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 
 	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{}}
 	
-	# as of now desktop version needs a pseudo blockmodel for each item
-	for itemname, itemdata in normalized_universal_description["ITEMS"].items():
-		icon = (0, texture_index[itemdata["icon"]])
-		transparent = False
-		facecoordslist = [[] for _ in FACES + ("inside",)]
-		textcoordslist = [[] for _ in FACES + ("inside",)]
-		blockmodel = itemname, transparent, icon, facecoordslist, textcoordslist
-		description["BLOCK_MODELS"].append(blockmodel)
-	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
 		icon = (0, texture_index[blockmodeldata["icon"]])
