@@ -25,6 +25,7 @@ class GUI(object):
         self.queue = collections.OrderedDict()
         self.stats = collections.OrderedDict()
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
+        self.closed = False
         self.serverconfig = serverconfig
         self.clientconfig = clientconfig
         self.get_worldtypes = get_worldtypes
@@ -46,12 +47,9 @@ class GUI(object):
         print("Please overwrite init_widgets method of baseclass GUI and invoke some addwidget_... methods")
     
     def mainloop(self):
-        try:
-            while 1:
-                time.sleep(0.01)
-                self.update()
-        except:
-            pass
+        while not self.closed:
+            time.sleep(0.01)
+            self.update()
 
     def update(self):
         self.root.update()
@@ -61,6 +59,8 @@ class GUI(object):
 
     def quit(self):
         self.callback("quit")
+        self.lock.acquire() #wait for lock to be available, lock forever because destroyed window will never come back
+        self.closed = True
         try:
             self.root.destroy()
         except:
@@ -71,9 +71,7 @@ class GUI(object):
         root = Tkinter.Tk()
         root.title("MCGCraft Server GUI")
         def on_closing():
-            self.callback("quit")
-            self.lock.acquire() #wait for lock to be available, lock forever because no one will be able to use window once it's destroyed
-            root.destroy()
+            self.quit()
         root.protocol("WM_DELETE_WINDOW", on_closing)
         root.protocol("WM_SAVE_YOURSELF", on_closing)
         root.grid_columnconfigure(1,weight=1)
