@@ -1,4 +1,3 @@
-var spawnpoint = [0,5,0];
 
 function cached (det_f) {
     var cache = new Map();
@@ -309,3 +308,19 @@ function terrain_hint(binary_box, tag) {
     return true;
 }
 
+// spawnpoint
+function generate_spawnpoint() {
+    var [x, y, z] = [0, 0, 0];
+    for (var i = 0; i < 100; i++) {
+        let b = (terrain([0,y+1,0]) != "AIR")*4
+              + (terrain([0,y  ,0]) != "AIR")*2
+              + (terrain([0,y-1,0]) != "AIR")*1;
+        if (b == 1) {
+            break;
+        }
+        (b > 1) ? y++ : y--;
+    }
+    let dy = 1.6 - 0.5 + 0.1; // player eye level, block center to surface, margin
+    return [x, y + dy, z];
+}
+var spawnpoint = generate_spawnpoint();
