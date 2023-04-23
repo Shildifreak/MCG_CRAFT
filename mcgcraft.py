@@ -5,11 +5,10 @@
 #    raise Warning("mcgcraft.py should not be imported")
 
 # Imports
-import sys, os, ast, imp, inspect, select
-import threading, _thread, signal
-import math, time, random, itertools, collections
+import sys, os, ast, inspect, select
+import threading
+import time, random, collections
 import queue
-import getpass
 import copy
 import pprint
 import json
