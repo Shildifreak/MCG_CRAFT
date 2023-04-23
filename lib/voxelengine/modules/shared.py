@@ -15,8 +15,8 @@ ACTIONS = ["inv1","inv2","inv3","inv4","inv5","inv6","inv7","inv8","inv9","inv0"
 #               0      1      2      3      4      5      6      7      8      9
            "for" ,"back","left","right","jump","fly","inv","shift","sprint","left_hand",
 #             10      11     12      13     14    15    16      17       18          19
-           "right_hand","emote","chat","inv+","inv-"]
-#                    20      21     22     23     24    25    26    27    28    29
+           "right_hand","emote","chat","inv+","inv-","pickblock"]
+#                    20      21     22     23     24          25    26    27    28    29
 
 # the dimension of the game (used to avoid magic numbers in code)
 DIMENSION = 3 # but please don't change it, it won't work, there are a lot of places where variables for x,y,z are hardcoded

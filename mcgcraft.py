@@ -497,7 +497,15 @@ class Player(voxelengine.Player):
                 #if action1 didn't really do anything automatically switch to action2, eg. if activating doesn't work just place a block
                 if do_next:
                     action2()
-
+        
+        if self.was_pressed("pickblock"):
+            _, pos, _ = self.entity.get_focused_pos(self.focus_distance)
+            if pos:
+                block = self.entity.world.blocks[pos]
+                inv_slot = self.entity.find_inventory_slot(block.item_version())
+                if inv_slot:
+                    hand = "left_hand" if self.is_pressed("shift") else "right_hand"
+                    pe[hand] = inv_slot
 
         # Movement
         

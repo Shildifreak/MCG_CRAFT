@@ -70,6 +70,7 @@ KEYMAP = [
     (("key"  , key.LSHIFT ),"shift"     ),
     (("key"  , key.LCTRL  ),"sprint"    ),
     (("mouse", mouse.LEFT ),"left_hand" ),
+    (("mouse", mouse.MIDDLE),"pickblock"),
     (("mouse", mouse.RIGHT),"right_hand"),
     (("key"  , key.F      ),"emote"     ),
     (("key"  , key.T      ),"chat"      ),

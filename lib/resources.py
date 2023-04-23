@@ -497,21 +497,30 @@ class Entity(voxelengine.Entity):
         if self["lives"] < 0:
             self.kill(verbose=False)
 
+    def find_inventory_slot(self, item={"id":"air"}):
+        """return first inventory slot that contains matching item (ignoring count)"""
+        for i,inv_item in enumerate(self["inventory"]):
+            if inv_item["id"] == item["id"]:
+                return i
+        return None
+
     def pickup_item(self,item):
+        """return success : bool"""
         if isinstance(item, Item):
             item = item.item
-        a = False
-        i_air = None
-        for i,inv_item in enumerate(self["inventory"]):
-            if i_air == None and inv_item["id"] == "AIR":
-                i_air = i
-            if inv_item["id"] == item["id"]:
-                inv_item["count"] = inv_item.get("count", 1) + item.get("count",1)
-                return True
-        if i_air == None:
-            return False
-        self["inventory"][i_air] = item
-        return True
+        # find a matching stack
+        i = self.find_inventory_slot(item)
+        if i != None:
+            inv_item = self["inventory"][i]
+            inv_item["count"] = inv_item.get("count", 1) + item.get("count",1)
+            return True
+        # or find an empty slot
+        i = self.find_inventory_slot()
+        if i != None:
+            self["inventory"][i] = item
+            return True
+        # no space
+        return False
 
 
 class CommandException(Exception):
