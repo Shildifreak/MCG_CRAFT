@@ -55,5 +55,6 @@ class ItemEntity(Entity):
             self["tags"] = {"block_update", "random_tick"}
         else:
             self["velocity"] -= (0,1,0)
+            self["rotation"] = (self["rotation"][0]+10, 0)
             self.update_position()
         self.take_damage(self.dt/self.TTL)

@@ -142,7 +142,7 @@
     "Fruhlingslaub"            : {"faces":{"all":"fruhlingslaub"}},
     
     "Quarzsaule"               : {"faces":{"top":"quarzsaule_querschnitt","bottom":"quarzsaule_querschnitt","other":"quarzsaule"}},
-    "GLAS"                     : {"faces":{"all":"glas"}, "transparent":True},
+    "GLAS"                     : {"faces":{"all":"glas"}, "transparent":True, "connecting":True},
     "Netherstone"              : {"faces":{"all":"netherstone"}},
     "Bucherregal"              : {"faces":{"top":"holzbretter","bottom":"holzbretter","other":"bucherregal"}, "icon":"bucherregal"},
     "Obsidian"                 : {"faces":{"all":"obsidian"}},
