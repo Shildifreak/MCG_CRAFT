@@ -506,7 +506,7 @@ class Entity(voxelengine.Entity):
             if i_air == None and inv_item["id"] == "AIR":
                 i_air = i
             if inv_item["id"] == item["id"]:
-                inv_item["count"] = inv_item.get("count", 1) + item["count"]
+                inv_item["count"] = inv_item.get("count", 1) + item.get("count",1)
                 return True
         if i_air == None:
             return False

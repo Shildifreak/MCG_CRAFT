@@ -176,6 +176,13 @@
     "HERZ"                     : {"icon":"herz"                  },
     "DOOR"                     : {"icon":"door"                  },
     "Fertilizer"               : {"icon":"fairy_dust"            },
+    "Stick1"                   : {"icon":"stick1"                },
+    "Stick2"                   : {"icon":"stick2"                },
+    "Stick3"                   : {"icon":"stick3"                },
+    "Bow"                      : {"icon":"bow"                   },
+    "Arrow"                    : {"icon":"arrow"                 },
+    "Axe"                      : {"icon":"axe"                   },
+    "Fishing_Rod"              : {"icon":"fishing_rod"           },
     },
 
 #{

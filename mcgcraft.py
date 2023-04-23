@@ -320,6 +320,10 @@ class Player(voxelengine.Player):
             for blockname in resources.allBlocknames: # includes blocks only mentioned in description.py
                 if blockname not in functional_blocks:
                     character["inventory"].append({"id":blockname})
+            for itemname in resources.itemClasses.keys():
+                character["inventory"].append({"id":itemname})
+        if self.gamemode == "survival":
+            character["inventory"] = [{"id":"Axe"},{"id":"Setzling"},{"id":"Bow"},{"id":"Arrow","count":100},{"id":"Fishing_Rod"}]
 
         # inventory stuff
         for i in range(60):
