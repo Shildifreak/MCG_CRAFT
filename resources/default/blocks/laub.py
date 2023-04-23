@@ -27,7 +27,7 @@ class Laub(Block):
     def handle_event_random_tick(self, event):
         if self["d_wood"] >= self.MAXDISTANCE:
             self.turn_into("AIR")
-            itemid = random.choices(["LAUB","Setzling"],[10,1])[0]
+            itemid = random.choices(["LAUB","Stick1","Stick2","Stick3","Setzling"],[6,1,1,1,1])[0]
             e = EntityFactory({"type":"Item","item":{"id":itemid}})
             e.set_world(self.world,self.position)
             e.add_random_velocity()

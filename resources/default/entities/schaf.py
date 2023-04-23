@@ -67,6 +67,7 @@ class Schaf(Entity):
 
     def right_clicked(self, character):
         self["texture"] = "SCHAF,GESCHOREN"
+        character.pickup_item({"id":"WEISS"})
         
     def left_clicked(self, character):
         print("Maehhh")
@@ -85,3 +86,4 @@ class Schaf(Entity):
             pos = (self["position"]+Vector(0,-2,0)).round()
             if self.world.blocks[pos] == "GRASS":
                 self.world.blocks[pos] = "DIRT"
+                self["texture"] = "SCHAF"

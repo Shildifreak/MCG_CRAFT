@@ -8,7 +8,6 @@ class Dirt(Block):
     def handle_event_random_tick(self,events):
         if self.world.blocks[self.position + (0,1,0)] == "AIR":
             self.turn_into("GRASS")
-            print("grassing")
             return True
         return False
 

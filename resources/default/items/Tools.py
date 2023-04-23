@@ -9,7 +9,7 @@ class Fertilizer(Item):
         character.world.blocks[blockpos].mined(character, face)
 
     def use_on_entity(self, character, entity):
-        entity.damage(5)
+        entity.take_damage(5)
         #self.decrease_count()
 
 @register_item("Fishing_Rod")
