@@ -1,4 +1,4 @@
-import imp
+import types
 import random
 import warnings
 import functools
@@ -11,8 +11,6 @@ from voxelengine.modules.py_mini_racer import py_mini_racer
 from voxelengine.modules.frozen_dict import freeze
 
 
-warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
-
 class WorldGenerator(object):
 	def __init__(self, generator_data, init_py=True, init_js=True):
 		self.generator_data = generator_data
@@ -23,7 +21,7 @@ class WorldGenerator(object):
 
 	def _init_py(self):
 		# creating the module
-		generator_module = self.generator_module = imp.new_module(self.generator_data["name"])
+		generator_module = self.generator_module = types.ModuleType(self.generator_data["name"])
 
 		# setting stuff up
 		generator_module.seed = self.generator_data["seed"]
@@ -36,7 +34,7 @@ class WorldGenerator(object):
 		# cleaning stuff up
 		random.seed()
 		if hasattr(generator_module, "terrain") or hasattr(generator_module, "terrain_js"):
-			raise DeprecationWarning("terrain functions in python file will be ignored, consider creating a .js file")
+			raise DeprecationWarning("terrain functions in python file are ignored, consider creating a .js file")
 		if not hasattr(generator_module, "init"):
 			generator_module.init = empty_init
 
