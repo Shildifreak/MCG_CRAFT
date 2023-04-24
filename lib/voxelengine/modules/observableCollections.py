@@ -58,6 +58,9 @@ class Observable(Serializable):
         return value
 
     def __setitem__(self,key,value):
+        prev_value = self.get(key,None)
+        if isinstance(prev_value, Observable):
+            prev_value.parent = None
         static_key = key if self.static_keys else None
         value = self._adopted_value(value,static_key)
         self.data[key] = value
@@ -68,8 +71,6 @@ class Observable(Serializable):
 
     def replace(self,key,value):
         prev_value = self[key]
-        if isinstance(prev_value, Observable):
-            prev_value.parent = None
         self[key] = value #should cause trigger
         return prev_value
 
