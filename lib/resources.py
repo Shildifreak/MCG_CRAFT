@@ -497,7 +497,7 @@ class Entity(voxelengine.Entity):
         if self["lives"] < 0:
             self.kill(verbose=False)
 
-    def find_inventory_slot(self, item={"id":"air"}):
+    def find_inventory_slot(self, item={"id":"AIR"}):
         """return first inventory slot that contains matching item (ignoring count)"""
         for i,inv_item in enumerate(self["inventory"]):
             if inv_item["id"] == item["id"]:
