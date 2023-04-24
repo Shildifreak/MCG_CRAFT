@@ -445,19 +445,37 @@ class SetQueue(collections.OrderedDict):
         return self.popitem(last=False)[0]
 
 class InitChunkQueue(object):
-    def __init__(self):
-        self.chunks = collections.OrderedDict()
+    def __init__(self, chunk_priority_callback):
+        self.committed = set()
+        self.chunks = set()
         self.positions = []
-        self.terrain_preload = lambda positions: None
+        self.world_generator = None
+        self.chunk_priority_callback = chunk_priority_callback
+    def clear(self):
+        self.committed.clear()
+        self.chunks.clear()
+        self.positions.clear()
+        self.world_generator = None
     def _refill(self):
         if self.chunks:
-            chunk = self.chunks.popitem(last=False)[0]
+            chunk = min(self.chunks, key=self.chunk_priority_callback)
+            self.chunks.remove(chunk)
+            self.committed.add(chunk)
             self.positions = [(chunk << CHUNKBASE) + offset for offset in CHUNKPOSITIONS]
-            self.terrain_preload(self.positions)
+            self.world_generator.preload(self.positions)
         else:
             raise Exception("can't call _refill with empty chunks")
-    def add(self, value):
-        self.chunks[value] = None
+    def add(self, chunk):
+        if chunk in self.committed or chunk in self.chunks:
+            pass
+        else:
+            if self.world_generator.terrain_hint((CHUNKBASE,chunk),"visible"):
+                self.chunks.add(chunk)
+    def difference_update(self, remove_set):
+        self.chunks.difference_update(remove_set)
+    def update(self, add_set):
+        for chunk in add_set:
+            self.add(chunk)
     def is_empty(self):
         return not (self.chunks or self.positions)
     def pop(self):
@@ -467,7 +485,7 @@ class InitChunkQueue(object):
 
 class Model(object):
 
-    def __init__(self):
+    def __init__(self, chunk_priority_callback):
 
         # A Batch is a collection of vertex lists for batched rendering.
         self.batch = pyglet.graphics.Batch()
@@ -488,7 +506,7 @@ class Model(object):
 
         self.queue = deque()
         self.blockface_update_buffer = SetQueue()
-        self.init_chunk_queue = InitChunkQueue()
+        self.init_chunk_queue = InitChunkQueue(chunk_priority_callback)
 
         self.occlusion_cache = collections.OrderedDict()
 
@@ -533,14 +551,26 @@ class Model(object):
 
     def load_generator(self, generator_data):
         self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
+        self.init_chunk_queue.world_generator = self.world_generator
         self.blocks.set_terrain_function(self.world_generator.client_terrain)
-        self.init_chunk_queue.terrain_preload = self.world_generator.preload
 
     def monitor_around(self, position):
         """returns list of messages to be send to server in order to announce new monitoring area and required updates"""
         center_chunk_position = position.round() >> CHUNKBASE
         added, removed = self.chunks.monitor_around(center_chunk_position)
+
+        # init queue removed
+        self.init_chunk_queue.difference_update(removed)
+        self.init_chunk_queue.update(added)
+
+        # monitor
+        lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
+        highest_corner_chunk = center_chunk_position + RENDERDISTANCE
+        lower_bounds = lowest_corner_chunk << CHUNKBASE
+        upper_bounds = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
+        yield ("monitor", lower_bounds, upper_bounds, self.chunks.current_monitor_id)
         
+        # update and init queue added
         added_chunks_with_areas_and_mid = [(chunkpos,
                                             BinaryBox(CHUNKBASE, chunkpos).bounding_box(),
                                             self.chunks.unmonitored_since_ids[chunkpos])
@@ -549,18 +579,8 @@ class Model(object):
         added_chunks_with_areas_and_mid.sort(key = lambda x, p=Point(position): x[1].distance(p))
 
         for chunkpos, area, m_id in added_chunks_with_areas_and_mid:
-            # update visibility of blocks in chunks (show blocks from terrain function)
-            if m_id == 0:
-                if self.world_generator.terrain_hint((CHUNKBASE,chunkpos),"visible"):
-                    self.init_chunk_queue.add(chunkpos)
-
             # create messages for server
             yield ("update", area.lower_bounds, area.upper_bounds, m_id)
-        lowest_corner_chunk = center_chunk_position - RENDERDISTANCE
-        highest_corner_chunk = center_chunk_position + RENDERDISTANCE
-        lower_bounds = lowest_corner_chunk << CHUNKBASE
-        upper_bounds = ((highest_corner_chunk + (1,1,1)) << CHUNKBASE) - (1,1,1)
-        yield ("monitor", lower_bounds, upper_bounds, self.chunks.current_monitor_id)
 
 
     ########## more private stuff ############
@@ -838,6 +858,7 @@ class Model(object):
         self.shown = {}
         self.blocks.clear()
         self.chunks.clear()
+        self.init_chunk_queue.clear()
         self.load_generator(generator_data)
 
     def _del_area(self, position):
@@ -950,7 +971,7 @@ class Window(pyglet.window.Window):
         self.rotation = (0, 0)
 
         # Instance of the model that handles the world.
-        self.model = Model()
+        self.model = Model(chunk_priority_callback=self.distance_to_chunk)
         
         # The label for debug info
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
@@ -1002,6 +1023,10 @@ class Window(pyglet.window.Window):
         #pyglet.window.Window.set_exclusive_mouse(self,exclusive)
         super(Window, self).set_exclusive_mouse(exclusive)
         self.exclusive = exclusive
+
+    def distance_to_chunk(self, chunk):
+        chunkpos = chunk << CHUNKBASE
+        return (self.position - chunkpos).length()
 
     def get_sight_vector(self):
         """
