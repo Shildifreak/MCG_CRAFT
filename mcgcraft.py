@@ -729,6 +729,7 @@ def run():
     settings = {"wait" : False,
                 "name" : config["name"],
                 "parole" : config["parole"],
+                "subnet_whitelist" : config["whitelist"],
                 "texturepack_path" : resources.texturepackPath,
                 "PlayerClass" : Player,
                 "host" : config["host"],

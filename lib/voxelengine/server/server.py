@@ -78,6 +78,9 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
     
 class MyHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
+    def __init__(self, server_address, RequestHandlerClass, subnet_whitelist):
+        super().__init__(server_address, RequestHandlerClass)
+        self.subnet_whitelist = subnet_whitelist
     def handle_error(self, request, client_address):
         try:
             # surpress socket/ssl related errors
@@ -89,6 +92,12 @@ class MyHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         except:
             # if unhandled exception occurs make sure to take main thread with you
             voxelengine.modules.utils.interrupt_main()
+    def verify_request(self, request, client_address):
+        ip, port = client_address
+        print(self.subnet_whitelist, ip)
+        ok = socket_connection.check_list_for_ip(self.subnet_whitelist, ip)
+        print(ok)
+        return ok
 
 class GameServer(object):
     """
@@ -120,6 +129,7 @@ class GameServer(object):
                  wait=True,
                  name="VoxelengineServer",
                  parole="",
+                 subnet_whitelist=("127.0.0.1","host"),
                  texturepack_path=os.path.join(VOXELENGINE_PATH, "texturepacks", "basic_colors",".versions"),
                  PlayerClass=Player,
                  host="",
@@ -130,6 +140,7 @@ class GameServer(object):
         self.wait = wait
         self.PlayerClass = PlayerClass
         self.host = host or voxelengine.modules.utils.get_ip()
+        self.subnet_whitelist = [self.host if n=="host" else n for n in subnet_whitelist] #replace "host" with self.host
 
         self.players = {}
         self.new_players = set()
@@ -142,14 +153,15 @@ class GameServer(object):
             }
         # Actual gameplay is done over this connection
         self.game_server = socket_connection.server(on_connect=self._on_connect,
-                                                    on_disconnect=self._async_on_disconnect)        
+                                                    on_disconnect=self._async_on_disconnect,
+                                                    subnet_whitelist=self.subnet_whitelist)        
         self.game_port = self.game_server.get_entry_port()
         # Serve texturepack and serverinfo using http
         Handler = functools.partial(MyHTTPHandler, texturepack_path, serverinfo)
         http_port = try_ports(http_port)
         if http_port is False:
             raise ConnectionError("Couldn't open any of the given http_port options.")
-        self.http_server = MyHTTPServer(("", http_port), Handler)
+        self.http_server = MyHTTPServer(("", http_port), Handler, self.subnet_whitelist)
         self.http_thread = threading.Thread(target=self.http_server.serve_forever)
         self.http_thread.start()
         self.http_port = self.http_server.socket.getsockname()[1]
@@ -163,7 +175,8 @@ class GameServer(object):
         # 
         self.info_server = socket_connection.beacon(key="voxelgame"+parole,
                                                     info_data=json.dumps(serverinfo),
-                                                    nameserveraddr=nameserveraddr)
+                                                    nameserveraddr=nameserveraddr,
+                                                    subnet_whitelist=self.subnet_whitelist)
 
     def __del__(self):
         pass

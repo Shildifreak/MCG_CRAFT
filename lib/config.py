@@ -55,7 +55,7 @@ default_serverconfig = {
             "file"       : "",
             "worldtype"  : "BeispielWelt_Infinity",
             "mobspawning": True,
-            "whitelist"  : "127.0.0.1",
+            "whitelist"  : ["127.0.0.1","host"],
             "parole"     : "",
             "resource_paths": ["default"],
             "resource_path_options": [],

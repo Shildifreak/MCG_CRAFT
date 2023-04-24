@@ -3,6 +3,7 @@ import socket
 import select
 import sys
 import urllib.request
+import ipaddress
 import json
 
 import time
@@ -81,6 +82,14 @@ def json_loads_or_INVALID_MSG (msg):
     except json.JSONDecodeError as e:
         return INVALID_MSG
 
+def check_list_for_ip(subnet_list, ip):
+    i = ipaddress.ip_address(ip)
+    for subnet in subnet_list:
+        n = ipaddress.ip_network(subnet)
+        if i in n:
+            return True
+    return False
+
 class client(template):
     def __init__(self,serveraddr):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,10 +111,11 @@ class client(template):
         self.socket.close()
 
 class server(template):
-    def __init__(self, on_connect=None, on_disconnect=None):
+    def __init__(self, on_connect=None, on_disconnect=None, subnet_whitelist=("0.0.0.0/0",)):
         # save parameters
         self.on_connect = on_connect or (lambda addr:None)
         self.on_disconnect = on_disconnect or (lambda addr:None)
+        self.subnet_whitelist = subnet_whitelist
 
         # declare some attributes
         self.clients = symmetric_addr_socket_mapping() #addr:socket
@@ -126,6 +136,9 @@ class server(template):
             try:
                 if select.select([self.entry_socket],[],[],1)[0]:
                     client, addr = self.entry_socket.accept()
+                    if self.subnet_whitelist and not check_list_for_ip(self.subnet_whitelist, addr[0]):
+                        print("refused connection from %s because it did not match whitelist" % addr[0])
+                        break
                     client = CodecSwitcher(client)
                     if self.closed: #M# this may need to be replace by a lock on new_connected clients instead
                         break
@@ -187,12 +200,13 @@ class server(template):
 
 class beacon():
     def __init__(self, info_data, key="", port=40000, 
-                 nameserveraddr=None, nameserver_refresh_interval=10):
+                 nameserveraddr=None, nameserver_refresh_interval=10, subnet_whitelist=("0.0.0.0/0",)):
         self.port = port
         self.key = key
         self.info_data = info_data
         self.nameserveraddr = nameserveraddr
         self.nameserver_refresh_interval = nameserver_refresh_interval
+        self.subnet_whitelist = subnet_whitelist
 
         random.seed()
         self.uid = random.getrandbits(32)
@@ -222,6 +236,8 @@ class beacon():
             try:
                 if select.select([self.info_socket],[],[],1)[0]:
                     msg, addr = self.info_socket.recvfrom(PACKAGESIZE)
+                    if not check_list_for_ip(self.subnet_whitelist, addr[0]):
+                        break
                     if self.closed:
                         break
                     print ("info_socket:",repr(msg.decode()))
@@ -316,7 +332,3 @@ def search_servers(waittime=1,port=40000,key="",nameserveraddr=None):
     with server_searcher(port,key,nameserveraddr) as s:
         time.sleep(waittime)
         return s.get_servers()
-
-if __name__ == "__main__":
-    with nameserver(40001) as s:
-        s.loop()

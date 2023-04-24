@@ -188,16 +188,16 @@ class GUI(object):
     def addwidgets_whitelist(self):
         # Whitelist
         def setwhitelist(*args):
-            self.serverconfig["whitelist"] = whitelistvar.get()
+            self.serverconfig["whitelist"] = whitelistvar.get().replace(" ","").split(",")
         whitelistvar = Tkinter.StringVar(self.root)
-        whitelistvar.set(self.serverconfig["whitelist"])
+        whitelistvar.set(",".join(self.serverconfig["whitelist"]))
         whitelistvar.trace("w",setwhitelist)
         self.add_label("Whitelist")
         whitelist_entry = Tkinter.Entry(self.root, textvariable = whitelistvar)
         whitelist_entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
-        whitelist_button_local = Tkinter.Radiobutton(text = "localhost", variable = whitelistvar, value = "127.0.0.1")
+        whitelist_button_local = Tkinter.Radiobutton(text = "This PC", variable = whitelistvar, value = "127.0.0.1,host")
         whitelist_button_local.grid(column = 2, row = self.row, sticky = Tkinter.W)
-        whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16")
+        whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "127.0.0.1,192.168.0.0/16")
         whitelist_button_LAN.grid(column = 3, row = self.row, sticky = Tkinter.W)
         self.row += 3
 
