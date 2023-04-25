@@ -3,8 +3,8 @@ import random
 
 @register_item("Fertilizer")
 class Fertilizer(Item):
-    def use_on_block(self, character, blockpos, face):
-        character.world.random_tick_at(blockpos)
+    def use_on_block(self, character, block, face):
+        character.world.random_tick_at(block.position)
         self.decrease_count()
 
     def use_on_entity(self, character, entity):

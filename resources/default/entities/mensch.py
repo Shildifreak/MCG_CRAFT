@@ -46,12 +46,9 @@ class Mensch(Entity):
     def select_emote(self, index):
         self["emote"] = self.EMOTES[index%len(self.EMOTES)]
 
-    def right_clicked(self, character):
+    def clicked(self, character, item):
         print("Oh no, that hurts!")
         self.take_damage(1)
-        
-    def left_clicked(self, character):
-        print("Just stop it already!")
 
     def update(self):
         self.execute_ai_commands()

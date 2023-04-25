@@ -6,7 +6,7 @@ class Door(Block):
     blast_resistance = 0
     #offset = -1 / 1      # y offset to get to other half of door
     
-    def activated(self,character,face):
+    def clicked(self,character,face,item):
         if self.ambient_power_level() != 0:
             return
         new_state = "" if self["state"] else "OPEN"
@@ -66,10 +66,10 @@ class DoorItem(Item):
     def block_version(self):
         # always place as DOORBOTTOM
         return "DOORBOTTOM"
-    def use_on_block(self,character,blockpos,face):
-        super().use_on_block(character,blockpos,face)
+    def use_on_block(self,character,block,face):
+        super().use_on_block(character,block,face)
         # after placing of DOORBOTTOM add DOORTOP
         world = character.world
-        upper_half_pos = blockpos + face + (0,1,0)
+        upper_half_pos = block.position + face + (0,1,0)
         if world.blocks[upper_half_pos] == "AIR":
             world.blocks[upper_half_pos] = "DOORTOP"

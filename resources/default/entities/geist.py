@@ -37,6 +37,6 @@ class Geist(Entity):
             
         self.update_position()
 
-    def right_clicked(self, character):
+    def clicked(self, character, item):
         r = character.get_sight_vector()
         self["velocity"] = Vector(r)*(20,0,20) + Vector((0,15,0))

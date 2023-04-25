@@ -305,6 +305,7 @@ class Player(voxelengine.Player):
         self.inventory_display = InventoryDisplay(self)
         self.chat = ChatDisplay(self)
         self.gamemode = config["gamemode"]
+        self.ongoing_hand_actions = {"left_hand":None, "right_hand":None} #generators that are fed with current hand pressure
 
     def create_character(self):
         world = self.universe.get_spawn_world()
@@ -313,7 +314,7 @@ class Player(voxelengine.Player):
 
         # just for testing:
         if self.gamemode == "creative":
-            character["inventory"] = [{"id":"GESICHT"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+            character["inventory"] = [{"id":"AIR"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
             functional_blocks = resources.blockClasses.keys()
             for blockname in functional_blocks: # with class in resourcepack/blocks
                 character["inventory"].append({"id":blockname})
@@ -458,45 +459,47 @@ class Player(voxelengine.Player):
         #           left click      right click
         # no shift  mine block      activate block
         # shift     use l item      use r. item
-                
-        get_block = lambda: pe.world.blocks[pos]
-        def get_item():
-            hand_name = {"left_hand": "left_hand", "right_hand":"right_hand"}[event_name]
-            item_index = pe[hand_name]
-            item_data = pe["inventory"][item_index]
-            return resources.ItemFactory(item_data)
 
         for event_name in ("left_hand", "right_hand"):
             if self.was_pressed(event_name):
                 d_block, pos, face = self.entity.get_focused_pos(self.focus_distance)
                 d_entity, entity = self.entity.get_focused_entity(self.focus_distance)
 
+                item_index = pe[event_name]
+                item_data = pe["inventory"][item_index]
+                item = resources.ItemFactory(item_data)
+
                 # nothing to click on
                 if (d_block == None) and (d_entity == None):
-                    get_item().use_on_air(pe)
-                    continue
-
+                    do_next = item.use_on_air(pe)
+                
                 # click on block
-                if (d_block != None) and ((d_entity == None) or (d_block < d_entity)):
-                    actions = {"right_hand": (lambda:get_block().activated(pe, face),
-                                              lambda:get_item().use_on_block(pe, pos, face)),
-                               "left_hand" : (lambda:get_block().mined(pe, face),
-                                              lambda:get_item().use_on_block(pe, pos, face))
-                               }[event_name]
+                elif (d_block != None) and ((d_entity == None) or (d_block < d_entity)):
+                    block = pe.world.blocks[pos]
+                    if not self.is_pressed("shift"):
+                        do_next = block.clicked(pe, face, item)
+                    else:
+                        do_next = item.use_on_block(pe, block, face)
+                
                 # click on entity
                 else:
-                    actions = {"right_hand": (lambda:get_item().use_on_entity(pe, entity),
-                                              lambda:entity.right_clicked(pe)),
-                               "left_hand" : (lambda:get_item().use_on_entity(pe, entity),
-                                              lambda:entity.left_clicked(pe))}[event_name]
-                action1, action2 = actions
-                if self.is_pressed("shift"): #if shift is pressed skip action1 and definitely do action2
-                    do_next = True
-                else:
-                    do_next = action1()
-                #if action1 didn't really do anything automatically switch to action2, eg. if activating doesn't work just place a block
-                if do_next:
-                    action2()
+                    if not self.is_pressed("shift"):
+                        do_next = item.use_on_entity(pe, entity)
+                    else:
+                        do_next = entity.clicked(pe, item)
+                
+                if isinstance(do_next, collections.abc.Generator):
+                    next(do_next) # go up to initial yield so we can use send after
+                    self.ongoing_hand_actions[event_name] = do_next
+            
+            if self.ongoing_hand_actions[event_name]:
+                pressure = self.get_pressure(event_name)
+                try:
+                    self.ongoing_hand_actions[event_name].send(pressure)
+                except StopIteration:
+                    self.ongoing_hand_actions[event_name] = None
+                if pressure == 0:
+                    self.ongoing_hand_actions[event_name] = None
         
         if self.was_pressed("pickblock"):
             _, pos, _ = self.entity.get_focused_pos(self.focus_distance)

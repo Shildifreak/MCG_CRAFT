@@ -2,7 +2,7 @@ from resources import *
 
 @register_block("CHEST")
 class ChestBlock(Block):
-    def activated(self,character,face):
+    def clicked(self,character,face,item):
         """something like placing block depending on direction character is looking"""
         # open inventory
         character.foreign_inventory = (self.world, self.position)

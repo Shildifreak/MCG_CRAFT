@@ -15,7 +15,7 @@ class tntblock(Block):
                 return True
         return False
 
-    def activated(self,character,face):
+    def clicked(self,character,face,item):
         self.explode()
         self.save()
 

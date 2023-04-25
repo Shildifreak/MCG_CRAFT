@@ -27,10 +27,7 @@ class ItemEntity(Entity):
         modelmaps = {"<<item>>":ItemFactory(self["item"]).entity_blockmodel()}
         self["modelmaps"] = modelmaps
 
-    def right_clicked(self, character):
-        self.collect_by(character)
-
-    def left_clicked(self, character):
+    def clicked(self, character, item):
         self.collect_by(character)
 
     def collect_by(self, character):

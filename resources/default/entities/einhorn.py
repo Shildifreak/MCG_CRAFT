@@ -23,10 +23,7 @@ class Einhorn(Entity):
         super().__init__(data_defaults)
         
 
-    def right_clicked(self, character):
-        self["texture"] = "SCHAF"
-        
-    def left_clicked(self, character):
+    def clicked(self, character, item):
         self["texture"] = "SCHAF"
 
     def update(self):

@@ -171,9 +171,9 @@ class Block(voxelengine.Block):
     
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
 
-    def activated(self,character,face):
+    def clicked(self,character,face,item):
         """blocks like levers should implement this action. Return value signalizes whether to execute use action of hold item"""
-        return True
+        return item.use_on_block(character, self, face)
 
     def item_version(self):
         """use the output of this function when turning the block into an item"""
@@ -249,18 +249,18 @@ class Item(object):
         """use the output of this function when trying to place the item into the world as a block"""
         return self.item["id"]
     
-    def block_version_on_place(self, character, blockpos, face):
+    def block_version_on_place(self, character, block, face):
         return self.block_version()
 
     def entity_blockmodel(self):
         return self.item["id"]
     
-    def use_on_block(self,character,blockpos,face):
+    def use_on_block(self,character,block,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
-        new_pos = blockpos + face
+        new_pos = block.position + face
 
         # check if block would collide with player
-        blockdata = self.block_version_on_place(character,blockpos,face)
+        blockdata = self.block_version_on_place(character,block,face)
         block = BlockFactory(blockdata, position=new_pos, blockworld=character.world.blocks)
         if "solid" in block.get_tags():
             for entity in character.world.entities.find_entities(block.get_bounding_box()):
@@ -268,22 +268,25 @@ class Item(object):
                     return
 
         # place block in world and decrease item count
-        block.save()
-        self.decrease_count()
+        if self.decrease_count():
+            block.save()
+        return
     
     def decrease_count(self):
         self.item["count"] -= 1
         if self.item["count"] <= 0:
             parent_key = self.item.parent.index(self.item)
-            self.item.parent[parent_key] = {"id": "AIR"}
+            self.item.parent.replace(parent_key, {"id": "AIR"})
+        return self.item["count"] >= 0
             
 
     def use_on_entity(self,character,entity):
         """
-        whatever this item should do when clicked on this entity... default is to do the same like when clicking air
-        Return value signalizes whether to also execute right_/left_clicked action of entity
+        whatever this item should do when clicked on entity
+        use yield or return a generator to continue action as long as key is hold
+        return bool to signalize whether to also execute right_/left_clicked action of entity
         """
-        return self.use_on_air(character)
+        return entity.clicked(character, self)
 
     def use_on_air(self,character):
         """whatever this item should do when clicked into air"""
@@ -342,12 +345,8 @@ class Entity(voxelengine.Entity):
             f = getattr(self, f_name, self.handle_event_default)
             f(events)
     
-    def right_clicked(self, character):
-        """whatever this entity should do when being right clicked by entity"""
-        pass
-
-    def left_clicked(self, character):
-        """whatever this entity should do when being right clicked by entity"""
+    def clicked(self, character, item):
+        """whatever this entity should do when being clicked by character with item"""
         pass
     
     @classmethod

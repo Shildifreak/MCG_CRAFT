@@ -10,7 +10,7 @@ from resources import *
 @register_item("Repeater")
 @register_item("ROCKET")
 class RotatableBlockItem(Item):
-    def block_version_on_place(self,character,blockpos,face):
+    def block_version_on_place(self,character,block,face):
         block_id = self.item["id"]
         faces = {( 0, 1, 0):"t",
                  ( 0,-1, 0):"b",
@@ -30,7 +30,7 @@ class RotatableBlockItem(Item):
 
 @register_block("GESICHT")
 class RotatableBlock(Block):
-    def activated(self,character,face):
+    def clicked(self,character,face,item):
         self["rotation"] += 1
         self["rotation"] %= 4
         self.save()

@@ -17,12 +17,6 @@ class Dame(Entity):
         self["sprint"] = 20
         self["tags"] = {"update"}
 
-    #def right_clicked(self, character):
-    #    print "Muuhhh"
-        
-    #def left_clicked(self, character):
-    #    print "Maehhh"
-
     def update(self):
         if self.world.players:
             player = random.choice(tuple(self.world.players))

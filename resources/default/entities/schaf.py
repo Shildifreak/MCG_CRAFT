@@ -65,12 +65,9 @@ class Schaf(Entity):
         super().__init__(data_defaults)
         self.ai = SchafAI(self)
 
-    def right_clicked(self, character):
+    def clicked(self, character, item):
         self["texture"] = "SCHAF,GESCHOREN"
         character.pickup_item({"id":"WEISS"})
-        
-    def left_clicked(self, character):
-        print("Maehhh")
 
     def update(self):
 
