@@ -157,6 +157,7 @@ from pyglet import compat_platform
 __docformat__ = 'restructuredtext'
 __version__ = '$Id$'
 
+version_tuple = tuple(map(int, sys.version.split()[0].split("."))) #fix for "3.10" < "3.3" issue
 
 if compat_platform in ('win32', 'cygwin'):
 
@@ -164,7 +165,7 @@ if compat_platform in ('win32', 'cygwin'):
         def sleep(self, microseconds):
             time.sleep(microseconds * 1e-6)
 
-    if sys.version >= "3.3":
+    if version_tuple >= (3, 3):
         _default_time_function = time.perf_counter
     else:
         _default_time_function = time.clock
@@ -177,7 +178,7 @@ else:
         def sleep(self, microseconds):
             _c.usleep(int(microseconds))
 
-    if sys.version >= "3.3":
+    if version_tuple >= (3, 3):
         _default_time_function = time.perf_counter
     else:
         _default_time_function = time.time
