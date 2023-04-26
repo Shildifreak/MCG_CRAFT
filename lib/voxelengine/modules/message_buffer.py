@@ -23,6 +23,7 @@ class MessageBuffer(object):
                          "delentity":(self.entity_group,self.vip_entity_group),
                          "set":(self.block_group,), "delarea":(self.block_group,),
                          "clear":(self.priority_group,), "error":(self.priority_group,),
+                         "sound":(self.priority_group,),
                          "focusdist":(self.type_group,), "focushud":(self.type_group,),
                          "textsuggestions":(self.type_group,),
                          "sethud":(self.hud_group,), "delhud":(self.hud_group,),

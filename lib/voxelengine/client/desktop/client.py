@@ -27,6 +27,7 @@ import pyglet
 from pyglet import image
 #pyglet.options["debug_gl"] = False
 pyglet.options['shadow_window'] = False
+pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
@@ -333,7 +334,7 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS
     def url_for(filename):
         path = os.path.join("/texturepacks/desktop",filename)
         netloc = "%s:%i" % (host,port)
@@ -354,6 +355,15 @@ def load_setup(host, port):
         BLOCKMODELS[name] = block_model(vertices, textures)
         ICON[name] = tex_coord(*icon_coords)
         TRANSPARENCY[name] = transparency
+    
+    SOUNDS = {}
+    sounddir = os.path.join(PATH,"Sounds")
+    for filename in os.listdir(sounddir):
+        path = os.path.join(sounddir, filename)
+        sound_name = os.path.splitext(filename)[0]
+        with open(path,"rb") as f:
+            SOUNDS[sound_name] = pyglet.media.StaticSource(pyglet.media.load(path,f))
+
 
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
@@ -1006,6 +1016,9 @@ class Window(pyglet.window.Window):
         # current state of actions
         self.actionstates = collections.defaultdict(int)
 
+        # Sound
+        self.listener = pyglet.media.get_audio_driver().get_listener()
+
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
@@ -1028,12 +1041,13 @@ class Window(pyglet.window.Window):
         chunkpos = chunk << CHUNKBASE
         return (self.position - chunkpos).length()
 
-    def get_sight_vector(self):
+    def get_sight_vector(self, pitchcorrection=0):
         """
         Returns the current line of sight vector indicating the direction
         the player is looking.
         """
         x, y = self.rotation
+        y += pitchcorrection
         # y ranges from -90 to 90, or -pi/2 to pi/2, so m ranges from 0 to 1 and
         # is 1 when looking ahead parallel to the ground and 0 when looking
         # straight up or down.
@@ -1079,6 +1093,7 @@ class Window(pyglet.window.Window):
                 elif test("goto",1):
                     position, = args
                     self.position = Vector(position)
+                    self.listener.position = tuple(position)
                     for msg in self.model.monitor_around(self.position):
                         self.client.send(msg)
                 elif test("focusdist",1):
@@ -1117,6 +1132,11 @@ class Window(pyglet.window.Window):
                         raise err
                     else:
                         warnings.warn(err)
+                elif test("sound",2):
+                    sound_name, position = args
+                    assert type(sound_name) == str
+                    position = Vector(position)
+                    self.play_sound(sound_name, position)
                 else:
                     print("unknown command", command, args)
             self.model.process_queue()
@@ -1219,6 +1239,8 @@ class Window(pyglet.window.Window):
         pitch += dpitch
         pitch = max(-90, min(90, pitch))
         self.rotation = (yaw,pitch)
+        self.listener.forward_orientation = tuple(self.get_sight_vector())
+        self.listener.up_orientation = tuple(self.get_sight_vector(90))
         self.client.send(("rot", self.rotation))
                 
     def on_mouse_motion(self, x, y, dx, dy):
@@ -1482,6 +1504,13 @@ class Window(pyglet.window.Window):
         Draw the crosshairs in the center of the screen.
         """
         self.reticle.draw(GL_LINES)
+
+    def play_sound(self, sound_name, position):
+        if sound_name in SOUNDS:
+            player = SOUNDS[sound_name].play()
+            player.position = position
+        else:
+            print("unknown sound name", sound_name)
 
 def setup_fog():
     """

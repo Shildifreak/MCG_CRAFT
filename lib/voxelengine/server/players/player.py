@@ -123,6 +123,10 @@ class Player(object):
 			elif event.tag in ("entity_leave", "entity_enter", "entity_change"):
 				entity = event.data
 				entity_events[entity].add(event.tag)
+			elif event.tag == "sound":
+				sound_name = event.data
+				position = event.area.center
+				self.outbox.add("sound",sound_name, position)
 			elif event.tag not in MUFFLED:
 				print("player received",event.tag)
 

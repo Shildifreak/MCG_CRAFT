@@ -29,6 +29,8 @@ server -> client
 		fatality: False -> just display and move on, True -> shutdown/reconnect
 	textsuggestions <suggestions>
 		suggestions: Liste von strings, als Antwort auf einen autocomplete command
+	sound name <x y z>
+		spiele den Sound an Stelle x y z
 
 	deprecated
 		del <x y z>
