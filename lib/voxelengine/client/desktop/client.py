@@ -808,12 +808,12 @@ class Model(object):
                     })
                 label = pyglet.text.layout.ScrollableTextLayout(document,
                                           batch=self.hud_batch,group=textgroup,
-                                          multiline=True, width=size[0], height=size[1],
+                                          multiline=True, width=int(size[0]), height=int(size[1]),
                                           )
                 label.begin_update()
                 
-                label.x = x
-                label.y = y
+                label.x = int(x)
+                label.y = int(y)
                 label.anchor_x = "center"
                 label.anchor_y = "center"
                 
