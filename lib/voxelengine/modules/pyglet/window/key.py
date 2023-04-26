@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -59,17 +60,15 @@ Usage::
         if modifiers & key.MOD_CTRL:
 
 """
-from builtins import str
 
 from pyglet import compat_platform
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id$'
 
 
 class KeyStateHandler(dict):
     """Simple handler that tracks the state of keys on the keyboard. If a
     key is pressed then this handler holds a True value for it.
+    If the window loses focus, all keys will be reset to False to avoid a
+    "sticky" key state.
 
     For example::
 
@@ -85,11 +84,15 @@ class KeyStateHandler(dict):
         False
 
     """
+
     def on_key_press(self, symbol, modifiers):
         self[symbol] = True
 
     def on_key_release(self, symbol, modifiers):
         self[symbol] = False
+    
+    def on_deactivate(self):
+        self.clear()
 
     def __getitem__(self, key):
         return self.get(key, False)

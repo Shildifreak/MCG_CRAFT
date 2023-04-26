@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -32,18 +33,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
 
-'''Encoder and decoder for PNG files, using PyPNG (png.py).
-'''
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
+"""Encoder and decoder for PNG files, using PyPNG (png.py).
+"""
 
 import array
 import itertools
 
-from pyglet.gl import *
-from pyglet.image import *
-from pyglet.image.codecs import *
+from pyglet.image import ImageData, ImageDecodeException
+from pyglet.image.codecs import ImageDecoder, ImageEncoder
 
 import pyglet.extlibs.png as pypng
 
@@ -57,23 +54,23 @@ class PNGImageDecoder(ImageDecoder):
             reader = pypng.Reader(file=file)
             width, height, pixels, metadata = reader.asDirect()
         except Exception as e:
-            raise ImageDecodeException(
-                'PyPNG cannot read %r: %s' % (filename or file, e))
+            raise ImageDecodeException('PyPNG cannot read %r: %s' % (filename or file, e))
 
         if metadata['greyscale']:
             if metadata['alpha']:
-                format = 'LA'
+                fmt = 'LA'
             else:
-                format = 'L'
+                fmt = 'L'
         else:
             if metadata['alpha']:
-                format = 'RGBA'
+                fmt = 'RGBA'
             else:
-                format = 'RGB'
-        pitch = len(format) * width
+                fmt = 'RGB'
+        pitch = len(fmt) * width
 
-        pixels = array.array('BH'[metadata['bitdepth']>8], itertools.chain(*pixels))
-        return ImageData(width, height, format, pixels.tostring(), -pitch)
+        pixels = array.array('BH'[metadata['bitdepth'] > 8], itertools.chain(*pixels))
+        return ImageData(width, height, fmt, pixels.tobytes(), -pitch)
+
 
 class PNGImageEncoder(ImageEncoder):
     def get_file_extensions(self):
@@ -97,18 +94,17 @@ class PNGImageEncoder(ImageEncoder):
 
         image.pitch = -(image.width * len(image.format))
 
-        writer = pypng.Writer(
-            image.width, image.height,
-            bytes_per_sample=1,
-            greyscale=greyscale,
-            alpha=has_alpha)
+        writer = pypng.Writer(image.width, image.height, greyscale=greyscale, alpha=has_alpha)
 
         data = array.array('B')
-        data.fromstring(image.data)
+        data.frombytes(image.get_data(image.format, image.pitch))
+
         writer.write_array(file, data)
+
 
 def get_decoders():
     return [PNGImageDecoder()]
+
 
 def get_encoders():
     return [PNGImageEncoder()]

@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -99,12 +100,8 @@ sprites within batches.
 .. versionadded:: 1.1
 """
 
-__docformat__ = 'restructuredtext'
-__version__ = '$Id$'
-
-import math
 import sys
-import warnings
+import math
 
 from pyglet.gl import *
 from pyglet import clock
@@ -112,7 +109,7 @@ from pyglet import event
 from pyglet import graphics
 from pyglet import image
 
-_is_pyglet_docgen = hasattr(sys, 'is_pyglet_docgen') and sys.is_pyglet_docgen
+_is_pyglet_doc_run = hasattr(sys, "is_pyglet_doc_run") and sys.is_pyglet_doc_run
 
 
 class SpriteGroup(graphics.Group):
@@ -182,6 +179,8 @@ class Sprite(event.EventDispatcher):
 
     _batch = None
     _animation = None
+    _frame_index = 0
+    _paused = False
     _rotation = 0
     _opacity = 255
     _rgb = (255, 255, 255)
@@ -234,7 +233,6 @@ class Sprite(event.EventDispatcher):
 
         if isinstance(img, image.Animation):
             self._animation = img
-            self._frame_index = 0
             self._texture = img.frames[0].image.get_texture()
             self._next_dt = img.frames[0].duration
             if self._next_dt:
@@ -387,18 +385,18 @@ class Sprite(event.EventDispatcher):
         else:
             vertex_format = 'v2i/%s' % self._usage
         if self._batch is None:
-            self._vertex_list = graphics.vertex_list(4, vertex_format,
-                'c4B', ('t3f', self._texture.tex_coords))
+            self._vertex_list = graphics.vertex_list(
+                4, vertex_format, 'c4B', ('t3f', self._texture.tex_coords))
         else:
-            self._vertex_list = self._batch.add(4, GL_QUADS, self._group,
-                vertex_format, 'c4B', ('t3f', self._texture.tex_coords))
+            self._vertex_list = self._batch.add(
+                4, GL_QUADS, self._group, vertex_format, 'c4B', ('t3f', self._texture.tex_coords))
         self._update_position()
         self._update_color()
 
     def _update_position(self):
         img = self._texture
-        scale_x = self._scale * self.scale_x
-        scale_y = self._scale * self.scale_y
+        scale_x = self._scale * self._scale_x
+        scale_y = self._scale * self._scale_y
         if not self._visible:
             vertices = (0, 0, 0, 0, 0, 0, 0, 0)
         elif self._rotation:
@@ -457,25 +455,9 @@ class Sprite(event.EventDispatcher):
         return self._x, self._y
 
     @position.setter
-    def position(self, pos):
-        self._x, self._y = pos
+    def position(self, position):
+        self._x, self._y = position
         self._update_position()
-
-    def set_position(self, x, y):
-        """Set the X and Y coordinates of the sprite simultaneously.
-
-        :Parameters:
-            `x` : int
-                X coordinate of the sprite.
-            `y` : int
-                Y coordinate of the sprite.
-
-        :deprecated: Set the X, Y coordinates via sprite.position instead.
-        """
-        self._x = x
-        self._y = y
-        self._update_position()
-        warnings.warn("Use position property instead.", DeprecationWarning)
 
     @property
     def x(self):
@@ -538,7 +520,7 @@ class Sprite(event.EventDispatcher):
     @property
     def scale_x(self):
         """Horizontal scaling factor.
-        
+
          A scaling factor of 1 (the default) has no effect.  A scale of 2 will
          draw the sprite at twice the native width of its image.
 
@@ -554,7 +536,7 @@ class Sprite(event.EventDispatcher):
     @property
     def scale_y(self):
         """Vertical scaling factor.
-        
+
          A scaling factor of 1 (the default) has no effect.  A scale of 2 will
          draw the sprite at twice the native height of its image.
 
@@ -682,6 +664,51 @@ class Sprite(event.EventDispatcher):
         self._visible = visible
         self._update_position()
 
+    @property
+    def paused(self):
+        """Pause/resume the Sprite's Animation
+
+        If `Sprite.image` is an Animation, you can pause or resume
+        the animation by setting this property to True or False.
+        If not an Animation, this has no effect.
+
+        :type: bool
+        """
+        return self._paused
+
+    @paused.setter
+    def paused(self, pause):
+        if not hasattr(self, '_animation') or pause == self._paused:
+            return
+        if pause is True:
+            clock.unschedule(self._animate)
+        else:
+            frame = self._animation.frames[self._frame_index]
+            self._next_dt = frame.duration
+            if self._next_dt:
+                clock.schedule_once(self._animate, self._next_dt)
+        self._paused = pause
+
+    @property
+    def frame_index(self):
+        """The current Animation frame.
+
+        If the `Sprite.image` is an `Animation`,
+        you can query or set the current frame.
+        If not an Animation, this will always
+        be 0.
+
+        :type: int
+        """
+        return self._frame_index
+
+    @frame_index.setter
+    def frame_index(self, index):
+        # Bound to available number of frames
+        if self._animation is None:
+            return
+        self._frame_index = max(0, min(index, len(self._animation.frames)-1))
+
     def draw(self):
         """Draw the sprite at its current position.
 
@@ -692,7 +719,7 @@ class Sprite(event.EventDispatcher):
         self._vertex_list.draw(GL_QUADS)
         self._group.unset_state_recursive()
 
-    if _is_pyglet_docgen:
+    if _is_pyglet_doc_run:
         def on_animation_end(self):
             """The sprite animation reached the final frame.
 
@@ -702,5 +729,6 @@ class Sprite(event.EventDispatcher):
 
             :event:
             """
+
 
 Sprite.register_event_type('on_animation_end')

@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -36,16 +37,12 @@
 
 .. versionadded:: 1.2
 """
-from __future__ import division
-from builtins import object
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
 
 import sys
+
 from pyglet.event import EventDispatcher
 
-_is_pyglet_docgen = hasattr(sys, 'is_pyglet_docgen') and sys.is_pyglet_docgen
+_is_pyglet_doc_run = hasattr(sys, "is_pyglet_doc_run") and sys.is_pyglet_doc_run
 
 
 class DeviceException(Exception):
@@ -60,7 +57,7 @@ class DeviceExclusiveException(DeviceException):
     pass
 
 
-class Device(object):
+class Device:
     """Input device.
 
     :Ivariables:
@@ -170,7 +167,7 @@ class Control(EventDispatcher):
         else:
             return '%s(raw_name=%s)' % (self.__class__.__name__, self.raw_name)
 
-    if _is_pyglet_docgen:
+    if _is_pyglet_doc_run:
         def on_change(self, value):
             """The value changed.
 
@@ -273,7 +270,7 @@ class Button(Control):
         else:
             self.dispatch_event('on_release')
 
-    if _is_pyglet_docgen:
+    if _is_pyglet_doc_run:
         def on_press(self):
             """The button was pressed.
 
@@ -615,7 +612,7 @@ AppleRemote.register_event_type('on_button_press')
 AppleRemote.register_event_type('on_button_release')
 
 
-class Tablet(object):
+class Tablet:
     """High-level interface to tablet devices.
 
     Unlike other devices, tablets must be opened for a specific window,
@@ -668,7 +665,7 @@ class TabletCanvas(EventDispatcher):
         """
         raise NotImplementedError('abstract')
 
-    if _is_pyglet_docgen:
+    if _is_pyglet_doc_run:
         def on_enter(self, cursor):
             """A cursor entered the proximity of the window.  The cursor may
             be hovering above the tablet surface, but outside of the window
@@ -701,7 +698,7 @@ class TabletCanvas(EventDispatcher):
             :event:
             """
 
-        def on_motion(self, cursor, x, y, pressure):
+        def on_motion(self, cursor, x, y, pressure, tilt_x, tilt_y):
             """The cursor moved on the tablet surface.
 
             If `pressure` is 0, then the cursor is actually hovering above the
@@ -730,7 +727,7 @@ TabletCanvas.register_event_type('on_leave')
 TabletCanvas.register_event_type('on_motion')
 
 
-class TabletCursor(object):
+class TabletCursor:
     """A distinct cursor used on a tablet.
 
     Most tablets support at least a *stylus* and an *erasor* cursor; this

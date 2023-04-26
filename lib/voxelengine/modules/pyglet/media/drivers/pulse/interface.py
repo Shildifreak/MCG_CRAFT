@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,18 +32,16 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
-from __future__ import print_function
-from __future__ import absolute_import
 
-import ctypes
 import sys
 import weakref
 
 from . import lib_pulseaudio as pa
 from pyglet.media.exceptions import MediaException
+from pyglet.util import debug_print
 
 import pyglet
-_debug = pyglet.options['debug_media']
+_debug = debug_print('debug_media')
 
 
 def get_uint32_or_none(value):
@@ -74,18 +73,15 @@ class PulseAudioException(MediaException):
         self.message = message
 
     def __str__(self):
-        return '{}: [{}] {}'.format(self.__class__.__name__,
-                                    self.error_code,
-                                    self.message)
+        return '{}: [{}] {}'.format(self.__class__.__name__, self.error_code, self.message)
 
     __repr__ = __str__
 
 
-class PulseAudioMainLoop(object):
+class PulseAudioMainLoop:
     def __init__(self):
         self._pa_threaded_mainloop = pa.pa_threaded_mainloop_new()
-        self._pa_mainloop = pa.pa_threaded_mainloop_get_api(
-            self._pa_threaded_mainloop)
+        self._pa_mainloop = pa.pa_threaded_mainloop_get_api(self._pa_threaded_mainloop)
         self._lock_count = 0
 
     def __del__(self):
@@ -97,14 +93,12 @@ class PulseAudioMainLoop(object):
             result = pa.pa_threaded_mainloop_start(self._pa_threaded_mainloop)
             if result < 0:
                 raise PulseAudioException(0, "Failed to start PulseAudio mainloop")
-            if _debug:
-                print('PulseAudioMainLoop: Started')
+        assert _debug('PulseAudioMainLoop: Started')
 
     def delete(self):
         """Clean up the mainloop."""
         if self._pa_threaded_mainloop is not None:
-            if _debug:
-                print("PulseAudioMainLoop.delete")
+            assert _debug("Delete PulseAudioMainLoop")
             pa.pa_threaded_mainloop_stop(self._pa_threaded_mainloop)
             pa.pa_threaded_mainloop_free(self._pa_threaded_mainloop)
             self._pa_threaded_mainloop = None
@@ -166,7 +160,7 @@ class PulseAudioMainLoop(object):
         self.unlock()
 
 
-class PulseAudioLockable(object):
+class PulseAudioLockable:
     def __init__(self, mainloop):
         assert mainloop is not None
         self.mainloop = weakref.ref(mainloop)
@@ -220,12 +214,12 @@ class PulseAudioContext(PulseAudioLockable):
     def delete(self):
         """Completely shut down pulseaudio client."""
         if self._pa_context is not None:
-            if _debug:
-                print("PulseAudioContext.delete")
-            pa.pa_context_disconnect(self._pa_context)
+            assert _debug("PulseAudioContext.delete")
+            if self.is_ready:
+                pa.pa_context_disconnect(self._pa_context)
 
-            while self.state is not None and not self.is_terminated:
-                self.wait()
+                while self.state is not None and not self.is_terminated:
+                    self.wait()
 
             self._disconnect_callbacks()
             pa.pa_context_unref(self._pa_context)
@@ -287,7 +281,6 @@ class PulseAudioContext(PulseAudioLockable):
         if self.is_failed:
             self.raise_error()
 
-
     def create_stream(self, audio_format):
         """
         Create a new audio stream.
@@ -319,6 +312,11 @@ class PulseAudioContext(PulseAudioLockable):
                 sample_spec.format = pa.PA_SAMPLE_S16LE
             else:
                 sample_spec.format = pa.PA_SAMPLE_S16BE
+        elif audio_format.sample_size == 24:
+            if sys.byteorder == 'little':
+                sample_spec.format = pa.PA_SAMPLE_S24LE
+            else:
+                sample_spec.format = pa.PA_SAMPLE_S24BE
         else:
             raise MediaException('Unsupported sample size')
         sample_spec.rate = audio_format.sample_rate
@@ -330,13 +328,15 @@ class PulseAudioContext(PulseAudioLockable):
         Set the volume for a stream.
         """
         cvolume = self._get_cvolume_from_linear(stream, volume)
-        with self:
-            idx = stream.index
-            op = pa.pa_context_set_sink_volume(self._pa_context,
-                                               idx,
-                                               cvolume,
-                                               self._success_cb_func,
-                                               None)
+        idx = stream.index
+        op = PulseAudioOperation(self, succes_cb_t=pa.pa_context_success_cb_t)
+        op.execute(
+                pa.pa_context_set_sink_input_volume(self._pa_context,
+                                                    idx,
+                                                    cvolume,
+                                                    op.pa_callback,
+                                                    None)
+                  )
         return op
 
     def _get_cvolume_from_linear(self, stream, volume):
@@ -350,7 +350,7 @@ class PulseAudioContext(PulseAudioLockable):
     def _connect_callbacks(self):
         self._state_cb_func = pa.pa_context_notify_cb_t(self._state_callback)
         pa.pa_context_set_state_callback(self._pa_context,
-                                        self._state_cb_func, None)
+                                         self._state_cb_func, None)
 
     def _disconnect_callbacks(self):
         self._state_cb_func = None
@@ -360,8 +360,8 @@ class PulseAudioContext(PulseAudioLockable):
 
     def _state_callback(self, context, userdata):
         self.state = pa.pa_context_get_state(self._pa_context)
-        if _debug:
-            print('PulseAudioContext: state changed to {}'.format(self._state_name[self.state]))
+        assert _debug('PulseAudioContext: state changed to {}'.format(
+                self._state_name[self.state]))
         self.signal()
 
     def check(self, result):
@@ -411,21 +411,18 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
     def delete(self):
         context = self.context()
         if context is None:
-            if _debug:
-                print("No active context anymore. Cannot disconnect the stream")
-                self._pa_stream = None
+            assert _debug("No active context anymore. Cannot disconnect the stream")
+            self._pa_stream = None
             return
 
         if self._pa_stream is None:
             assert _debug("No stream to delete.")
             return
 
-        if _debug:
-            print("PulseAudioStream.delete")
-            print('PulseAudioStream: writable_size {}'.format(self.writable_size))
+        assert _debug("Delete PulseAudioStream")
         if not self.is_unconnected:
-            if _debug:
-                print("PulseAudioStream: disconnecting")
+            assert _debug("PulseAudioStream: disconnecting")
+
             with self:
                 context.check(
                     pa.pa_stream_disconnect(self._pa_stream)
@@ -472,6 +469,11 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
         assert self._pa_stream is not None
         return get_bool_or_none(pa.pa_stream_is_corked(self._pa_stream))
 
+    @property
+    def audio_format(self):
+        assert self._pa_stream is not None
+        return pa.pa_stream_get_sample_spec(self._pa_stream)[0]
+
     def connect_playback(self):
         context = self.context()
         assert self._pa_stream is not None
@@ -497,8 +499,7 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
             self.wait()
         if not self.is_ready:
             context.raise_error()
-        if _debug:
-            print('PulseAudioStream: Playback connected')
+        assert _debug('PulseAudioStream: Playback connected')
 
     def write(self, audio_data, length=None, seek_mode=pa.PA_SEEK_RELATIVE):
         context = self.context()
@@ -507,9 +508,8 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
         assert self.is_ready
         if length is None:
             length = min(audio_data.length, self.writable_size)
-        if _debug:
-            print('PulseAudioStream: writing {} bytes'.format(length))
-            print('PulseAudioStream: writable size before write {} bytes'.format(self.writable_size))
+        assert _debug('PulseAudioStream: writing {} bytes'.format(length))
+        assert _debug('PulseAudioStream: writable size before write {} bytes'.format(self.writable_size))
         context.check(
                 pa.pa_stream_write(self._pa_stream,
                                    audio_data.data,
@@ -518,8 +518,7 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
                                    0,
                                    seek_mode)
                 )
-        if _debug:
-            print('PulseAudioStream: writable size after write {} bytes'.format(self.writable_size))
+        assert _debug('PulseAudioStream: writable size after write {} bytes'.format(self.writable_size))
         self.underflow = False
         return length
 
@@ -625,22 +624,19 @@ class PulseAudioStream(PulseAudioLockable, pyglet.event.EventDispatcher):
                                         None)
 
     def _underflow_callback(self, stream, userdata):
-        if _debug:
-            print("PulseAudioStream: underflow")
+        assert _debug("PulseAudioStream: underflow")
         self.underflow = True
         self._write_needed()
         self.signal()
 
     def _write_callback(self, stream, nbytes, userdata):
-        if _debug:
-            print("PulseAudioStream: write requested")
+        assert _debug("PulseAudioStream: write requested")
         self._write_needed(nbytes)
         self.signal()
 
     def _state_callback(self, stream, userdata):
         self._refresh_state()
-        if _debug:
-            print("PulseAudioStream: state changed to {}".format(self._state_name[self.state]))
+        assert _debug("PulseAudioStream: state changed to {}".format(self._state_name[self.state]))
         self.signal()
 
     def _refresh_state(self):
@@ -671,13 +667,14 @@ class PulseAudioOperation(PulseAudioLockable):
                    pa.PA_OPERATION_DONE: 'Done',
                    pa.PA_OPERATION_CANCELLED: 'Cancelled'}
 
-    def __init__(self, context, callback=None, pa_operation=None):
+    def __init__(self, context, callback=None, pa_operation=None,
+                 succes_cb_t=pa.pa_stream_success_cb_t):
         mainloop = context.mainloop()
         assert mainloop is not None
         PulseAudioLockable.__init__(self, mainloop)
         self.context = weakref.ref(context)
         self._callback = callback
-        self.pa_callback = pa.pa_stream_success_cb_t(self._success_callback)
+        self.pa_callback = succes_cb_t(self._success_callback)
         if pa_operation is not None:
             self.execute(pa_operation)
         else:
@@ -690,8 +687,7 @@ class PulseAudioOperation(PulseAudioLockable):
 
     def delete(self):
         if self._pa_operation is not None:
-            if _debug:
-                print("PulseAudioOperation.delete({})".format(id(self)))
+            assert _debug("PulseAudioOperation.delete({})".format(id(self)))
             pa.pa_operation_unref(self._pa_operation)
             self._pa_operation = None
 
@@ -699,8 +695,7 @@ class PulseAudioOperation(PulseAudioLockable):
         context = self.context()
         assert context is not None
         context.check_ptr_not_null(pa_operation)
-        if _debug:
-            print("PulseAudioOperation.execute({})".format(id(self)))
+        assert _debug("PulseAudioOperation.execute({})".format(id(self)))
         self._pa_operation = pa_operation
         self._get_state()
         return self

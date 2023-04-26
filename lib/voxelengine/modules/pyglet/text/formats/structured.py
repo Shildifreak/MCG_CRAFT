@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -32,18 +33,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
 
-'''Base class for structured (hierarchical) document formats.
-'''
-from __future__ import division
-from builtins import range
-from builtins import object
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
+"""Base class for structured (hierarchical) document formats.
+"""
 
 import re
 
 import pyglet
+
 
 class ImageElement(pyglet.text.document.InlineElement):
     def __init__(self, image, width=None, height=None):
@@ -58,8 +54,7 @@ class ImageElement(pyglet.text.document.InlineElement):
         super(ImageElement, self).__init__(ascent, descent, self.width)
 
     def place(self, layout, x, y):
-        group = pyglet.graphics.TextureGroup(self.image.texture, 
-                                             layout.top_group)
+        group = pyglet.graphics.TextureGroup(self.image.get_texture(), layout.top_group)
         x1 = x
         y1 = y + self.descent
         x2 = x + self.width
@@ -74,6 +69,7 @@ class ImageElement(pyglet.text.document.InlineElement):
         self.vertex_lists[layout].delete()
         del self.vertex_lists[layout]
 
+
 def _int_to_roman(input):
     # From http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/81611
     if not 0 < input < 4000:
@@ -87,9 +83,10 @@ def _int_to_roman(input):
         input -= ints[i] * count
     return result
 
-class ListBuilder(object):
+
+class ListBuilder:
     def begin(self, decoder, style):
-        '''Begin a list.
+        """Begin a list.
 
         :Parameters:
             `decoder` : `StructuredTextDecoder`
@@ -97,7 +94,7 @@ class ListBuilder(object):
             `style` : dict
                 Style dictionary that applies over the entire list.
 
-        '''
+        """
         left_margin = decoder.current_style.get('margin_left') or 0
         tab_stops = decoder.current_style.get('tab_stops')
         if tab_stops:
@@ -110,7 +107,7 @@ class ListBuilder(object):
         style['tab_stops'] = tab_stops
 
     def item(self, decoder, style, value=None):
-        '''Begin a list item.
+        """Begin a list item.
 
         :Parameters:
             `decoder` : `StructuredTextDecoder`
@@ -121,14 +118,14 @@ class ListBuilder(object):
                 Optional value of the list item.  The meaning is list-type
                 dependent.
 
-        '''            
+        """            
         mark = self.get_mark(value)
         if mark:
             decoder.add_text(mark)
         decoder.add_text('\t')
 
     def get_mark(self, value=None):
-        '''Get the mark text for the next list item.
+        """Get the mark text for the next list item.
 
         :Parameters:
             `value` : str
@@ -136,29 +133,30 @@ class ListBuilder(object):
                 dependent.
 
         :rtype: str
-        '''
+        """
         return ''
+
 
 class UnorderedListBuilder(ListBuilder):
     def __init__(self, mark):
-        '''Create an unordered list with constant mark text.
+        """Create an unordered list with constant mark text.
 
         :Parameters:
             `mark` : str
                 Mark to prepend to each list item.
 
-        '''
+        """
         self.mark = mark
-
 
     def get_mark(self, value):
         return self.mark
+
 
 class OrderedListBuilder(ListBuilder):
     format_re = re.compile('(.*?)([1aAiI])(.*)')
 
     def __init__(self, start, format):
-        '''Create an ordered list with sequentially numbered mark text.
+        """Create an ordered list with sequentially numbered mark text.
 
         The format is composed of an optional prefix text, a numbering
         scheme character followed by suffix text. Valid numbering schemes
@@ -184,7 +182,7 @@ class OrderedListBuilder(ListBuilder):
             `format` : str
                 Format style, for example ``"1."``.
 
-        '''
+        """
         self.next_value = start
 
         self.prefix, self.numbering, self.suffix = self.format_re.match(format).groups()
@@ -212,6 +210,7 @@ class OrderedListBuilder(ListBuilder):
             return '%s%s%s' % (self.prefix, mark, self.suffix)
         else:
             return '%s%d%s' % (self.prefix, value, self.suffix)
+
 
 class StructuredTextDecoder(pyglet.text.DocumentDecoder):
     def decode(self, text, location=None):

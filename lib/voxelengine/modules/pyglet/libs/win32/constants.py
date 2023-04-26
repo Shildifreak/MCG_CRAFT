@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -31,6 +32,8 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
+import sys
+
 # Most of this file is win32con.py from Python for Windows Extensions:
 # http://www.python.net/crew/mhammond/win32/
 
@@ -1186,8 +1189,17 @@ VK_VOLUME_UP = 0xAF
 VK_MEDIA_NEXT_TRACK = 0xB0
 VK_MEDIA_PREV_TRACK = 0xB1
 VK_MEDIA_PLAY_PAUSE = 0xB3
+VK_LAUNCH_MAIL = 0xB4
+VK_LAUNCH_MEDIA_SELECT = 0xB5
+VK_LAUNCH_APP1 = 0xB6
+VK_LAUNCH_APP2 = 0xB
 VK_BROWSER_BACK = 0xA6
 VK_BROWSER_FORWARD = 0xA7
+VK_BROWSER_REFRESH = 0xA8
+VK_BROWSER_STOP = 0xA9
+VK_BROWSER_SEARCH = 0xAA
+VK_BROWSER_FAVORITES = 0xAB
+VK_BROWSER_HOME = 0xAC
 WH_MIN = (-1)
 WH_MSGFILTER = (-1)
 WH_JOURNALRECORD = 0
@@ -1365,6 +1377,7 @@ WM_COMMNOTIFY = 68
 WM_WINDOWPOSCHANGING = 70
 WM_WINDOWPOSCHANGED = 71
 WM_POWER = 72
+WM_COPYGLOBALDATA = 73
 PWR_OK = 1
 PWR_FAIL = (-1)
 PWR_SUSPENDREQUEST = 1
@@ -1455,6 +1468,9 @@ WM_RBUTTONDBLCLK = 518
 WM_MBUTTONDOWN = 519
 WM_MBUTTONUP = 520
 WM_MBUTTONDBLCLK = 521
+WM_XBUTTONDOWN = 523
+WM_XBUTTONUP = 524
+WM_XBUTTONBDLCLK = 525
 WM_MOUSEWHEEL = 522
 WM_MOUSELAST = 522
 WHEEL_DELTA = 120     # Value for rolling one detent
@@ -1611,6 +1627,8 @@ MK_RBUTTON = 2
 MK_SHIFT = 4
 MK_CONTROL = 8
 MK_MBUTTON = 16
+MK_XBUTTON1 = 32
+MK_XBUTTON2 = 64
 TME_HOVER = 1
 TME_LEAVE = 2
 TME_QUERY = 1073741824
@@ -5001,6 +5019,15 @@ RIDEV_CAPTUREMOUSE = 0x00000200
 RIDEV_NOHOTKEYS = 0x00000200
 RIDEV_APPKEYS = 0x00000400
 RIDEV_EXMODEMASK = 0x000000F0
+RIDEV_EXINPUTSINK = 0x00001000 # Vista+
+RIDEV_DEVNOTIFY = 0x00002000 # Vista+
+
+RI_KEY_MAKE = 0
+RI_KEY_BREAK = 1
+RI_KEY_E0 = 2
+RI_KEY_E1 = 4
+RI_KEY_TERMSRV_SET_LED = 8
+RI_KEY_TERMSRV_SHADOW = 0x10
 
 RIM_TYPEMOUSE = 0
 RIM_TYPEKEYBOARD = 1
@@ -5034,3 +5061,43 @@ RI_MOUSE_BUTTON_5_DOWN = 0x0100
 RI_MOUSE_BUTTON_5_UP = 0x0200
 
 RI_MOUSE_WHEEL = 0x0400
+
+WINDOWS_VISTA_OR_GREATER = sys.getwindowsversion() >= (6, 0)
+WINDOWS_7_OR_GREATER = sys.getwindowsversion() >= (6, 1)
+WINDOWS_8_OR_GREATER = sys.getwindowsversion() >= (6, 2)
+WINDOWS_8_1_OR_GREATER = sys.getwindowsversion() >= (6, 3)
+WINDOWS_10_ANNIVERSARY_UPDATE_OR_GREATER = sys.getwindowsversion() >= (10, 0, 14393)  # 1607
+WINDOWS_10_CREATORS_UPDATE_OR_GREATER = sys.getwindowsversion() >= (10, 0, 15063)  # 1703
+
+MSGFLT_ALLOW = 1
+MSGFLT_DISALLOW = 2
+MSGFLT_RESET = 0
+
+COINIT_APARTMENTTHREADED = 0x2
+COINIT_MULTITHREADED = 0x0
+COINIT_DISABLE_OLE1DDE = 0x4
+COINIT_SPEED_OVER_MEMORY = 0x8
+
+MF_ACCESSMODE_READ = 1
+MF_ACCESSMODE_WRITE = 2
+MF_ACCESSMODE_READWRITE = 3
+
+MF_OPENMODE_FAIL_IF_NOT_EXIST = 0
+MF_OPENMODE_FAIL_IF_EXIST = 1
+MF_OPENMODE_RESET_IF_EXIST = 2
+MF_OPENMODE_APPEND_IF_EXIST = 3
+MF_OPENMODE_DELETE_IF_EXIST = 4
+
+MF_FILEFLAGS_NONE = 0
+MF_FILEFLAGS_NOBUFFERING = 1
+
+CLSCTX_INPROC_SERVER = 0x1
+
+# From Dwmapi.h
+DWM_BB_ENABLE = 0x00000001
+DWM_BB_BLURREGION = 0x00000002
+DWM_BB_TRANSITIONONMAXIMIZED = 0x00000004
+
+STREAM_SEEK_SET = 0
+STREAM_SEEK_CUR = 1
+STREAM_SEEK_END = 2

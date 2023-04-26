@@ -1,6 +1,37 @@
-from builtins import zip
-#!/usr/bin/python
-# $Id:$
+# ----------------------------------------------------------------------------
+# pyglet
+# Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#  * Neither the name of pyglet nor the names of its
+#    contributors may be used to endorse or promote products
+#    derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# ----------------------------------------------------------------------------
 
 import ctypes
 
@@ -31,6 +62,7 @@ _rel_instance_names = {
 
 _btn_instance_names = {}
 
+
 def _create_control(object_instance):
     raw_name = object_instance.tszName
     type = object_instance.dwType
@@ -53,7 +85,8 @@ def _create_control(object_instance):
 
     control._type = object_instance.dwType
     return control
-        
+
+
 class DirectInputDevice(base.Device):
     def __init__(self, display, device, device_instance):
         name = device_instance.tszInstanceName
@@ -105,8 +138,7 @@ class DirectInputDevice(base.Device):
         prop.diph.dwObj = 0
         prop.diph.dwHow = dinput.DIPH_DEVICE
         prop.dwData = 64 * ctypes.sizeof(dinput.DIDATAFORMAT)
-        self._device.SetProperty(dinput.DIPROP_BUFFERSIZE, 
-                                 ctypes.byref(prop.diph))
+        self._device.SetProperty(dinput.DIPROP_BUFFERSIZE, ctypes.byref(prop.diph))
 
     def open(self, window=None, exclusive=False):
         if not self.controls:
@@ -127,8 +159,7 @@ class DirectInputDevice(base.Device):
         
         self._wait_object = _kernel32.CreateEventW(None, False, False, None)
         self._device.SetEventNotification(self._wait_object)
-        pyglet.app.platform_event_loop.add_wait_object(self._wait_object, 
-                                                       self._dispatch_events)
+        pyglet.app.platform_event_loop.add_wait_object(self._wait_object, self._dispatch_events)
 
         self._device.SetCooperativeLevel(window._hwnd, flags)
         self._device.Acquire()
@@ -153,16 +184,22 @@ class DirectInputDevice(base.Device):
         
         events = (dinput.DIDEVICEOBJECTDATA * 64)()
         n_events = win32.DWORD(len(events))
-        self._device.GetDeviceData(ctypes.sizeof(dinput.DIDEVICEOBJECTDATA),
-                                   ctypes.cast(ctypes.pointer(events), 
-                                               dinput.LPDIDEVICEOBJECTDATA),
-                                   ctypes.byref(n_events),
-                                   0)
+        try:
+            self._device.GetDeviceData(ctypes.sizeof(dinput.DIDEVICEOBJECTDATA),
+                                       ctypes.cast(ctypes.pointer(events),
+                                                   dinput.LPDIDEVICEOBJECTDATA),
+                                       ctypes.byref(n_events),
+                                       0)
+        except OSError:
+            return
+
         for event in events[:n_events.value]:
             index = event.dwOfs // 4
             self.controls[index].value = event.dwData
 
+
 _i_dinput = None
+
 
 def _init_directinput():
     global _i_dinput
@@ -174,6 +211,7 @@ def _init_directinput():
     dinput.DirectInput8Create(module, dinput.DIRECTINPUT_VERSION,
                               dinput.IID_IDirectInput8W, 
                               ctypes.byref(_i_dinput), None)
+
 
 def get_devices(display=None):
     _init_directinput()
@@ -194,11 +232,14 @@ def get_devices(display=None):
                           None, dinput.DIEDFL_ATTACHEDONLY)
     return _devices
 
+
 def _create_joystick(device):
     if device._type in (dinput.DI8DEVTYPE_JOYSTICK,
                         dinput.DI8DEVTYPE_1STPERSON,
-                        dinput.DI8DEVTYPE_GAMEPAD):
+                        dinput.DI8DEVTYPE_GAMEPAD,
+                        dinput.DI8DEVTYPE_SUPPLEMENTAL):
         return base.Joystick(device)
+
 
 def get_joysticks(display=None):
     return [joystick 

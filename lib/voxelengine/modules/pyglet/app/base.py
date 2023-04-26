@@ -1,34 +1,63 @@
-from __future__ import print_function
-from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
-from builtins import next
-from builtins import object
+# ----------------------------------------------------------------------------
+# pyglet
+# Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#  * Neither the name of pyglet nor the names of its
+#    contributors may be used to endorse or promote products
+#    derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# ----------------------------------------------------------------------------
 
-import platform
-import queue
 import sys
+import queue
+import platform
 import threading
 
 from pyglet import app
-from pyglet import compat_platform
 from pyglet import clock
 from pyglet import event
+from pyglet import compat_platform
 
-_is_pyglet_docgen = hasattr(sys, 'is_pyglet_docgen') and sys.is_pyglet_docgen
+_is_pyglet_doc_run = hasattr(sys, "is_pyglet_doc_run") and sys.is_pyglet_doc_run
 
 
-class PlatformEventLoop(object):
+class PlatformEventLoop:
     """ Abstract class, implementation depends on platform.
     
     .. versionadded:: 1.2
     """
+
     def __init__(self):
         self._event_queue = queue.Queue()
         self._is_running = threading.Event()
         self._is_running.clear()
 
-    def is_running(self):  
+    def is_running(self):
         """Return True if the event loop is currently processing, or False
         if it is blocked or not activated.
 
@@ -67,11 +96,13 @@ class PlatformEventLoop(object):
         """
         while True:
             try:
-                dispatcher, event, args = self._event_queue.get(False)
+                dispatcher, evnt, args = self._event_queue.get(False)
+                dispatcher.dispatch_event(evnt, *args)
             except queue.Empty:
                 break
-
-            dispatcher.dispatch_event(event, *args)
+            except ReferenceError:
+                # weakly-referenced object no longer exists
+                pass
 
     def notify(self):
         """Notify the event loop that something needs processing.
@@ -86,7 +117,6 @@ class PlatformEventLoop(object):
         pass
 
     def step(self, timeout=None):
-        """:TODO: in mac/linux: return True if didn't time out"""
         raise NotImplementedError('abstract')
 
     def set_timer(self, func, interval):
@@ -133,87 +163,21 @@ class EventLoop(event.EventDispatcher):
         platform_event_loop = app.platform_event_loop
         platform_event_loop.start()
         self.dispatch_event('on_enter')
-
         self.is_running = True
-        legacy_platforms = ('XP', '2000', '2003Server', 'post2003')
-        if compat_platform == 'win32' and platform.win32_ver()[0] in legacy_platforms:
-            self._run_estimated()
-        else:
-            self._run()
-        self.is_running = False
 
-        self.dispatch_event('on_exit')
-        platform_event_loop.stop()
-
-    def _run(self):
-        """The simplest standard run loop, using constant timeout.  Suitable
-        for well-behaving platforms (Mac, Linux and some Windows).
-        """
-        platform_event_loop = app.platform_event_loop
         while not self.has_exit:
             timeout = self.idle()
             platform_event_loop.step(timeout)
 
-    def _run_estimated(self):
-        """Run-loop that continually estimates function mapping requested
-        timeout to measured timeout using a least-squares linear regression.
-        Suitable for oddball platforms (Windows).
-
-        XXX: There is no real relation between the timeout given by self.idle(), and used
-        to calculate the estimate, and the time actually spent waiting for events. I have
-        seen this cause a negative gradient, showing a negative relation. Then CPU use
-        runs out of control due to very small estimates.
-        """
-        platform_event_loop = app.platform_event_loop
-
-        predictor = self._least_squares()
-        gradient, offset = next(predictor)
-
-        time = self.clock.time
-        while not self.has_exit:
-            timeout = self.idle()
-            if timeout is None: 
-                estimate = None
-            else:
-                estimate = max(gradient * timeout + offset, 0.0)
-            if False:
-                print('Gradient = %f, Offset = %f' % (gradient, offset))
-                print('Timeout = %f, Estimate = %f' % (timeout, estimate))
-
-            t = time()
-            if not platform_event_loop.step(estimate) and estimate != 0.0 and estimate is not None:
-                dt = time() - t
-                gradient, offset = predictor.send((dt, estimate))
-
-    @staticmethod
-    def _least_squares(gradient=1, offset=0):
-        X = 0
-        Y = 0
-        XX = 0
-        XY = 0
-        n = 0
-
-        while True:
-            x, y = yield gradient, offset
-            X += x
-            Y += y
-            XX += x * x
-            XY += x * y
-            n += 1
-
-            try:
-                gradient = (n * XY - X * Y) / (n * XX - X * X)
-                offset = (Y - gradient * X) / n
-            except ZeroDivisionError:
-                # Can happen in pathalogical case; keep current
-                # gradient/offset for now.
-                pass
+        self.is_running = False
+        self.dispatch_event('on_exit')
+        platform_event_loop.stop()
 
     def _legacy_setup(self):
         # Disable event queuing for dispatch_events
         from pyglet.window import Window
         Window._enable_event_queue = False
-        
+
         # Dispatch pending events
         for window in app.windows:
             window.switch_to()
@@ -285,18 +249,6 @@ class EventLoop(event.EventDispatcher):
         # Update timout
         return self.clock.get_sleep_time(True)
 
-    def _get_has_exit(self):
-        self._has_exit_condition.acquire()
-        result = self._has_exit
-        self._has_exit_condition.release()
-        return result
-
-    def _set_has_exit(self, value):
-        self._has_exit_condition.acquire()
-        self._has_exit = value
-        self._has_exit_condition.notify()
-        self._has_exit_condition.release()
-
     @property
     def has_exit(self):
         """Flag indicating if the event loop will exit in
@@ -308,11 +260,17 @@ class EventLoop(event.EventDispatcher):
         :see: `exit`
         :type: bool
         """
-        return self._get_has_exit()
+        self._has_exit_condition.acquire()
+        result = self._has_exit
+        self._has_exit_condition.release()
+        return result
 
     @has_exit.setter
     def has_exit(self, value):
-        self._set_has_exit(value)
+        self._has_exit_condition.acquire()
+        self._has_exit = value
+        self._has_exit_condition.notify()
+        self._has_exit_condition.release()
 
     def exit(self):
         """Safely exit the event loop at the end of the current iteration.
@@ -321,7 +279,7 @@ class EventLoop(event.EventDispatcher):
         :py:attr:`has_exit` to ``True``.  All waiting threads will be
         interrupted (see :py:meth:`sleep`).
         """
-        self._set_has_exit(True)
+        self.has_exit = True
         app.platform_event_loop.notify()
 
     def sleep(self, timeout):
@@ -350,7 +308,7 @@ class EventLoop(event.EventDispatcher):
         if len(app.windows) == 0:
             self.exit()
 
-    if _is_pyglet_docgen:
+    if _is_pyglet_doc_run:
         def on_window_close(self, window):
             """A window was closed.
 
@@ -384,6 +342,7 @@ class EventLoop(event.EventDispatcher):
 
             :event:
             """
+
 
 EventLoop.register_event_type('on_window_close')
 EventLoop.register_event_type('on_enter')
