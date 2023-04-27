@@ -198,7 +198,7 @@ class Block(voxelengine.Block):
         return False
 
     def get_break_sound(self):
-        return "generic_block_broken"
+        return self["id"]+"_block_broken"
 
     def get_tags(self):
         """

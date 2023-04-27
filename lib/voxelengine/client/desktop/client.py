@@ -335,8 +335,8 @@ class BlockModelDict(dict):
         
 def load_setup(host, port):
     global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS
-    def url_for(filename):
-        path = os.path.join("/texturepacks/desktop",filename)
+    def url_for(filename, folder="desktop"):
+        path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
         components = urllib.parse.ParseResult("http",netloc,path,"","","")
         url = urllib.request.urlunparse(components)
@@ -357,13 +357,14 @@ def load_setup(host, port):
         TRANSPARENCY[name] = transparency
     
     SOUNDS = {}
-    sounddir = os.path.join(PATH,"Sounds")
-    for filename in os.listdir(sounddir):
-        path = os.path.join(sounddir, filename)
-        sound_name = os.path.splitext(filename)[0]
-        with open(path,"rb") as f:
-            SOUNDS[sound_name] = pyglet.media.StaticSource(pyglet.media.load(path,f))
-
+    sound_files = {}
+    for filename in set(description["SOUNDS"].values()):
+        url = url_for(filename,folder="sounds")
+        with urllib.request.urlopen(url) as f:
+            b = io.BytesIO(f.read())
+        sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
+    for sound, filename in description["SOUNDS"].items():
+        SOUNDS[sound] = sound_files[filename]
 
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)

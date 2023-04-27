@@ -1,5 +1,6 @@
 
 import os, sys, ast
+import shutil
 
 if __name__ == "__main__":
     sys.path.append(os.path.abspath(".."))
@@ -15,8 +16,9 @@ FACES = {"top","bottom","front","back","left","right"}
 
 class TP_Compiler(object):
 	def __init__(self):
-		self.description = {"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{}}
+		self.description = {"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{},"SOUNDS":{}}
 		self.texture_directories = []
+		self.sound_files = {}
 	
 	def add_textures_from(self, path):
 		description_path = os.path.join(path, "description.py")
@@ -28,11 +30,20 @@ class TP_Compiler(object):
 			description = ast.literal_eval(description_file.read())
 		self.texture_directories.append(textureIO.TextureDirectory(path))
 		
+		for dirpath, dirnames, filenames in os.walk(path, topdown=True):
+			for filename in filenames:
+				_, ext = os.path.splitext(filename)
+				if ext in (".mp3", ".ogg", ".wav"):
+					if filename in self.sound_files:
+						print("multiple files for sound", filename)
+					self.sound_files[filename] = os.path.join(dirpath, filename)
+		
 		# refine description
 		description.setdefault("BLOCKS", {})
 		description.setdefault("BLOCK_MODELS", {})
 		description.setdefault("ITEMS", {})
 		description.setdefault("ENTITY_MODELS", {})
+		description.setdefault("SOUNDS", {})
 		
 		for blockname, block in description["BLOCKS"].items():
 			block.setdefault("transparent", False)
@@ -57,6 +68,8 @@ class TP_Compiler(object):
 			block.setdefault("icon", images["top"])
 			if "missing_texture" in (block["icon"],*images.values()):
 				print("missing some texture in", blockname)
+			block.setdefault("break_sound", "generic_block_broken.mp3")
+			block.setdefault("place_sound", "generic_block_placed.mp3")
 			# add blockmodel for blocks that don't have one
 			if blockname not in description["BLOCK_MODELS"]:
 				d = 0.01 if block["transparent"] else 0
@@ -77,6 +90,11 @@ class TP_Compiler(object):
 					for face in FACES:
 						blockmodel["faces"]["inside"].extend(blockmodel["faces"].pop(face))
 				description["BLOCK_MODELS"][blockname] = blockmodel
+			# add sounds from blocks into the sound section
+			if blockname+"_block_broken" not in description["SOUNDS"]:
+				description["SOUNDS"][blockname+"_block_broken"] = block["break_sound"]
+			if blockname+"_block_placed" not in description["SOUNDS"]:
+				description["SOUNDS"][blockname+"_block_placed"] = block["place_sound"]
 		
 		# add blockmodels for items
 		for itemname, itemdata in description["ITEMS"].items():
@@ -110,13 +128,41 @@ class TP_Compiler(object):
 		for section in self.description:
 			for name in description[section]:
 				if name in self.description[section]:
-					print("overwriting existing entry for",section,name)
+					print("shadowing existing entry for",section,name)
 				self.description[section][name] = description[section][name]
 	
-	def save_to(self, path):
-		print("\nGenerating Desktop Version for Texturepack")
+	def finish(self):
 		if not self.texture_directories:
 			raise RuntimeError("no texturepacks were found / added to TP_Compiler")
+
+
+		# clean up missing and unused sounds
+		existing_sound_files = set(self.sound_files.keys())
+		used_sound_files = set(self.description["SOUNDS"].values())
+
+		missing_sound_files = used_sound_files - existing_sound_files
+		if missing_sound_files:
+			print("MISSING SOUND FILES:\n\t"+"\n\t".join(missing_sound_files))
+		for sound, sound_file in tuple(self.description["SOUNDS"].items()):
+			if sound_file in missing_sound_files:
+				self.description["SOUNDS"].pop(sound)
+
+		unused_sound_files = existing_sound_files - used_sound_files
+		if unused_sound_files:
+			print("UNUSED SOUND FILES:\n\t"+"\n\t".join(unused_sound_files))
+		for filename in unused_sound_files:
+			self.sound_files.pop(filename)
+	
+	def generate_sound_folder(self, target_path):
+		print("\nGenerating Sound Folder for Texturepack")
+		os.makedirs(target_path, exist_ok=True)
+		for filename, src_path in self.sound_files.items():
+			print("copy sound file from", src_path, "to", os.path.join(target_path,filename))
+			shutil.copyfile(src_path, os.path.join(target_path,filename))
+	
+	def save_to(self, path):
+		self.finish()
+		self.generate_sound_folder(os.path.join(path,"sounds"))
 		generate_desktop_version(self.description, self.texture_directories, os.path.abspath(os.path.join(path,"desktop")))
 		generate_web_version    (self.description, self.texture_directories, os.path.abspath(os.path.join(path,"web")))
 	

@@ -779,7 +779,7 @@ def run():
                     else:
                         ctx.execute(cmd)                        
                 else:
-                    print("valid commands include: quit, kill, save, reload, stats, /help")
+                    print("valid commands include: quit, kill, save, reload, stats, play, /help")
             
             # game server update - communicate with clients
             g.update()

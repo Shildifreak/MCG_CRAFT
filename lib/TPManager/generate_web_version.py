@@ -17,7 +17,8 @@ class AutoIndex(dict):
 		return len(self)
 
 def generate_web_version(normalized_universal_description, texture_directories, target_path):
-	
+	print("\nGenerating Web Version for Texturepack")
+
 	texture_index = AutoIndex()
 	
 	description = generate_description(texture_index, normalized_universal_description)
@@ -29,7 +30,7 @@ def generate_web_version(normalized_universal_description, texture_directories, 
 	pygame.image.save(textures, os.path.join(target_path, "textures.png"))
 
 def generate_description(texture_index, normalized_universal_description):
-	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]},"properties":{"translucency":[],"renderbits":[]}}
+	description = {"blockDataArray":[],"blockIdByName":{},"icons":{},"blockModelData":{"vertexBuffer":[],"offsets":[0]},"properties":{"translucency":[],"renderbits":[]},"SOUNDS":{}}
 
 	#	    -x   x      -y   y      -z   z     r g b a
 	#	0x00040004, 0x00050003, 0x00040004, 0x00000000, # Grass
@@ -94,6 +95,8 @@ def generate_description(texture_index, normalized_universal_description):
 	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]
 
 	description["TEXTURE_DIMENSIONS"] = (1, texture_index.texture_size())
+	
+	description["SOUNDS"] = normalized_universal_description["SOUNDS"]
 	
 	return description
 
