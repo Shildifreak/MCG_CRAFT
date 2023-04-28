@@ -131,6 +131,7 @@
     "FAN"                      : {"faces":{"top":"fan", "other":"reinforced_stone"}},
     "Repeater"                 : {"faces":{"bottom":"repeater_off", "other":"transparent"}, "icon":"repeater_off", "transparent":True},
     "Piston"                   : {"faces":{"top":"piston_top","bottom":"piston_bottom","other":"piston_side"}, "icon":"piston_side"},
+    "Noteblock"                : {"faces":{"all":"noteblock"}},
 
     # EXPLOSIV
     "RACKETENWERFER"           : {"faces":{"back":"racketenwerfer_back","left":"racketenwerfer_side","right":"racketenwerfer_side","other":"racketenwerfer_front"}},
