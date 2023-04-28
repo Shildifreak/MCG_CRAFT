@@ -139,8 +139,9 @@ class GameServer(object):
         self.universe = universe
         self.wait = wait
         self.PlayerClass = PlayerClass
-        self.host = host or voxelengine.modules.utils.get_ip()
-        self.subnet_whitelist = [self.host if n=="host" else n for n in subnet_whitelist] #replace "host" with self.host
+        host_ip = voxelengine.modules.utils.get_ip()
+        self.host = host or host_ip
+        self.subnet_whitelist = [host_ip if n=="host" else n for n in subnet_whitelist] #replace "host" with self.host
 
         self.players = {}
         self.new_players = set()

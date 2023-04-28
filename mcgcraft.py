@@ -845,6 +845,11 @@ def load_config():
             if not isinstance(config[key], str):
                 value = ast.literal_eval(value)
             config[key] = value
+    if config["public"] and (config["whitelist"] != ["0.0.0.0/0"]):
+        if config["parole"]:
+            print("You have a whitelist enabled. Some people may have problem joining even if the know the parole.")
+        else:
+            raise Exception('Whitelist for public server must be set to ["0.0.0.0/0"].')
 
 def parse_args():
     global args

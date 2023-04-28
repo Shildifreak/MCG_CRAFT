@@ -197,7 +197,7 @@ class GUI(object):
         whitelist_entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         whitelist_button_local = Tkinter.Radiobutton(text = "This PC", variable = whitelistvar, value = "127.0.0.1,host")
         whitelist_button_local.grid(column = 2, row = self.row, sticky = Tkinter.W)
-        whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "127.0.0.1,192.168.0.0/16")
+        whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16,10.0.0.0/8,127.0.0.1")
         whitelist_button_LAN.grid(column = 3, row = self.row, sticky = Tkinter.W)
         self.row += 3
 
