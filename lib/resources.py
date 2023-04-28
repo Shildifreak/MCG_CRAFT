@@ -643,7 +643,7 @@ class Command(object):
             return [self.rstrip()+" "] if len(self) else ["0 "] 
 
     class INT(object):
-        def __init__(self, /, default=0):
+        def __init__(self, default=0):
             self.default = default
 
         @staticmethod
