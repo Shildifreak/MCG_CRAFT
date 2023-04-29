@@ -209,13 +209,15 @@ class InventoryDisplay():
 
         if self.inventory:
             with self.inventory:
+                dual_wielding = self.player.entity["left_hand"] == self.player.entity["right_hand"]
                 item = self.inventory[self.player.entity["left_hand"]]
                 if not left_hand_slot_visible and item["id"] != "AIR":
-                    self.player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT,"inventory_border_left")
+                    border = "inventory_border_mixed" if dual_wielding else "inventory_border_left"
+                    self.player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT,border)
                 else:
                     self.player.undisplay_item("left_hand")
                 item = self.inventory[self.player.entity["right_hand"]]
-                if not right_hand_slot_visible and item["id"] != "AIR":
+                if not right_hand_slot_visible and item["id"] != "AIR" and not dual_wielding:
                     self.player.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT,"inventory_border_right")
                 else:
                     self.player.undisplay_item("right_hand")
