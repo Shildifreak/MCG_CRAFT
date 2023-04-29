@@ -855,6 +855,22 @@
         "noteblock": [
             7,
             10
+        ],
+        "inventory_background": [
+            13,
+            0
+        ],
+        "inventory_border_blue": [
+            10,
+            0
+        ],
+        "inventory_border_red_blue": [
+            11,
+            0
+        ],
+        "inventory_border_red": [
+            12,
+            0
         ]
     }
 }

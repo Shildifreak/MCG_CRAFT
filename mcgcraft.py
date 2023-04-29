@@ -166,11 +166,15 @@ class InventoryDisplay():
         self.display()
 
     def _calculate_index(self,k,row,col):
+        if k == 0 and row == 0:
+            return row*7 + col #dont scroll away hotbar
         return self.current_pages[k]*7 + row*7 + col
 
     def display(self):
         size = (0.1,0.1)
         rows = 4# if self.foreign_inventory else 9
+        left_hand_slot_visible = False
+        right_hand_slot_visible = False
         for k, inventory in enumerate((self.inventory, self.foreign_inventory)):
             with inventory:
                 for col in range(7):
@@ -182,8 +186,18 @@ class InventoryDisplay():
                             if item:
                                 x = 0.2*(col - 3)
                                 y = 0.2*(row) + k - 0.8
+                                border = None
+                                if k == 0:
+                                    if self.is_open and row == 0 and self.current_pages[0] != 0:
+                                        y -= 0.05
+                                    if i == self.player.entity["left_hand"]:
+                                        border = "inventory_border_left"
+                                        left_hand_slot_visible = True
+                                    if i == self.player.entity["right_hand"]:
+                                        border = "inventory_border_right" if (border == None) else "inventory_border_mixed"
+                                        right_hand_slot_visible = True
                                 position = (x,y,0)
-                                self.player.display_item(name,item,position,size,INNER|CENTER)
+                                self.player.display_item(name,item,position,size,INNER|CENTER,border)
                                 continue
                         self.player.undisplay_item(name)
                 if inventory and self.is_open:
@@ -193,16 +207,30 @@ class InventoryDisplay():
                     self.player.del_hud("#inventory:(%s,%s)" %(k,-1))
                     self.player.del_hud("#inventory:(%s,%s)" %(k,+1))
 
+        if self.inventory:
+            with self.inventory:
+                item = self.inventory[self.player.entity["left_hand"]]
+                if not left_hand_slot_visible and item["id"] != "AIR":
+                    self.player.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT,"inventory_border_left")
+                else:
+                    self.player.undisplay_item("left_hand")
+                item = self.inventory[self.player.entity["right_hand"]]
+                if not right_hand_slot_visible and item["id"] != "AIR":
+                    self.player.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT,"inventory_border_right")
+                else:
+                    self.player.undisplay_item("right_hand")
+
+
     def open(self,foreign_inventory_pointer = None):
         if self.is_open:
             self.close()
         self.is_open = True
         self.player.focus_hud()
-        self.current_pages = [0,0]
         if foreign_inventory_pointer != None:
             self.foreign_inventory = inventory_wrapper_factory(foreign_inventory_pointer)
             if self.foreign_inventory != self.inventory:
                 self.foreign_inventory.register_callback(self.callback)
+            self.current_pages[1] = 0
         self.display()
 
     def close(self):
@@ -239,22 +267,30 @@ class InventoryDisplay():
         self.current_pages[page] = max(0,self.current_pages[page] + direction)
         self.display()
     
+    def _element_to_inventory_and_index(self, element):
+        if element:
+            if element.startswith("#inventory"):
+                args = element.rsplit("(",1)[1].split(")",1)[0].split(",")
+                if len(args) == 3:
+                    k, col, row = map(int, args)
+                    inventory = self.inventory if k==0 else self.foreign_inventory
+                    index = self._calculate_index(k, row, col)
+                    return inventory, index
+            if element in ("#left_hand", "#right_hand"):
+                return self.inventory, self.player.entity[element[1:]]
+        return None
+
     def handle_drag(self,button,from_element,to_element):
-        if from_element and to_element and \
-           from_element.startswith("#inventory") and to_element.startswith("#inventory"):
-            from_args = from_element.rsplit("(",1)[1].split(")",1)[0].split(",")
-            to_args = to_element.rsplit("(",1)[1].split(")",1)[0].split(",")
-            if len(from_args) == 3 and len(to_args) == 3:
-                from_k, from_col, from_row = map(int, from_args)
-                to_k, to_col, to_row = map(int, to_args)
-                from_inventory = self.inventory if from_k==0 else self.foreign_inventory
-                to_inventory = self.inventory if to_k==0 else self.foreign_inventory
-                from_index = self._calculate_index(from_k, from_row, from_col)
-                to_index = self._calculate_index(to_k, to_row, to_col)
-                if False: #check if they could stack
-                    pass #add them together
-                else: #swap
-                    self.swap(from_inventory, from_index, to_inventory, to_index)
+        from_inventory_and_index = self._element_to_inventory_and_index(from_element)
+        to_inventory_and_index = self._element_to_inventory_and_index(to_element)
+        if not from_inventory_and_index or not to_inventory_and_index:
+            return
+        from_inventory, from_index = from_inventory_and_index
+        to_inventory, to_index = to_inventory_and_index
+        if False: #check if they could stack
+            pass #add them together
+        else: #swap
+            self.swap(from_inventory, from_index, to_inventory, to_index)
     
     def swap(self,inventory1,index1,inventory2,index2):
         with inventory1:
@@ -334,19 +370,15 @@ class Player(voxelengine.Player):
     def control(self, entity):
         if self.entity:
             self.entity.unregister_item_callback(self._open_inventory_callback,"open_inventory")
-            self.entity.unregister_item_callback(self._update_left_hand_image,"left_hand")
-            self.entity.unregister_item_callback(self._update_left_hand_image,"inventory")
-            self.entity.unregister_item_callback(self._update_right_hand_image,"right_hand")
-            self.entity.unregister_item_callback(self._update_right_hand_image,"inventory")
+            self.entity.unregister_item_callback(self.inventory_display.callback,"left_hand")
+            self.entity.unregister_item_callback(self.inventory_display.callback,"right_hand")
             self.entity.unregister_item_callback(self._update_lives,"lives")
         super().control(entity)
         if self.entity:
             self.inventory_display.register(self.entity["inventory"])
             self.entity.register_item_callback(self._open_inventory_callback,"open_inventory")
-            self.entity.register_item_callback(self._update_left_hand_image,"left_hand")
-            self.entity.register_item_callback(self._update_left_hand_image,"inventory")
-            self.entity.register_item_callback(self._update_right_hand_image,"right_hand")
-            self.entity.register_item_callback(self._update_right_hand_image,"inventory")
+            self.entity.register_item_callback(self.inventory_display.callback,"left_hand")
+            self.entity.register_item_callback(self.inventory_display.callback,"right_hand")
             self.entity.register_item_callback(self._update_lives,"lives")
 
     def handle_events(self, events):
@@ -377,12 +409,6 @@ class Player(voxelengine.Player):
             self.entity.foreign_inventory = None
         else:
             self.inventory_display.close()
-    def _update_left_hand_image(self, _):
-        item = self.entity["inventory"][self.entity["left_hand"]]
-        self.display_item("left_hand",item,(-0.8,-0.8,0.5),(0.1,0.1),BOTTOM|LEFT)
-    def _update_right_hand_image(self, _):
-        item = self.entity["inventory"][self.entity["right_hand"]]
-        self.display_item("right_hand",item,(0.8,-0.8,0.5),(0.1,0.1),BOTTOM|RIGHT)
     def _update_lives(self, lives):
         #todo: fix!
         for x in range(lives,10):
@@ -530,14 +556,18 @@ class Player(voxelengine.Player):
         if self.is_pressed("sprint"):
             pe.ai_commands["sprint"].append(1)
 
-    def display_item(self,name,item,position,size,align):
+    def display_item(self,name,item,position,size,align,border=None):
         w, h = size
-        self.set_hud(name+"_bgbox","GLAS",position+Vector((0,0,-0.01)),0,size,align)
+        self.set_hud(name+"_bgbox","inventory_background",position+Vector((0,0,-0.01)),0,size,align)
         self.set_hud("#"+name,item["id"],position,0,Vector(size)*0.8,align)
-        self.set_hud_text(name+"_count",str(item.get("count","")),position+Vector((0,0,0.01)),0,size,align)
+        if border:
+            self.set_hud(name+"_border",border,position+Vector((0,0,0.01)),0,Vector(size)*1.1,align)
+        else:
+            self.del_hud(name+"_border")
+        self.set_hud_text(name+"_count",str(item.get("count","")),position+Vector((0,0,0.02)),0,size,align)
 
     def undisplay_item(self,name):
-        for prefix, suffix in (("","_bgbox"),("#",""),("","_count")):
+        for prefix, suffix in (("","_bgbox"),("#",""),("","_border"),("","_count")):
             self.del_hud(prefix+name+suffix)
 
 class ValidTag(object):
