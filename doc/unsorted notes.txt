@@ -2,7 +2,6 @@
 	Wie erstellt/bearbeitet man Texturen?
 	Schaftextur "verbessern"?
 	give command
-	nicht auf wasser laufen
 	Inventar verbessern
 	Crafting einführen
 	weniger buggy laden (größere chunks)
