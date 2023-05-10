@@ -1,22 +1,49 @@
-#!/usr/bin/env python
+# ----------------------------------------------------------------------------
+# pyglet
+# Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#  * Neither the name of pyglet nor the names of its
+#    contributors may be used to endorse or promote products
+#    derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# ----------------------------------------------------------------------------
 
-'''
-'''
-from __future__ import absolute_import
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
-
+import warnings
 from ctypes import *
 
-from pyglet.canvas.xlib import XlibCanvas
 from .base import Config, CanvasConfig, Context
-
-from pyglet import gl
+from pyglet.canvas.xlib import XlibCanvas
 from pyglet.gl import glx
 from pyglet.gl import glxext_arb
 from pyglet.gl import glx_info
 from pyglet.gl import glxext_mesa
+from pyglet.gl import lib
+from pyglet import gl
 
 
 class XlibConfig(Config):
@@ -32,10 +59,7 @@ class XlibConfig(Config):
         if have_13:
             config_class = XlibCanvasConfig13
         else:
-            if 'ATI' in info.get_client_vendor():
-                config_class = XlibCanvasConfig10ATI
-            else:
-                config_class = XlibCanvasConfig10
+            config_class = XlibCanvasConfig10
 
         # Construct array of attributes
         attrs = []
@@ -49,21 +73,16 @@ class XlibConfig(Config):
         else:
             attrs.extend([glx.GLX_RGBA, True])
 
-        if len(attrs):
-            attrs.extend([0, 0])
-            attrib_list = (c_int * len(attrs))(*attrs)
-        else:
-            attrib_list = None
+        attrs.extend([0, 0])  # attrib_list must be null terminated
+        attrib_list = (c_int * len(attrs))(*attrs)
 
         if have_13:
             elements = c_int()
-            configs = glx.glXChooseFBConfig(x_display, x_screen,
-                                            attrib_list, byref(elements))
+            configs = glx.glXChooseFBConfig(x_display, x_screen, attrib_list, byref(elements))
             if not configs:
                 return []
 
-            configs = cast(configs,
-                           POINTER(glx.GLXFBConfig * elements.value)).contents
+            configs = cast(configs, POINTER(glx.GLXFBConfig * elements.value)).contents
 
             result = [config_class(canvas, info, c, self) for c in configs]
 
@@ -145,12 +164,6 @@ class XlibCanvasConfig10(BaseXlibCanvasConfig):
         return XlibContext10(self, share)
 
 
-class XlibCanvasConfig10ATI(XlibCanvasConfig10):
-    attribute_ids = BaseXlibCanvasConfig.attribute_ids.copy()
-    del attribute_ids['stereo']
-    stereo = False
-
-
 class XlibCanvasConfig13(BaseXlibCanvasConfig):
     attribute_ids = BaseXlibCanvasConfig.attribute_ids.copy()
     attribute_ids.update({
@@ -206,15 +219,16 @@ class BaseXlibContext(Context):
 
         self._have_SGI_video_sync = config.glx_info.have_extension('GLX_SGI_video_sync')
         self._have_SGI_swap_control = config.glx_info.have_extension('GLX_SGI_swap_control')
+        self._have_EXT_swap_control = config.glx_info.have_extension('GLX_EXT_swap_control')
         self._have_MESA_swap_control = config.glx_info.have_extension('GLX_MESA_swap_control')
 
         # In order of preference:
-        # 1. GLX_MESA_swap_control (more likely to work where video_sync will
-        #    not)
-        # 2. GLX_SGI_video_sync (does not work on Intel 945GM, but that has
-        #    MESA)
-        # 3. GLX_SGI_swap_control (cannot be disabled once enabled).
-        self._use_video_sync = (self._have_SGI_video_sync and not self._have_MESA_swap_control)
+        # 1. GLX_EXT_swap_control (more likely to work where video_sync will not)
+        # 2. GLX_MESA_swap_control (same as above, but supported by MESA drivers)
+        # 3. GLX_SGI_video_sync (does not work on Intel 945GM, but that has EXT)
+        # 4. GLX_SGI_swap_control (cannot be disabled once enabled)
+        self._use_video_sync = (self._have_SGI_video_sync and
+                                not (self._have_EXT_swap_control or self._have_MESA_swap_control))
 
         # XXX mandate that vsync defaults on across all platforms.
         self._vsync = True
@@ -225,10 +239,15 @@ class BaseXlibContext(Context):
     def set_vsync(self, vsync=True):
         self._vsync = vsync
         interval = vsync and 1 or 0
-        if not self._use_video_sync and self._have_MESA_swap_control:
-            glxext_mesa.glXSwapIntervalMESA(interval)
-        elif self._have_SGI_swap_control:
-            glxext_arb.glXSwapIntervalSGI(interval)
+        try:
+            if not self._use_video_sync and self._have_EXT_swap_control:
+                glxext_arb.glXSwapIntervalEXT(self.x_display, glx.glXGetCurrentDrawable(), interval)
+            elif not self._use_video_sync and self._have_MESA_swap_control:
+                glxext_mesa.glXSwapIntervalMESA(interval)
+            elif self._have_SGI_swap_control:
+                glxext_arb.glXSwapIntervalSGI(interval)
+        except lib.MissingFunctionException as e:
+            warnings.warn(e.message)
 
     def get_vsync(self):
         return self._vsync
@@ -245,10 +264,9 @@ class XlibContext10(BaseXlibContext):
         super(XlibContext10, self).__init__(config, share)
 
     def _create_glx_context(self, share):
-        if self.config._requires_gl_3():
+        if self.config.requires_gl_3():
             raise gl.ContextException(
-                'Require GLX_ARB_create_context extension to create ' +
-                'OpenGL 3 contexts.')
+                'Require GLX_ARB_create_context extension to create OpenGL 3 contexts.')
 
         if share:
             share_context = share.glx_context
@@ -264,8 +282,7 @@ class XlibContext10(BaseXlibContext):
         self.set_current()
 
     def set_current(self):
-        glx.glXMakeCurrent(self.x_display, self.canvas.x_window,
-                           self.glx_context)
+        glx.glXMakeCurrent(self.x_display, self.canvas.x_window, self.glx_context)
         super(XlibContext10, self).set_current()
 
     def detach(self):
@@ -298,7 +315,7 @@ class XlibContext13(BaseXlibContext):
         self.glx_window = None
 
     def _create_glx_context(self, share):
-        if self.config._requires_gl_3():
+        if self.config.requires_gl_3():
             raise gl.ContextException(
                 'Require GLX_ARB_create_context extension to create ' +
                 'OpenGL 3 contexts.')
@@ -313,7 +330,7 @@ class XlibContext13(BaseXlibContext):
                                        True)
 
     def attach(self, canvas):
-        if canvas is self.canvas:  # XXX do this for carbon too?
+        if canvas is self.canvas:
             return
 
         super(XlibContext13, self).attach(canvas)

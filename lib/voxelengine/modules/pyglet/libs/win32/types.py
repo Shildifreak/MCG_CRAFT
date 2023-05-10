@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,14 +33,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
 
-"""
-"""
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
-
 import sys
 import ctypes
+from pyglet import com
 from ctypes import *
 from ctypes.wintypes import *
 
@@ -87,6 +83,7 @@ def POINTER_(obj):
 
 c_void_p = POINTER_(c_void)
 INT = c_int
+UBYTE = c_ubyte
 LPVOID = c_void_p
 HCURSOR = HANDLE
 LRESULT = LPARAM
@@ -101,6 +98,7 @@ UINT_PTR = HANDLE
 LONG_PTR = HANDLE
 HDROP = HANDLE
 LPTSTR = LPWSTR
+LPSTREAM = c_void_p
 
 LF_FACESIZE = 32
 CCHDEVICENAME = 32
@@ -271,6 +269,25 @@ class LOGFONT(Structure):
     ]
 
 
+class LOGFONTW(Structure):
+    _fields_ = [
+        ('lfHeight', LONG),
+        ('lfWidth', LONG),
+        ('lfEscapement', LONG),
+        ('lfOrientation', LONG),
+        ('lfWeight', LONG),
+        ('lfItalic', BYTE),
+        ('lfUnderline', BYTE),
+        ('lfStrikeOut', BYTE),
+        ('lfCharSet', BYTE),
+        ('lfOutPrecision', BYTE),
+        ('lfClipPrecision', BYTE),
+        ('lfQuality', BYTE),
+        ('lfPitchAndFamily', BYTE),
+        ('lfFaceName', (WCHAR * LF_FACESIZE))
+    ]
+
+
 class TRACKMOUSEEVENT(Structure):
     _fields_ = [
         ('cbSize', DWORD),
@@ -338,15 +355,8 @@ class MONITORINFOEX(Structure):
     __slots__ = [f[0] for f in _fields_]
 
 
-class DEVMODE(Structure):
+class _DUMMYSTRUCTNAME(Structure):
     _fields_ = [
-        ('dmDeviceName', BCHAR * CCHDEVICENAME),
-        ('dmSpecVersion', WORD),
-        ('dmDriverVersion', WORD),
-        ('dmSize', WORD),
-        ('dmDriverExtra', WORD),
-        ('dmFields', DWORD),
-        # Just using largest union member here
         ('dmOrientation', c_short),
         ('dmPaperSize', c_short),
         ('dmPaperLength', c_short),
@@ -355,6 +365,37 @@ class DEVMODE(Structure):
         ('dmCopies', c_short),
         ('dmDefaultSource', c_short),
         ('dmPrintQuality', c_short),
+    ]
+
+
+class _DUMMYSTRUCTNAME2(Structure):
+    _fields_ = [
+        ('dmPosition', POINTL),
+        ('dmDisplayOrientation', DWORD),
+        ('dmDisplayFixedOutput', DWORD)
+    ]
+
+
+class _DUMMYDEVUNION(Union):
+    _anonymous_ = ('_dummystruct1', '_dummystruct2')
+    _fields_ = [
+        ('_dummystruct1', _DUMMYSTRUCTNAME),
+        ('dmPosition', POINTL),
+        ('_dummystruct2', _DUMMYSTRUCTNAME2),
+    ]
+
+
+class DEVMODE(Structure):
+    _anonymous_ = ('_dummyUnion',)
+    _fields_ = [
+        ('dmDeviceName', BCHAR * CCHDEVICENAME),
+        ('dmSpecVersion', WORD),
+        ('dmDriverVersion', WORD),
+        ('dmSize', WORD),
+        ('dmDriverExtra', WORD),
+        ('dmFields', DWORD),
+        # Just using largest union member here
+        ('_dummyUnion', _DUMMYDEVUNION),
         # End union
         ('dmColor', c_short),
         ('dmDuplex', c_short),
@@ -469,4 +510,96 @@ class RAWINPUT(Structure):
     _fields_ = [
         ('header', RAWINPUTHEADER),
         ('data', _RAWINPUTDEVICEUNION),
+    ]
+
+
+# PROPVARIANT wrapper, doesn't require InitPropVariantFromInt64 this way.
+class _VarTable(ctypes.Union):
+    """Must be in an anonymous union or values will not work across various VT's."""
+    _fields_ = [
+        ('llVal', ctypes.c_longlong),
+        ('pwszVal', LPWSTR)
+    ]
+
+
+class PROPVARIANT(ctypes.Structure):
+    _anonymous_ = ['union']
+
+    _fields_ = [
+        ('vt', ctypes.c_ushort),
+        ('wReserved1', ctypes.c_ubyte),
+        ('wReserved2', ctypes.c_ubyte),
+        ('wReserved3', ctypes.c_ulong),
+        ('union', _VarTable)
+    ]
+
+
+class _VarTableVariant(ctypes.Union):
+    """Must be in an anonymous union or values will not work across various VT's."""
+    _fields_ = [
+        ('bstrVal', LPCWSTR)
+    ]
+
+
+class VARIANT(ctypes.Structure):
+    _anonymous_ = ['union']
+
+    _fields_ = [
+        ('vt', ctypes.c_ushort),
+        ('wReserved1', WORD),
+        ('wReserved2', WORD),
+        ('wReserved3', WORD),
+        ('union', _VarTableVariant)
+    ]
+
+
+class DWM_BLURBEHIND(ctypes.Structure):
+    _fields_ = [
+        ("dwFlags", DWORD),
+        ("fEnable", BOOL),
+        ("hRgnBlur", HRGN),
+        ("fTransitionOnMaximized", DWORD),
+    ]
+
+
+class STATSTG(ctypes.Structure):
+    _fields_ = [
+        ('pwcsName', LPOLESTR),
+        ('type', DWORD),
+        ('cbSize', ULARGE_INTEGER),
+        ('mtime', FILETIME),
+        ('ctime', FILETIME),
+        ('atime', FILETIME),
+        ('grfMode', DWORD),
+        ('grfLocksSupported', DWORD),
+        ('clsid', DWORD),
+        ('grfStateBits', DWORD),
+        ('reserved', DWORD),
+    ]
+
+
+class IStream(com.pIUnknown):
+    _methods_ = [
+        ('Read',
+         com.STDMETHOD(c_void_p, ULONG, POINTER(ULONG))),
+        ('Write',
+         com.STDMETHOD()),
+        ('Seek',
+         com.STDMETHOD(LARGE_INTEGER, DWORD, POINTER(ULARGE_INTEGER))),
+        ('SetSize',
+         com.STDMETHOD()),
+        ('CopyTo',
+         com.STDMETHOD()),
+        ('Commit',
+         com.STDMETHOD()),
+        ('Revert',
+         com.STDMETHOD()),
+        ('LockRegion',
+         com.STDMETHOD()),
+        ('UnlockRegion',
+         com.STDMETHOD()),
+        ('Stat',
+         com.STDMETHOD(POINTER(STATSTG), UINT)),
+        ('Clone',
+         com.STDMETHOD()),
     ]

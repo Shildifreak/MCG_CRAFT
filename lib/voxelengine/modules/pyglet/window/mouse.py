@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -34,8 +35,40 @@
 
 """Mouse constants and utilities for pyglet.window.
 """
-__docformat__ = 'restructuredtext'
-__version__ = '$Id$'
+
+
+class MouseStateHandler(dict):
+    """Simple handler that tracks the state of buttons from the mouse. If a
+    button is pressed then this handler holds a True value for it.
+    If the window loses focus, all buttons will be reset to False to avoid a
+    "sticky" button state.
+
+    For example::
+
+        >>> win = window.Window()
+        >>> mousebuttons = mouse.MouseStateHandler()
+        >>> win.push_handlers(mousebuttons)
+
+        # Hold down the "left" button...
+
+        >>> mousebuttons[mouse.LEFT]
+        True
+        >>> mousebuttons[mouse.RIGHT]
+        False
+
+    """
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        self[button] = True
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        self[button] = False
+
+    def on_deactivate(self):
+        self.clear()
+
+    def __getitem__(self, key):
+        return self.get(key, False)
 
 
 def buttons_string(buttons):
@@ -54,14 +87,21 @@ def buttons_string(buttons):
     """
     button_names = []
     if buttons & LEFT:
-        button_names.append('LEFT')
+        button_names.append("LEFT")
     if buttons & MIDDLE:
-        button_names.append('MIDDLE')
+        button_names.append("MIDDLE")
     if buttons & RIGHT:
-        button_names.append('RIGHT')
-    return '|'.join(button_names)
+        button_names.append("RIGHT")
+    if buttons & MOUSE4:
+        button_names.append("MOUSE4")
+    if buttons & MOUSE5:
+        button_names.append("MOUSE5")
+    return "|".join(button_names)
+
 
 # Symbolic names for the mouse buttons
-LEFT =   1 << 0
+LEFT = 1 << 0
 MIDDLE = 1 << 1
-RIGHT =  1 << 2
+RIGHT = 1 << 2
+MOUSE4 = 1 << 3
+MOUSE5 = 1 << 4

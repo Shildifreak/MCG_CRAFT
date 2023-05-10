@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -31,13 +32,12 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
-from __future__ import division
-from builtins import object
 
 import ctypes
+import warnings
 from collections import namedtuple
 
-from pyglet.compat import asbytes, asstr
+from pyglet.util import asbytes, asstr
 from pyglet.font import base
 from pyglet import image
 from pyglet.font.fontconfig import get_fontconfig
@@ -46,7 +46,7 @@ from pyglet.font.freetype_lib import *
 
 class FreeTypeGlyphRenderer(base.GlyphRenderer):
     def __init__(self, font):
-        super(FreeTypeGlyphRenderer, self).__init__(font)
+        super().__init__(font)
         self.font = font
 
         self._glyph_slot = None
@@ -135,11 +135,10 @@ class FreeTypeGlyphRenderer(base.GlyphRenderer):
         return self._create_glyph()
 
 
-FreeTypeFontMetrics = namedtuple('FreeTypeFontMetrics',
-                                 ['ascent', 'descent'])
+FreeTypeFontMetrics = namedtuple('FreeTypeFontMetrics', ['ascent', 'descent'])
 
 
-class MemoryFaceStore(object):
+class MemoryFaceStore:
     def __init__(self):
         self._dict = {}
 
@@ -161,10 +160,15 @@ class FreeTypeFont(base.Font):
     # Map font (name, bold, italic) to FreeTypeMemoryFace
     _memory_faces = MemoryFaceStore()
 
-    def __init__(self, name, size, bold=False, italic=False, dpi=None):
-        super(FreeTypeFont, self).__init__()
+    def __init__(self, name, size, bold=False, italic=False, stretch=False, dpi=None):
+        # assert type(bold) is bool, "Only a boolean value is supported for bold in the current font renderer."
+        # assert type(italic) is bool, "Only a boolean value is supported for bold in the current font renderer."
 
-        self.name = name
+        if stretch:
+            warnings.warn("The current font render does not support stretching.")
+
+        super().__init__()
+        self._name = name
         self.size = size
         self.bold = bold
         self.italic = italic
@@ -172,6 +176,10 @@ class FreeTypeFont(base.Font):
 
         self._load_font_face()
         self.metrics = self.face.get_font_metrics(self.size, self.dpi)
+
+    @property
+    def name(self):
+        return self.face.family_name
 
     @property
     def ascent(self):
@@ -187,14 +195,14 @@ class FreeTypeFont(base.Font):
         return self.face.get_glyph_slot(glyph_index)
 
     def _load_font_face(self):
-        self.face = self._memory_faces.get(self.name, self.bold, self.italic)
+        self.face = self._memory_faces.get(self._name, self.bold, self.italic)
         if self.face is None:
             self._load_font_face_from_system()
 
     def _load_font_face_from_system(self):
-        match = get_fontconfig().find_font(self.name, self.size, self.bold, self.italic)
+        match = get_fontconfig().find_font(self._name, self.size, self.bold, self.italic)
         if not match:
-            raise base.FontException('Could not match font "%s"' % self.name)
+            raise base.FontException('Could not match font "%s"' % self._name)
         self.face = FreeTypeFace.from_fontconfig(match)
 
     @classmethod
@@ -210,7 +218,7 @@ class FreeTypeFont(base.Font):
         cls._memory_faces.add(face)
 
 
-class FreeTypeFace(object):
+class FreeTypeFace:
     """FreeType typographic face object.
 
     Keeps the reference count to the face at +1 as long as this object exists. If other objects
@@ -241,6 +249,10 @@ class FreeTypeFace(object):
             if not match.file:
                 raise base.FontException('No filename for "%s"' % match.name)
             return cls.from_file(match.file)
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def family_name(self):
@@ -316,7 +328,7 @@ class FreeTypeFace(object):
                                    descent=-ascent // 4)  # arbitrary.
 
     def _get_best_name(self):
-        self.name = self.family_name
+        self._name = asstr(self.ft_face.contents.family_name)
         self._get_font_family_from_ttf
 
     def _get_font_family_from_ttf(self):
@@ -335,7 +347,7 @@ class FreeTypeFace(object):
                             name.encoding_id == TT_MS_ID_UNICODE_CS):
                         continue
                     # name.string is not 0 terminated! use name.string_len
-                    self.name = name.string.decode('utf-16be', 'ignore')
+                    self._name = name.string.decode('utf-16be', 'ignore')
                 except:
                     continue
 
@@ -343,7 +355,7 @@ class FreeTypeFace(object):
 class FreeTypeMemoryFace(FreeTypeFace):
     def __init__(self, data):
         self._copy_font_data(data)
-        super(FreeTypeMemoryFace, self).__init__(self._create_font_face())
+        super().__init__(self._create_font_face())
 
     def _copy_font_data(self, data):
         self.font_data = (FT_Byte * len(data))()

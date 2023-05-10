@@ -14,9 +14,11 @@ class AutoIndex(dict):
 
 def generate_desktop_version(normalized_universal_description, texture_directories, target_path):
 
+	print("\nGenerating Desktop Version for Texturepack")
+
 	texture_index = AutoIndex()
 
-	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{}}
+	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{},"SOUNDS":{}}
 	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
@@ -42,6 +44,8 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 		description["BLOCK_MODELS"].append(blockmodel)
 	
 	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]
+
+	description["SOUNDS"] = normalized_universal_description["SOUNDS"]
 
 	TEXTURE_COUNT = 2**math.ceil(math.log2(len(texture_index)))
 	description["TEXTURE_DIMENSIONS"] = (1, TEXTURE_COUNT)

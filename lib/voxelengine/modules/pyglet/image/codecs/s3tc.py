@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -31,14 +32,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
-# $Id:$
 
-'''Software decoder for S3TC compressed texture (i.e., DDS).
+"""Software decoder for S3TC compressed texture (i.e., DDS).
 
 http://oss.sgi.com/projects/ogl-sample/registry/EXT/texture_compression_s3tc.txt
-'''
-from __future__ import division
-from builtins import range
+"""
 
 import ctypes
 import re
@@ -49,6 +47,7 @@ from pyglet.image import AbstractImage, Texture
 
 split_8byte = re.compile('.' * 8, flags=re.DOTALL)
 split_16byte = re.compile('.' * 16, flags=re.DOTALL)
+
 
 class PackedImageData(AbstractImage):
     _current_texture = None
@@ -94,10 +93,11 @@ class PackedImageData(AbstractImage):
     texture = property(_get_texture)
 
     def get_texture(self, rectangle=False, force_rectangle=False):
-        '''The parameters 'rectangle' and 'force_rectangle' are ignored.
+        """The parameters 'rectangle' and 'force_rectangle' are ignored.
            See the documentation of the method 'AbstractImage.get_texture' for
-           a more detailed documentation of the method. '''
+           a more detailed documentation of the method. """
         return self._get_texture()
+
 
 def decode_dxt1_rgb(data, width, height):
     # Decode to 16-bit RGB UNSIGNED_SHORT_5_6_5
@@ -153,8 +153,8 @@ def decode_dxt1_rgb(data, width, height):
         advance_row = (image_offset + 4) % width == 0
         image_offset += width * 3 * advance_row + 4
 
-    return PackedImageData(width, height, 
-        GL_RGB, GL_UNSIGNED_SHORT_5_6_5, out)
+    return PackedImageData(width, height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, out)
+
 
 def decode_dxt1_rgba(data, width, height):
     # Decode to GL_RGBA
@@ -285,6 +285,7 @@ def decode_dxt3(data, width, height):
         image_offset += pitch * 3 * advance_row + 16
 
     return PackedImageData(width, height, GL_RGBA, GL_UNSIGNED_BYTE, out)
+
 
 def decode_dxt5(data, width, height):
     # Decode to GL_RGBA

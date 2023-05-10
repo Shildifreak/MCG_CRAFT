@@ -183,7 +183,8 @@ class Block(voxelengine.Block):
         """drop item or something... also remember to set it to air. Return value see activated"""
         character.pickup_item(self.item_version())
         self.blockworld[self.position] = "AIR"
-        
+        sound_event = Event("sound",Point(self.position),self.get_break_sound())
+        self.world.event_system.add_event(sound_event)
 
     def handle_event_explosion(self,events):
         """default implementation for handling explosion events"""
@@ -195,6 +196,9 @@ class Block(voxelengine.Block):
                 self.turn_into("AIR")
                 return True
         return False
+
+    def get_break_sound(self):
+        return self["id"]+"_block_broken"
 
     def get_tags(self):
         """
@@ -639,7 +643,7 @@ class Command(object):
             return [self.rstrip()+" "] if len(self) else ["0 "] 
 
     class INT(object):
-        def __init__(self, /, default=0):
+        def __init__(self, default=0):
             self.default = default
 
         @staticmethod

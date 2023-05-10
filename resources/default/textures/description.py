@@ -131,6 +131,7 @@
     "FAN"                      : {"faces":{"top":"fan", "other":"reinforced_stone"}},
     "Repeater"                 : {"faces":{"bottom":"repeater_off", "other":"transparent"}, "icon":"repeater_off", "transparent":True},
     "Piston"                   : {"faces":{"top":"piston_top","bottom":"piston_bottom","other":"piston_side"}, "icon":"piston_side"},
+    "Noteblock"                : {"faces":{"all":"noteblock"}},
 
     # EXPLOSIV
     "RACKETENWERFER"           : {"faces":{"back":"racketenwerfer_back","left":"racketenwerfer_side","right":"racketenwerfer_side","other":"racketenwerfer_front"}},
@@ -183,6 +184,10 @@
     "Arrow"                    : {"icon":"arrow"                 },
     "Axe"                      : {"icon":"axe"                   },
     "Fishing_Rod"              : {"icon":"fishing_rod"           },
+    "inventory_background"     : {"icon":"inventory_background"  },
+    "inventory_border_right"   : {"icon":"inventory_border_blue" },
+    "inventory_border_left"    : {"icon":"inventory_border_red"  },
+    "inventory_border_mixed"   : {"icon":"inventory_border_red_blue"},
     },
 
 #{

@@ -1,15 +1,16 @@
 # ----------------------------------------------------------------------------
 # pyglet
 # Copyright (c) 2006-2008 Alex Holkner
+# Copyright (c) 2008-2022 pyglet contributors
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions 
+# modification, are permitted provided that the following conditions
 # are met:
 #
 #  * Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright 
+#  * Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the
 #    distribution.
@@ -31,7 +32,6 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
-# $Id: $
 
 """Text formatting, layout and display.
 
@@ -72,10 +72,6 @@ creating scrollable layouts.
 
 .. versionadded:: 1.1
 """
-from builtins import object
-
-__docformat__ = 'restructuredtext'
-__version__ = '$Id: $'
 
 import os.path
 
@@ -88,7 +84,7 @@ class DocumentDecodeException(Exception):
     pass
 
 
-class DocumentDecoder(object):
+class DocumentDecoder:
     """Abstract document decoder.
     """
 
@@ -308,6 +304,26 @@ class DocumentLabel(layout.TextLayout):
                                 {'color': color})
 
     @property
+    def opacity(self):
+        """Blend opacity.
+
+        This property sets the alpha component of the colour of the label's
+        vertices.  With the default blend mode, this allows the layout to be
+        drawn with fractional opacity, blending with the background.
+
+        An opacity of 255 (the default) has no effect.  An opacity of 128 will
+        make the label appear semi-translucent.
+
+        :type: int
+        """
+        return self.color[3]
+
+    @opacity.setter
+    def opacity(self, alpha):
+        if alpha != self.color[3]:
+            self.color = list(map(int, (*self.color[:3], alpha)))
+
+    @property
     def font_name(self):
         """Font family name.
 
@@ -396,7 +412,7 @@ class Label(DocumentLabel):
     """
 
     def __init__(self, text='',
-                 font_name=None, font_size=None, bold=False, italic=False,
+                 font_name=None, font_size=None, bold=False, italic=False, stretch=False,
                  color=(255, 255, 255, 255),
                  x=0, y=0, width=None, height=None,
                  anchor_x='left', anchor_y='baseline',
@@ -412,10 +428,12 @@ class Label(DocumentLabel):
                 first matching name is used.
             `font_size` : float
                 Font size, in points.
-            `bold` : bool
+            `bold` : bool/str
                 Bold font style.
-            `italic` : bool
+            `italic` : bool/str
                 Italic font style.
+            `stretch` : bool/str
+                 Stretch font style.
             `color` : (int, int, int, int)
                 Font colour, as RGBA components in range [0, 255].
             `x` : int
@@ -457,6 +475,7 @@ class Label(DocumentLabel):
             'font_size': font_size,
             'bold': bold,
             'italic': italic,
+            'stretch': stretch,
             'color': color,
             'align': align,
         })
@@ -525,3 +544,4 @@ class HTMLLabel(DocumentLabel):
     def text(self, text):
         self._text = text
         self.document = decode_html(text, self._location)
+

@@ -27,6 +27,7 @@ import pyglet
 from pyglet import image
 #pyglet.options["debug_gl"] = False
 pyglet.options['shadow_window'] = False
+pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
@@ -333,9 +334,9 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES
-    def url_for(filename):
-        path = os.path.join("/texturepacks/desktop",filename)
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS
+    def url_for(filename, folder="desktop"):
+        path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
         components = urllib.parse.ParseResult("http",netloc,path,"","","")
         url = urllib.request.urlunparse(components)
@@ -354,6 +355,16 @@ def load_setup(host, port):
         BLOCKMODELS[name] = block_model(vertices, textures)
         ICON[name] = tex_coord(*icon_coords)
         TRANSPARENCY[name] = transparency
+    
+    SOUNDS = {}
+    sound_files = {}
+    for filename in set(description["SOUNDS"].values()):
+        url = url_for(filename,folder="sounds")
+        with urllib.request.urlopen(url) as f:
+            b = io.BytesIO(f.read())
+        sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
+    for sound, filename in description["SOUNDS"].items():
+        SOUNDS[sound] = sound_files[filename]
 
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
@@ -808,12 +819,12 @@ class Model(object):
                     })
                 label = pyglet.text.layout.ScrollableTextLayout(document,
                                           batch=self.hud_batch,group=textgroup,
-                                          multiline=True, width=size[0], height=size[1],
+                                          multiline=True, width=int(size[0]), height=int(size[1]),
                                           )
                 label.begin_update()
                 
-                label.x = x
-                label.y = y
+                label.x = int(x)
+                label.y = int(y)
                 label.anchor_x = "center"
                 label.anchor_y = "center"
                 
@@ -1006,6 +1017,9 @@ class Window(pyglet.window.Window):
         # current state of actions
         self.actionstates = collections.defaultdict(int)
 
+        # Sound
+        self.listener = pyglet.media.get_audio_driver().get_listener()
+
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
@@ -1028,12 +1042,13 @@ class Window(pyglet.window.Window):
         chunkpos = chunk << CHUNKBASE
         return (self.position - chunkpos).length()
 
-    def get_sight_vector(self):
+    def get_sight_vector(self, pitchcorrection=0):
         """
         Returns the current line of sight vector indicating the direction
         the player is looking.
         """
         x, y = self.rotation
+        y += pitchcorrection
         # y ranges from -90 to 90, or -pi/2 to pi/2, so m ranges from 0 to 1 and
         # is 1 when looking ahead parallel to the ground and 0 when looking
         # straight up or down.
@@ -1079,6 +1094,7 @@ class Window(pyglet.window.Window):
                 elif test("goto",1):
                     position, = args
                     self.position = Vector(position)
+                    self.listener.position = tuple(position)
                     for msg in self.model.monitor_around(self.position):
                         self.client.send(msg)
                 elif test("focusdist",1):
@@ -1117,6 +1133,11 @@ class Window(pyglet.window.Window):
                         raise err
                     else:
                         warnings.warn(err)
+                elif test("sound",2):
+                    sound_name, position = args
+                    assert type(sound_name) == str
+                    position = Vector(position)
+                    self.play_sound(sound_name, position)
                 else:
                     print("unknown command", command, args)
             self.model.process_queue()
@@ -1219,6 +1240,8 @@ class Window(pyglet.window.Window):
         pitch += dpitch
         pitch = max(-90, min(90, pitch))
         self.rotation = (yaw,pitch)
+        self.listener.forward_orientation = tuple(self.get_sight_vector())
+        self.listener.up_orientation = tuple(self.get_sight_vector(90))
         self.client.send(("rot", self.rotation))
                 
     def on_mouse_motion(self, x, y, dx, dy):
@@ -1482,6 +1505,13 @@ class Window(pyglet.window.Window):
         Draw the crosshairs in the center of the screen.
         """
         self.reticle.draw(GL_LINES)
+
+    def play_sound(self, sound_name, position):
+        if sound_name in SOUNDS:
+            player = SOUNDS[sound_name].play()
+            player.position = position
+        else:
+            print("unknown sound name", sound_name)
 
 def setup_fog():
     """
