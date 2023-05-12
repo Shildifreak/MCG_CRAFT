@@ -1,0 +1,52 @@
+
+
+# Javascript API
+
+/*
+A standalone JavaScript that will be used both on the server and all clients to independently generate the same world.
+A global 32bit integer seed variable is supplied by the framework.
+*/
+
+var spawnpoint = [x,y,z]; // where players should spawn in this world (may use seed)
+
+function terrain(position) {
+	/*
+	can be a functional description of the world, look up pregenerated map of blocks and positions, or a mix of both
+	has to be deterministic!
+	will be called very often, may cache previous results to optimize performance
+	*/
+	return "AIR";
+}
+
+function terrain_hint(area, tag) {
+	/*
+	tell if there are any blocks matching the given tag 
+	return yes/no/maybe
+	*/
+	return undefined;
+}
+
+function priority(area) {
+	/*
+	value indicating importance of this area, should be high for areas containing surfaces or points of interest
+	is combined with distance to camera to determine chunk loading order
+	*/
+	return 0;
+}
+
+function sky(position, time) {
+	/*
+	sky color to use for player at this point in space and time
+	default shader ignores alpha value
+	*/
+	return [r,g,b,a];
+}
+
+
+
+# Python API
+
+def init(world):
+	"""
+	runs on server exactly once when the world is generated (not when loaded from save file etc.)
+	"""
