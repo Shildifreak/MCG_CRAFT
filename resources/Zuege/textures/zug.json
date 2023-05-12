@@ -1,0 +1,28 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "zug_top": [
+            1,
+            0
+        ],
+        "zug_front": [
+            0,
+            1
+        ],
+        "zug_side": [
+            1,
+            1
+        ],
+        "zug_back": [
+            2,
+            1
+        ],
+        "zug_bottom": [
+            1,
+            2
+        ]
+    }
+}

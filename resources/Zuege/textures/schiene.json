@@ -1,0 +1,37 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "schiene": [
+            0,
+            0
+        ],
+
+        "schiene_top_bottom": [
+            1,
+            0
+        ],
+        "schiene_front_top": [
+            0,
+            1
+        ],
+        "schiene_top_top": [
+            2,
+            0
+        ],
+        "schiene_side_bottom": [
+            1,
+            1
+        ],
+        "schiene_front_bottom": [
+            2,
+            1
+        ],
+        "schiene_side_top": [
+            1,
+            2
+        ]
+    }
+}

@@ -352,7 +352,7 @@ class Player(voxelengine.Player):
 
         # just for testing:
         if self.gamemode == "creative":
-            character["inventory"] = [{"id":"AIR"},{"id":"STONE","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+            character["inventory"] = [{"id":"AIR"},{"id":"Schiene","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
             functional_blocks = resources.blockClasses.keys()
             for blockname in functional_blocks: # with class in resourcepack/blocks
                 character["inventory"].append({"id":blockname})

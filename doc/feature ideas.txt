@@ -1,15 +1,20 @@
-
+﻿
 ------ Dinge die man in der AG machen könnte ------
 
+	Züge
+		mitfahren
+
+	Ereignisse:
+		Wetter
+		Blitze
+		Naturkatastrophe
+
 	Bäume:
-		Blätter: Setzlinge droppen lassen
-		Blätter: despawnen wenn kein Stamm mehr da
-		Setzling: Baumform (Höhe, Breite, Blattart) veränderlich mit DNA -> ermöglicht züchten
 		Apfelblock: generiert als Teil von Baum, dropt Äpfel
 		Apfel: essbar -> regeneriert Herzen, aber auch möglicher Ersatz für Setzling
+		Setzling: Baumform (Höhe, Breite, Blattart) veränderlich mit DNA -> ermöglicht züchten
 
 	Schafe:
-		ändern Textur wenn angeklickt und geben Wolle -> wächst nach wenn sie Gras fressen
 		suchen nach Grasblöcken in der Umgebung 
 		verschiedene AIs / Persönlichkeiten -> faul, quirlig, verfressen, anhänglich, ängstlich, ...
 
@@ -20,6 +25,7 @@
 		kleine Slimes werden mit der Zeit wieder zu größeren
 
 	Blöcke:
+		Wasser in dem man schwimmen kann
 		Treppen
 		Stufen (aka Slabs):
 			Doppelstufen einzeln abbaubar machen
@@ -27,6 +33,7 @@
 		Redstone Lampe mit Helligkeit abhängig von Signalstärke
 		Slowsand -> lässt Spieler langsamer laufen (Anspielung auf Soulsand)
 		Block der nicht abgebaut werden kann aber verschiebbar ist
+		Lucky Blocks
 
 	Werkzeuge:
 		anstelle von Haltbarkeit einfach stackbare Werkzeuge
@@ -42,6 +49,7 @@
 
 ------ Random Stuff (was sind gute Ideen?)   ------
 
+	Tablet auf dem man Spiele spielen kann
 	drei Arten von Graß die sich gegenseitig aufessen
 	Noteblock making the block breaking sound of the block beneath it
 	Becher Block -> can be combined into one block and seperated by piston pushing/pulling vertically but not horizontally
