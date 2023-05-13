@@ -15,7 +15,7 @@ function terrain(position) {
 	has to be deterministic!
 	will be called very often, may cache previous results to optimize performance
 	*/
-	return "AIR";
+	return "AIR"; // can also be blockdata in {"id":..., "state":..., "base":..., "rotation":..., ...} format
 }
 
 function terrain_hint(area, tag) {
@@ -39,7 +39,7 @@ function sky(position, time) {
 	sky color to use for player at this point in space and time
 	default shader ignores alpha value
 	*/
-	return [r,g,b,a];
+	return [r,g,b,a]; // values from 0 to 1
 }
 
 

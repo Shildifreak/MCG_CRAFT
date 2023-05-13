@@ -24,6 +24,10 @@ function terrain(position) {
 	}
 }
 
+function sky(position, time) {
+    return [0.3,0,0,1];
+}
+
 
 /*
 Copyright (C) 2010 by Johannes Baagøe <baagoe@baagoe.org>

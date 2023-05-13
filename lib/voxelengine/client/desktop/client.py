@@ -1435,6 +1435,8 @@ class Window(pyglet.window.Window):
         """
         Called by pyglet to draw the canvas.
         """
+        r,g,b,a = self.model.world_generator.sky(self.position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
+        glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
         self.set_3d()
         glColor3d(1, 1, 1)
@@ -1535,8 +1537,6 @@ def setup():
     """ Basic OpenGL configuration.
 
     """
-    # Set the color of "clear", i.e. the sky, in rgba.
-    glClearColor(0.5, 0.69, 1.0, 1)
     # Enable culling (not rendering) of back-facing facets -- facets that aren't
     # visible to you.
     glEnable(GL_CULL_FACE)

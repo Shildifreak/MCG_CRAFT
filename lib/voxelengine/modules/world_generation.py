@@ -43,12 +43,13 @@ class WorldGenerator(object):
 			self.js_context = py_mini_racer.MiniRacer()
 			self.js_context.eval("var seed = %s;" % self.generator_data["seed"])
 			self.js_context.eval(self.generator_data["code_js"])
-			self.js_context.eval(default_terrain_hint_js)
+			self.js_context.eval(default_functions_js)
 		else:
 			# overwrite methods for performance improvement of not calling js_context all the time
 			self.terrain = empty_terrain
 			self.client_terrain = empty_terrain
 			self.terrain_hint = empty_terrain_hint
+			self.sky = empty_sky
 
 	def init(self, world):
 		random.seed(self.generator_data["seed"])
@@ -89,6 +90,8 @@ class WorldGenerator(object):
 	def terrain_hint(self, binary_box, tag):
 		return self.js_context.call("terrain_hint", binary_box, tag)
 
+	def sky(self, position, time):
+		return self.js_context.call("sky", position, time)
 
 	def preload(self, positions):
 		values = self.js_context.call("((positions)=>positions.map(terrain))", positions)
@@ -100,19 +103,41 @@ class WorldGenerator(object):
 			self.client_terrain(position)
 		self._terrain = original_terrain_func
 
-terrain_mapped_js = """
-function terrain_mapped(positions) {
-	return positions.map(terrain);
+#terrain_mapped_js = """
+#function terrain_mapped(positions) {
+#	return positions.map(terrain);
+#}
+#"""
+
+
+default_functions_js = """
+
+if (typeof terrain === "undefined") {
+	function terrain(position) {
+		return "AIR";
+	}
+	function terrain_hint(binary_box,tag) {
+		switch(String(tag)) {
+			case "visible":
+				return false
+			default:
+				return true;
+		}
+	}
 }
-"""
 
-
-default_terrain_hint_js = """
 if (typeof terrain_hint === "undefined") {
 	function terrain_hint(binary_box,tag) {
 		return true;
 	}
 }
+
+if (typeof sky === "undefined") {
+	function sky(position, time) {
+		return [0.5, 0.69, 1.0, 1];
+	}
+}
+
 """
 
 def empty_init(world):
@@ -126,18 +151,5 @@ def empty_terrain_hint(binary_box, tag):
 		return False
 	return True
 
-empty_terrain_js = """
-function terrain(position) {
-	return "AIR";
-}
-
-function terrain_hint(binary_box,tag) {
-	switch(String(tag)) {
-		case "visible":
-			return false
-		default:
-			return true;
-	}
-}
-
-"""
+def empty_sky(position, time):
+	return (0.5, 0.69, 1.0, 1)
