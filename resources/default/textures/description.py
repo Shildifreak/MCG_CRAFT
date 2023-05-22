@@ -93,6 +93,7 @@
     "DIAMANTERZ"               : {"faces":{"all": "diamant_erz"    }},
     "GOLD"                     : {"faces":{"all": "gold_block"     }},
     "GOLDERZ"                  : {"faces":{"all": "gold_erz"       }},
+    "NETHERGOLD"               : {"faces":{"all": "nether_gold_erz"}},
     "IRON"                     : {"faces":{"all": "eisen_block"    }}, # umbenennen zu EISEN?
     "EISENERZ"                 : {"faces":{"all": "eisen_erz"      }},
     #"KOHLE"                    : {"faces":{"all": "kohle_block"    }},

@@ -871,6 +871,10 @@
         "inventory_border_red": [
             12,
             0
+        ],
+        "nether_gold_erz": [
+            8,
+            8
         ]
     }
 }

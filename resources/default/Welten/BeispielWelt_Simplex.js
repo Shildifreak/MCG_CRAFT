@@ -13,12 +13,23 @@ slightly edited to fit into this standalone script by Joram Brenz
 full licenses below
 */
 
+function stone_with_ores(position) {
+	var [x,y,z] = position;
+	var r = noise3D(x/8, y/8, z/8);
+	var d = -0.85;
+	if (r < d) {
+		return "NETHERGOLD";
+	} else {
+		return "Netherstone";
+	}
+}
+
 function terrain(position) {
 	var [x,y,z] = position;
-	var r = noise3D(x/32, y/32, z/32);
+	var r = noise3D(x/32+1, y/32, z/32);
 	var d = Math.abs(y)/100+0.1;
 	if (r < d) {
-		return "Netherstone";
+		return stone_with_ores(position);
 	} else {
 		return "AIR";
 	}
