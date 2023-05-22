@@ -394,7 +394,7 @@ class Player(voxelengine.Player):
 
     def autocomplete(self, msg):
         if msg.startswith("/"):
-            command_text = msg.removeprefix("/")
+            command_text = msg[1:]#msg.removeprefix("/")
             ctx = resources.CommandContext(self)
             suggestions = ctx.autocomplete(command_text)
             return ["/"+s for s in suggestions]

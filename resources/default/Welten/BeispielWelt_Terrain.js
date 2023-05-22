@@ -113,7 +113,7 @@ function count3d(f, d, k=1, w=constant_weight) {
         for (var dx = -d; dx < d+2; dx++) {
             for (var dy = -d; dy < d+2; dy++) {
                 for (var dz = -d; dz < d+2; dz++) {
-                    t = f([xi+dx, yi+dy, zi+dz]);
+                    var t = f([xi+dx, yi+dy, zi+dz]);
                     var v = counter.get(t);
                     if (v == undefined) {
                         v = 0;
