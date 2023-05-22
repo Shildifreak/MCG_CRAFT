@@ -8,8 +8,9 @@ var random = new RNG(seed || 1);
 
 for (var x = -10; x <= 10; x = x + 1) {
 	for (var z = -10; z <= 10; z = z + 1) {
-		var material = random.choice(["GRASS","STONE","DIRT"]);
-		blocks.set([x,0,z], material);
+		blocks.set([x,0,z], "GRASS");
+		var material = random.choice(["HALM","grass","AIR","AIR","AIR"]);
+		blocks.set([x,1,z], material);
 	}
 }
 
