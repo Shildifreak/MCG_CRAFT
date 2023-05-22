@@ -10,7 +10,7 @@ class Zug(Entity):
     def __init__(self, data = None):
         data_defaults = {
             "texture" : "ZUG",
-            "SPEED" : 3,
+            "SPEED" : 68,
             "JUMPSPEED" : 10,
             "tags" : {"update"},
         }
