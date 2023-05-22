@@ -426,7 +426,7 @@ class Player(voxelengine.Player):
                     name = self.entity.get("id",name)
                 print("[%s][%s] %s" % (time.strftime("%Z %Y-%m-%d %T"), name, msg))
                 if msg.startswith("/"):
-                    command_text = msg.removeprefix("/")
+                    command_text = msg[1:]#msg.removeprefix("/")
                     ctx = resources.CommandContext(self)
                     ctx.execute(command_text)
                     #self.chat.add_message(msg)
@@ -803,7 +803,7 @@ def run():
                         print("use like this: play clienttype [username] [password]")
                 elif command.startswith("/"):
                     print(repr(command))
-                    cmd = command.removeprefix("/")
+                    cmd = cmd[1:]#command.removeprefix("/")
                     ctx = resources.CommandContext(u)
                     if cmd.endswith("\t"):
                         cmd = cmd.rstrip("\t")
