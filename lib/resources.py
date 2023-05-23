@@ -29,6 +29,12 @@ class PowerLevelAccumulator(object):
                 self.level = level
             self.abs_level = abs_level
 
+def wait(dt):
+    """a wait for asynchronous action handlers for onclick etc."""
+    t0 = time.time()
+    while time.time() - t0 < dt:
+        yield
+
 class Block(voxelengine.Block):
     blast_resistance = 0
     defaults = {"p_level":0, # redstone power level

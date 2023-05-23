@@ -20,6 +20,25 @@ class Axe(Item):
 class InstaPick(Axe):
     TTM = 0
 
+@register_item("InfiniPick")
+class InfiniPick(Item):
+    """A Pickaxe that continues mining as long as the key/button is held down."""
+    max_distance = 5
+    interval = 0.05
+    def use_on_block(self, character, block, face):
+        block.mined(character, face)
+        yield from wait(0.2)
+        yield from self.use_on_air(character)
+    
+    def use_on_air(self, character):
+        while True:
+            pressure = yield
+            distance, pos, face = character.get_focused_pos(self.max_distance)
+            if pos:
+                block = character.world.blocks[pos]
+                block.mined(character, face)
+                yield from wait(self.interval)
+
 @register_item("Fishing_Rod")
 class FishingRod(Item):
     def use_on_block(self, character, block, face):
