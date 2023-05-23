@@ -20,13 +20,14 @@ def observable_from(data):
     return data
 
 class Observable(Serializable):
-    __slots__ = ("parent","parent_key","item_callbacks","callbacks","sanitizers","data","static_keys")
+    __slots__ = ("parent","parent_key","item_callbacks","callbacks","sanitizers","default_sanitizer","data","static_keys")
     def __init__(self, data, static_keys):
         self.parent = None
         self.parent_key = None
         self.item_callbacks = collections.defaultdict(set)
         self.callbacks = set()
         self.sanitizers = dict()
+        self.default_sanitizer = lambda x:x
         self.data = data
         self.static_keys = static_keys
 
@@ -49,8 +50,9 @@ class Observable(Serializable):
             return default
 
     def _adopted_value(self,value,static_key=None):
-        value = self.sanitizers.get(static_key,lambda x:x)(value)
-        value = observable_from(value)
+        value = self.sanitizers.get(static_key,self.default_sanitizer)(value)
+        if not isinstance(value,Observable):
+            value = observable_from(value)
         if isinstance(value,Observable):
             assert value.parent == None
             value.parent = self
@@ -92,12 +94,19 @@ class Observable(Serializable):
 
     def register_item_sanitizer(self,sanitizer,key,initial_call=True):
         self.sanitizers[key] = sanitizer
-        try:
-            value = self[key]
-        except (KeyError, IndexError):
-            pass
-        else:
-            self[key] = value #will be sanitized by reassignment now that sanitizer is in place
+        if initial_call:
+            try:
+                value = self[key]
+            except (KeyError, IndexError):
+                pass
+            else:
+                self[key] = value #will be sanitized by reassignment now that sanitizer is in place
+
+    def register_default_item_sanitizer(self, sanitizer, initial_call=True):
+        self.default_sanitizer = sanitizer
+        if initial_call:
+            for key in self.keys():
+                self[key] = self[key]
 
     def trigger(self,key):
         for callback in self.item_callbacks[key]:
@@ -131,6 +140,9 @@ class ObservableDict(Observable, collections.abc.MutableMapping):
         if key not in self.data:
             self[key] = value
         return self[key]
+    
+    def keys(self):
+        return self.data.keys()
 
 class ObservableList(Observable, collections.abc.MutableSequence):
     __slots__ = ()
@@ -166,7 +178,8 @@ class ObservableList(Observable, collections.abc.MutableSequence):
     def remove(self, value):
         self.pop(self.index(value))
 
-
+    def keys(self):
+        return range(len(self.data))
 
 if __name__ == "__main__":
     root = observable_from({"a":7,"b":[1,2,3]})

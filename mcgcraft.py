@@ -308,6 +308,7 @@ class InventoryDisplay():
                 x = inventory1.replace(index1, {"id":"AIR"})
                 y = inventory2.replace(index2, x)
                 inventory1.replace(index1, y)
+                print(type(inventory1.inventory), type(inventory2.inventory))
 
 class ChatDisplay(object):
     def __init__(self, player):

@@ -9,6 +9,7 @@ from TPManager.tp_compiler import TP_Compiler
 import voxelengine
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box
+from voxelengine.modules.observableCollections import observable_from
 from voxelengine.server.event_system import Event
 
 GRAVITY = 35
@@ -307,6 +308,14 @@ class UnplacableItem(Item):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         return self.use_on_air(character)
 
+def ItemData(data):
+    print(data)
+    return dict(data)
+
+def InventoryFactory(inventory):
+    inventory = observable_from(inventory)
+    inventory.register_default_item_sanitizer(ItemData)
+    return inventory
 
 class Entity(voxelengine.Entity):
     HITBOX = Hitbox(0,0,0)
@@ -328,7 +337,8 @@ class Entity(voxelengine.Entity):
         assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses or use EntityFactory
         assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
-        self.register_item_sanitizer(lambda v: Vector(v),"velocity")
+        self.register_item_sanitizer(Vector,"velocity")
+        self.register_item_sanitizer(InventoryFactory, "inventory")
 
         self.ai_commands = collections.defaultdict(list)
 
