@@ -185,6 +185,7 @@
     "Arrow"                    : {"icon":"arrow"                 },
     "Axe"                      : {"icon":"axe"                   },
     "Fishing_Rod"              : {"icon":"fishing_rod"           },
+    "InstaPick"                : {"icon":"instapick"             },
     "inventory_background"     : {"icon":"inventory_background"  },
     "inventory_border_right"   : {"icon":"inventory_border_blue" },
     "inventory_border_left"    : {"icon":"inventory_border_red"  },

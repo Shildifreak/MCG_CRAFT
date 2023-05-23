@@ -875,6 +875,10 @@
         "nether_gold_erz": [
             8,
             8
+        ],
+        "instapick": [
+            11,
+            10
         ]
     }
 }

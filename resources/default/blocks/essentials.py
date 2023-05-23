@@ -8,11 +8,6 @@ class AirBlock(Block):
     def collides_with(self,area):
         return False
 
-@register_item("AIR")
-class AirItem(Item):
-    def use_on_block(self,character,block,face):
-        block.mined(character,face)
-
 @register_block("BEDROCK")
 @register_block("mcgcraft:bedrock")
 class StoneBlock(Block):

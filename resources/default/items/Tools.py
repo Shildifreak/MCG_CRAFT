@@ -5,17 +5,20 @@ import time
 
 @register_item("Axe")
 class Axe(Item):
+    TTM = 0.2
     def use_on_block(self, character, block, face):
-        TTM = 0.2
-        print("using axe to mine block")
         t0 = time.time()
-        while time.time() - t0 < TTM:
+        while time.time() - t0 < self.TTM:
             pressure = yield
         block.mined(character, face)
 
     def use_on_entity(self, character, entity):
         entity.take_damage(5)
         #self.decrease_count()
+
+@register_item("InstaPick")
+class InstaPick(Axe):
+    TTM = 0
 
 @register_item("Fishing_Rod")
 class FishingRod(Item):

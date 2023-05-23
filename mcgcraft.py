@@ -352,7 +352,7 @@ class Player(voxelengine.Player):
 
         # just for testing:
         if self.gamemode == "creative":
-            character["inventory"] = [{"id":"AIR"},{"id":"Schiene","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+            character["inventory"] = [{"id":"InstaPick"},{"id":"Schiene","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
             functional_blocks = resources.blockClasses.keys()
             for blockname in functional_blocks: # with class in resourcepack/blocks
                 character["inventory"].append({"id":blockname})
@@ -517,8 +517,12 @@ class Player(voxelengine.Player):
                         do_next = entity.clicked(pe, item)
                 
                 if isinstance(do_next, collections.abc.Generator):
-                    next(do_next) # go up to initial yield so we can use send after
-                    self.ongoing_hand_actions[event_name] = do_next
+                    try:
+                        next(do_next) # go up to initial yield so we can use send after
+                    except StopIteration: # iterators can finish without a single yield
+                        pass
+                    else:
+                        self.ongoing_hand_actions[event_name] = do_next
             
             if self.ongoing_hand_actions[event_name]:
                 pressure = self.get_pressure(event_name)
