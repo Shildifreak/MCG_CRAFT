@@ -57,6 +57,11 @@ class InventoryWrapper(object):
         assert self.open
         return self.inventory.may_contain(item)
 
+    def on_close(self): #this on close is not directly related to the open attribute above
+        assert self.open
+        if hasattr(self.inventory, "on_close"):
+            self.inventory.on_close()
+
 class BlockInventoryWrapper(InventoryWrapper):
     def __init__(self, world, position):
         super().__init__()
@@ -241,6 +246,8 @@ class InventoryDisplay():
         self.is_open = False
         if self.foreign_inventory:
             if self.foreign_inventory != self.inventory:
+                with self.foreign_inventory:
+                    self.foreign_inventory.on_close()
                 self.foreign_inventory.unregister_callback(self.callback)
             self.foreign_inventory = EmptyInventoryWrapper()
         self.display()
@@ -308,7 +315,6 @@ class InventoryDisplay():
                 x = inventory1.replace(index1, {"id":"AIR"})
                 y = inventory2.replace(index2, x)
                 inventory1.replace(index1, y)
-                print(type(inventory1.inventory), type(inventory2.inventory))
 
 class ChatDisplay(object):
     def __init__(self, player):
@@ -363,7 +369,7 @@ class Player(voxelengine.Player):
             for itemname in resources.itemClasses.keys():
                 character["inventory"].append({"id":itemname})
         if self.gamemode == "survival":
-            character["inventory"] = [{"id":"Axe"},{"id":"Setzling"},{"id":"Bow"},{"id":"Arrow","count":100},{"id":"Fishing_Rod"}]
+            character["inventory"] = [{"id":"Axe"},{"id":"Setzling"},{"id":"String","count":100},{"id":"Arrow","count":100},{"id":"Fishing_Rod"}]
 
         # inventory stuff
         for i in range(60):

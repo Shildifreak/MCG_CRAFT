@@ -250,7 +250,7 @@ class Item(object):
             self.item = item.item
             return
         self.item = item
-        self.tags = item.setdefault("tags",{})
+        #self.tags = item.setdefault("tags",{})
         self.item.setdefault("count",1)
 
         assert itemClasses[self.item["id"]] == type(self) #item class must match id
@@ -286,7 +286,9 @@ class Item(object):
     def decrease_count(self):
         self.item["count"] -= 1
         if self.item["count"] <= 0:
-            parent_key = self.item.parent.index(self.item)
+            parent_key = self.item.parent_key
+            if parent_key == None:
+                parent_key = self.item.parent.index(self.item)
             self.item.parent.replace(parent_key, {"id": "AIR"})
         return self.item["count"] >= 0
             
@@ -295,7 +297,7 @@ class Item(object):
         """
         whatever this item should do when clicked on entity
         use yield or return a generator to continue action as long as key is hold
-        return bool to signalize whether to also execute right_/left_clicked action of entity
+        return bool to signalize whether to also execute clicked action of entity
         """
         return entity.clicked(character, self)
 
@@ -308,9 +310,8 @@ class UnplacableItem(Item):
         """whatever this item should do when click on a block... default is to place a block with same id"""
         return self.use_on_air(character)
 
-def ItemData(data):
-    print(data)
-    return dict(data)
+class ItemData(dict):
+    pass
 
 def InventoryFactory(inventory):
     inventory = observable_from(inventory)

@@ -31,7 +31,7 @@ class ItemEntity(Entity):
         self.collect_by(character)
 
     def collect_by(self, character):
-        if character.pickup_item(self["item"]):
+        if character.pickup_item(dict(self["item"])):
             self.kill()
     
     def add_random_velocity(self):
