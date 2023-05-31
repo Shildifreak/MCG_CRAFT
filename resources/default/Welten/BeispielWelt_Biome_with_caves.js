@@ -872,6 +872,13 @@ function terrain(position) {
 		}
 	}
 	
+	// Clouds
+	var r = noise3D(x/32+1, y/8, z/32);
+	var d = Math.abs(y-25)/10+0.1;
+	if (r > d) {
+		return "WEISS";
+	}
+
 	return "AIR";
 	
         //return tunnel_terrain([x, z]);
