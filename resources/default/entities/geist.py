@@ -1,5 +1,6 @@
 from resources import *
-from voxelengine.modules.geometry import Vector, Hitbox
+from voxelengine.modules.geometry import Vector, Hitbox, Point
+from voxelengine.server.event_system import Event
 
 @register_entity("Geist")
 
@@ -40,3 +41,5 @@ class Geist(Entity):
     def clicked(self, character, item):
         r = character.get_sight_vector()
         self["velocity"] = Vector(r)*(20,0,20) + Vector((0,15,0))
+        sound_event = Event("sound",Point(self["position"]),"cat1")
+        self.world.event_system.add_event(sound_event)

@@ -1,1 +1,2 @@
-generic_block_broken.mp3		https://freesound.org/people/Evcy/sounds/583272/
+generic_block_broken.mp3	https://freesound.org/people/Evcy/sounds/583272/		CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+cat1				https://freesound.org/people/alizardguy/sounds/668632/		CC0 1.0 Universal (CC0 1.0) Public Domain Dedication	"Recording of my cat Tori, feel free to use however you like :)"
