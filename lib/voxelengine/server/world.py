@@ -33,7 +33,7 @@ class Clock(dict):
 		self.tick_event = threading.Event()
 		self.dt = 0
 	current_gametick = property(lambda self:self["gametick"])
-	time = property(lambda self:self["gametick"])
+	time = property(lambda self:self["time"])
 	
 	def tick(self, dt):
 		self.dt = dt
