@@ -158,6 +158,7 @@
     "DOORBOTTOM"               : {"icon":"door", "faces":{"top":"door_closed_surface","bottom":"door_closed_surface", "other":"door_closed_lower_half"}},
     "DOORTOPOPEN"              : {"icon":"door", "faces":{"top":"door_open_surface",  "bottom":"transparent",   "other":"door_open_upper_half"}, "transparent":True},
     "DOORBOTTOMOPEN"           : {"icon":"door", "faces":{"top":"transparent",  "bottom":"door_open_surface",   "other":"door_open_lower_half"}, "transparent":True},
+    "PORTAL"                   : {"faces":{"all":"portal"}},
     "BARRIER"                  : {"faces":{"all":"transparent"}, "transparent":True},
     "WAND"                     : {"faces":{"all":"grun"}},
     "AIM"                      : {"faces":{"all":"gold"}},
