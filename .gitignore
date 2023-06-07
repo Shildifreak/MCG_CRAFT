@@ -4,6 +4,8 @@ build/
 __pycache__
 .fuse_hidden*
 *.zip
+*.exe
+*.spec
 Thumbs.db
 test/
 tests/
