@@ -1,27 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import tkinter as tk
 import sys, os
+import runpy
 
-root = tk.Tk()
+if len(sys.argv) > 1:
+	path = sys.argv.pop(1)
+else:
+	path = "scripts/menu.py"
 
-selected_script = None
-def callback(script):
-	def select_script():
-		global selected_script
-		root.destroy()
-		selected_script = script
-	return select_script
-
-b = tk.Button(root, command=callback("startGame"),           text="Start Game"       ); b.pack(fill=tk.X); b.focus_set()
-tk.Button(    root, command=callback("joinGame"),            text="Join Game"           ).pack(fill=tk.X)
-tk.Button(    root, command=callback("editControls2"),       text="Edit Controls"       ).pack(fill=tk.X)
-tk.Button(    root, command=callback("tpEditor"),            text="Edit Textures"       ).pack(fill=tk.X)
-tk.Button(    root, command=callback("update"),              text="Update"              ).pack(fill=tk.X)
-
-root.mainloop()
-
-if selected_script:
-	sys.path.append("scripts")
-	__import__(selected_script)
+runpy.run_path(path,run_name="__main__")
