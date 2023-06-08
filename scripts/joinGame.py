@@ -57,7 +57,7 @@ if events["play"] and clientconfig["address"]:
     if not os.path.exists(path):
         print("no matching call for selected client type", client_type)
     else:
-        python = "python" if sys.platform == "win32" else "python3"
+        python = sys.executable
         command = [python,
                    path,
                    address,
