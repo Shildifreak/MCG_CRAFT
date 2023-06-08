@@ -28,6 +28,7 @@ from pyglet import image
 #pyglet.options["debug_gl"] = False
 pyglet.options['shadow_window'] = False
 pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
+pyglet.options['debug_media'] = True
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse

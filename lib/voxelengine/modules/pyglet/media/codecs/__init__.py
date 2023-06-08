@@ -79,15 +79,17 @@ def add_default_media_codecs():
         from . import wave
         add_decoders(wave)
         add_encoders(wave)
-    except ImportError:
-        pass
+    except ImportError as e:
+        if _debug:
+            print("missing optional codec",e)
 
     if pyglet.compat_platform.startswith('linux'):
         try:
             from . import gstreamer
             add_decoders(gstreamer)
-        except ImportError:
-            pass
+        except ImportError as e:
+            if _debug:
+                print("missing optional codec",e)
 
     try:
         if pyglet.compat_platform in ('win32', 'cygwin'):
@@ -95,21 +97,24 @@ def add_default_media_codecs():
             if WINDOWS_VISTA_OR_GREATER:  # Supports Vista and above.
                 from . import wmf
                 add_decoders(wmf)
-    except ImportError:
-        pass
+    except ImportError as e:
+        if _debug:
+            print("missing optional codec",e)
 
     try:
         if have_ffmpeg():
             from . import ffmpeg
             add_decoders(ffmpeg)
-    except ImportError:
-        pass
+    except ImportError as e:
+        if _debug:
+            print("missing optional codec",e)
 
     try:
         from . import pyogg
         add_decoders(pyogg)
-    except ImportError:
-        pass
+    except ImportError as e:
+        if _debug:
+            print("missing optional codec",e)
 
 
 def have_ffmpeg():
