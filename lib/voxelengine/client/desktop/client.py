@@ -996,6 +996,8 @@ class Window(pyglet.window.Window):
         self.camera_distance = 0 # 0 = first person
         self.camera_smoothing = 0.5
         
+        self.d_yaw_player_camera = 0
+        
         # Instance of the model that handles the world.
         self.model = Model(chunk_priority_callback=self.distance_to_chunk)
         
@@ -1202,6 +1204,12 @@ class Window(pyglet.window.Window):
         if (yaw, pitch) != previous_rotation:
             self.player_rotation = (yaw, pitch)
             self.client.send(("rot", self.player_rotation))
+        
+        d_yaw = self.player_rotation[0] - self.camera_rotation[0]
+        if d_yaw != self.d_yaw_player_camera:
+            self.d_yaw_player_camera = d_yaw
+            if any(self.actionstates[d] for d in ("for","back","left","right")):
+                self.send_input_change(True)
     
     def update_camera_position(self):
         # eye offset
@@ -1368,6 +1376,15 @@ class Window(pyglet.window.Window):
                 if event == e:
                     self.handle_input_action(action, value)
                 self.actionstates[action] = max(value, self.actionstates[action])
+            dx = self.actionstates["right"] - self.actionstates["left"]
+            dz = self.actionstates["back"] - self.actionstates["for"]
+            da = math.radians(self.d_yaw_player_camera)
+            c, s = math.cos(da), math.sin(da)
+            dx, dz = dx*c + dz*s, dz*c - dx*s
+            self.actionstates["right"] = max(0, min(255, int(round(+dx))))
+            self.actionstates["left"]  = max(0, min(255, int(round(-dx))))
+            self.actionstates["back"]  = max(0, min(255, int(round(+dz))))
+            self.actionstates["for"]   = max(0, min(255, int(round(-dz))))
             actionstates = bytearray(self.actionstates[a] for a in ACTIONS)
             actionstates_b64 = base64.encodebytes(actionstates.rstrip(b"\00")).decode("ascii")
             self.client.send(("keys",actionstates_b64))
