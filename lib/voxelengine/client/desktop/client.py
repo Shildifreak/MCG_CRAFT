@@ -1132,7 +1132,6 @@ class Window(pyglet.window.Window):
                     self.player_position = Vector(position)
                 elif test("focusdist",1):
                     focus_distance, = args
-                    focus_distance*=100
                     assert isinstance(focus_distance, (int, float))
                 elif test("setentity",5):
                     entity_id, model, position, rotation, modelmaps = args
@@ -1428,6 +1427,8 @@ class Window(pyglet.window.Window):
             if symbol == key.F7:
                 ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
                 self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
+            if symbol == key.F11:
+                self.set_fullscreen(not self.fullscreen)
             if self.chat_open:
                 pass
             self.send_input_change(("key", symbol))
