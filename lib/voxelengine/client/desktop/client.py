@@ -47,6 +47,7 @@ TICKS_PER_SEC = 60
 MSGS_PER_TICK = 100
 ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE = CHUNKSIZE**DIMENSION*6
 JOYSTICK_DEADZONE = 0.1
+FOV = 65.0
 
 focus_distance = 0
 
@@ -78,6 +79,10 @@ KEYMAP = [
     (("key"  , key.T      ),"chat"      ),
     (("scroll","up"       ),"inv-"      ),
     (("scroll","down"     ),"inv+"      ),
+    (("key"  , key.LEFT   ),"-yaw"    ),
+    (("key"  , key.RIGHT  ),"+yaw"    ),
+    (("key"  , key.DOWN   ),"-pitch"    ),
+    (("key"  , key.UP     ),"+pitch"    ),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -521,6 +526,8 @@ class Model(object):
         self.init_chunk_queue = InitChunkQueue(chunk_priority_callback)
 
         self.occlusion_cache = collections.OrderedDict()
+        
+        self.load_generator({"code_js":""})
 
     def add_block(self, position, block_name):
         """for immediate execution use private method"""
@@ -959,6 +966,7 @@ class Window(pyglet.window.Window):
         self.chat_open = False
         self.chat_input_buffer = ""
         self.chat_cursor_position = 0
+        self.hud_replaced_exclusive = False
 
         glEnable(GL_NORMALIZE)
         default_block_shader      = Shader([vertex_shader_code], [     default_fragment_shader_code])
@@ -972,7 +980,7 @@ class Window(pyglet.window.Window):
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
-        self.position = Vector((0, 0, 0))
+        self.player_position = Vector((0, 0, 0))
 
         # First element is rotation of the player in the x-z plane (ground
         # plane) measured from the z-axis down. The second is the rotation
@@ -980,8 +988,14 @@ class Window(pyglet.window.Window):
         #
         # The vertical plane rotation ranges from -90 (looking straight down) to
         # 90 (looking straight up). The horizontal rotation range is unbounded.
-        self.rotation = (0, 0)
+        self.player_rotation = (0, 0)
 
+        # And the same for the camera
+        self.camera_position = Vector((0, 0, 0))
+        self.camera_rotation = (0, 0)
+        self.camera_distance = 0 # 0 = first person
+        self.camera_smoothing = 0.5
+        
         # Instance of the model that handles the world.
         self.model = Model(chunk_priority_callback=self.distance_to_chunk)
         
@@ -1006,6 +1020,9 @@ class Window(pyglet.window.Window):
         # and just a variable for the mouse that is updated by event_handlers below
         self.mousestates = collections.defaultdict(bool)
         self.focused_on_mouse_press = None
+
+        # mouse pointer
+        self._pointer_position = (0, 0)
 
         # joysticks
         self.joysticks = pyglet.input.get_joysticks()
@@ -1038,29 +1055,45 @@ class Window(pyglet.window.Window):
         #pyglet.window.Window.set_exclusive_mouse(self,exclusive)
         super(Window, self).set_exclusive_mouse(exclusive)
         self.exclusive = exclusive
+        self.update_reticle(*self.get_size())
 
     def distance_to_chunk(self, chunk):
         chunkpos = chunk << CHUNKBASE
-        return (self.position - chunkpos).length()
+        return (self.camera_position - chunkpos).length()
 
-    def get_sight_vector(self, pitchcorrection=0):
+    def get_sight_vector(self, rotation, pitchcorrection=0):
         """
         Returns the current line of sight vector indicating the direction
         the player is looking.
         """
-        x, y = self.rotation
-        y += pitchcorrection
+        yaw, pitch = rotation
+        pitch += pitchcorrection
         # y ranges from -90 to 90, or -pi/2 to pi/2, so m ranges from 0 to 1 and
         # is 1 when looking ahead parallel to the ground and 0 when looking
         # straight up or down.
-        m = math.cos(math.radians(y))
+        m = math.cos(math.radians(pitch))
         # dy ranges from -1 to 1 and is -1 when looking straight down and 1 when
         # looking straight up.
-        dy = math.sin(math.radians(y))
-        dx = math.cos(math.radians(x - 90)) * m
-        dz = math.sin(math.radians(x - 90)) * m
+        dy = math.sin(math.radians(pitch))
+        dx = math.cos(math.radians(yaw - 90)) * m
+        dz = math.sin(math.radians(yaw - 90)) * m
         return Vector((dx, dy, dz))
 
+    def get_pointer_vector(self):
+        front_vector = self.get_sight_vector(self.camera_rotation)
+        if self.exclusive:
+            return front_vector
+        front_vector = front_vector.normalize()
+        up_vector = self.get_sight_vector(self.camera_rotation, 90).normalize()
+        side_vector = front_vector.cross(up_vector)
+        
+        x, y = self._pointer_position
+        w, h = self.get_size()
+        f = math.tan(math.radians(FOV/2))/(0.5*h)
+        fx = (x-0.5*w) * f
+        fy = (y-0.5*h) * f
+        return front_vector + fx*side_vector + fy*up_vector
+    
     def update(self, dt):
         global focus_distance
         with self.update_lock:
@@ -1094,12 +1127,10 @@ class Window(pyglet.window.Window):
                     self.model.add_block(position,block_name)
                 elif test("goto",1):
                     position, = args
-                    self.position = Vector(position)
-                    self.listener.position = tuple(position)
-                    for msg in self.model.monitor_around(self.position):
-                        self.client.send(msg)
+                    self.player_position = Vector(position)
                 elif test("focusdist",1):
                     focus_distance, = args
+                    focus_distance*=100
                     assert isinstance(focus_distance, (int, float))
                 elif test("setentity",5):
                     entity_id, model, position, rotation, modelmaps = args
@@ -1125,8 +1156,7 @@ class Window(pyglet.window.Window):
                     element_id, = args
                     self.model.del_hud(element_id)
                 elif test("focushud",0):
-                    self.set_exclusive_mouse(False)
-                    self.hud_open = True
+                    self.open_hud()
                 elif test("error",2):
                     errmsg, is_fatal = args
                     err = Exception(errmsg)
@@ -1150,6 +1180,59 @@ class Window(pyglet.window.Window):
             if dyaw != 0 or dpitch != 0:
                 k = 0.5
                 self.rotate(dyaw*k*dt, dpitch*k*dt)
+            
+            self.update_player_rotation()
+            self.update_camera_position()
+
+    def update_player_rotation(self):
+        previous_rotation = self.player_rotation
+        
+        #yaw, pitch = self.camera_rotation
+        # TODO:
+        pointer_vector = self.get_pointer_vector()
+        d = Ray(self.camera_position, pointer_vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", (max(RENDERDISTANCE)+1)*CHUNKSIZE)[0]
+        if d:
+            dx,dy,dz = (self.camera_position + d*pointer_vector.normalize()) - self.player_position
+        else:
+            dx,dy,dz = pointer_vector
+        lxz = Vector(dx,dz).length()
+        pitch = math.degrees(math.atan(dy/lxz))
+        yaw = math.degrees(math.atan2(dz, dx))+90 if lxz else self.camera_rotation[0]
+        
+        if (yaw, pitch) != previous_rotation:
+            self.player_rotation = (yaw, pitch)
+            self.client.send(("rot", self.player_rotation))
+    
+    def update_camera_position(self):
+        # eye offset
+        AH = 0.32
+        yaw, pitch = self.camera_rotation
+        c = math.cos(math.radians(yaw))
+        s = math.sin(math.radians(yaw))
+        dx = AH* math.sin(math.radians(pitch))*-s
+        dz = AH* math.sin(math.radians(pitch))*c
+        dy = AH*(math.cos(math.radians(pitch))-1)
+        eye_position = self.player_position + (dx,dy,dz)
+        # third person
+        camera_position_target = eye_position - self.get_sight_vector(self.camera_rotation)*self.camera_distance
+        # smooth camera
+        self.camera_position = self.camera_smoothing*self.camera_position + (1-self.camera_smoothing)*camera_position_target
+
+        # audio
+        self.listener.position = tuple(self.camera_position)
+        # monitored area
+        for msg in self.model.monitor_around(self.camera_position):
+            self.client.send(msg)
+
+    def open_hud(self):
+        self.hud_open = True
+        self.hud_replaced_exclusive = self.exclusive
+        self.set_exclusive_mouse(False)
+
+    def close_hud(self):
+        self.hud_open = False
+        if self.hud_replaced_exclusive:
+            self.set_exclusive_mouse(True)
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         #self.client.send(("scrolling",scroll_y))
@@ -1197,16 +1280,19 @@ class Window(pyglet.window.Window):
             Number representing any modifying keys that were pressed when the
             mouse button was clicked.
         """
-        if self.exclusive:
-            self.mousestates[button] = True
-            self.send_input_change(("mouse",button))
-        else:
+        if not self.exclusive:
             self.focused_on_mouse_press = self.get_focused(x,y)
             if self.focused_on_mouse_press == None:
                 if self.hud_open:
                     self.client.send(("press","inv"))
-                    self.hud_open = False
-                self.set_exclusive_mouse(True)
+                    self.close_hud()
+                    return
+                w,h = self.get_size()
+                if (x-0.5*w)**2 + (y-0.5*h)**2 <= 50**2:
+                    self.set_exclusive_mouse(True)
+                    return
+        self.mousestates[button] = True
+        self.send_input_change(("mouse",button))
     
     def on_mouse_release(self, x, y, button, modifiers):
         self.mousestates[button] = False
@@ -1236,15 +1322,15 @@ class Window(pyglet.window.Window):
         self.send_input_change(True)
 
     def rotate(self, dyaw, dpitch):
-        yaw, pitch = self.rotation
+        yaw, pitch = self.camera_rotation
         yaw += dyaw
         pitch += dpitch
         pitch = max(-90, min(90, pitch))
-        self.rotation = (yaw,pitch)
-        self.listener.forward_orientation = tuple(self.get_sight_vector())
-        self.listener.up_orientation = tuple(self.get_sight_vector(90))
-        self.client.send(("rot", self.rotation))
-                
+        self.camera_rotation = (yaw,pitch)
+
+        self.listener.forward_orientation = tuple(self.get_sight_vector(self.camera_rotation))
+        self.listener.up_orientation = tuple(self.get_sight_vector(self.camera_rotation,90))
+    
     def on_mouse_motion(self, x, y, dx, dy):
         """
         Called when the player moves the mouse.
@@ -1257,6 +1343,7 @@ class Window(pyglet.window.Window):
         dx, dy : float
             The movement of the mouse.
         """
+        self._pointer_position = x, y
         if self.exclusive:
             m = 0.15
             self.rotate(dx*m, dy*m)
@@ -1288,8 +1375,7 @@ class Window(pyglet.window.Window):
     def handle_input_action(self, action, value):
         if action == "inv" and value > 0:
             if self.hud_open:
-                self.hud_open = False
-                self.set_exclusive_mouse(True)
+                self.close_hud()
         if action == "chat" and value == 0: #do this on release, so key is not printed into chat
             self.chat_open = True
 
@@ -1311,6 +1397,7 @@ class Window(pyglet.window.Window):
                 self.client.send(("press","chat_close"))
                 self.chat_open = False
             else:
+                self.hud_replaced_exclusive = False
                 self.set_exclusive_mouse(False)
         else:
             if symbol == key.F3:
@@ -1319,6 +1406,11 @@ class Window(pyglet.window.Window):
                 self.enable_fragment_texture = not self.enable_fragment_texture
             if symbol == key.F5:
                 self.enable_fragment_light = not self.enable_fragment_light
+            if symbol == key.F6:
+                self.camera_distance = 10 - self.camera_distance
+            if symbol == key.F7:
+                ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
+                self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
             if self.chat_open:
                 pass
             self.send_input_change(("key", symbol))
@@ -1384,15 +1476,30 @@ class Window(pyglet.window.Window):
         # label
         self.label.y = height - 10
         # reticle
-        if self.reticle:
-            self.reticle.delete()
-        x, y = self.width // 2, self.height // 2
-        n = 10
-        self.reticle = pyglet.graphics.vertex_list(4,
-            ('v2i', (x - n, y, x + n, y, x, y - n, x, y + n))
-        )
+        self.update_reticle(width, height)
         # hud
         self.model.hud_resize(self.get_size())
+    
+    def update_reticle(self, width, height):
+        if self.reticle:
+            self.reticle.delete()
+        x, y = self.width / 2, self.height / 2
+        if self.exclusive or self.hud_replaced_exclusive:
+            n = 10
+            lines = [((-n, 0), (n, 0)),
+                     ((0, -n), (0, n))]
+        else:
+            n = 50
+            points = [(n*math.cos(math.radians(a)),n*math.sin(math.radians(a)))
+                      for a in range(0, 360, 10)]
+            lines = [(points[i],points[(i+1)%len(points)]) for i in range(len(points))]
+        centered_lines = tuple((p + dp)
+                               for line in lines
+                               for point in line
+                               for p, dp in zip((x,y), point))
+        self.reticle = pyglet.graphics.vertex_list(len(centered_lines)//2,
+            ('v2f', centered_lines)
+        )
 
     def set_2d(self):
         """
@@ -1417,26 +1524,22 @@ class Window(pyglet.window.Window):
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(65.0, width / float(height), 0.1, 200.0) #last value is Renderdistance ... was once 60
+        gluPerspective(FOV, width / float(height), 0.1, 200.0) #last value is Renderdistance ... was once 60
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        yaw, pitch = self.rotation
+        yaw, pitch = self.camera_rotation
         c = math.cos(math.radians(yaw))
         s = math.sin(math.radians(yaw))
         glRotatef(yaw, 0, 1, 0)
         glRotatef(-pitch, c, 0, s)
-        AH = 0.32
-        dx = AH* math.sin(math.radians(pitch))*-s
-        dz = AH* math.sin(math.radians(pitch))*c
-        dy = AH*(math.cos(math.radians(pitch))-1)
-        x, y, z = self.position
-        glTranslatef(-x-dx, -y-dy, -z-dz)
+        x, y, z = self.camera_position
+        glTranslatef(-x, -y, -z)
 
     def on_draw(self):
         """
         Called by pyglet to draw the canvas.
         """
-        r,g,b,a = self.model.world_generator.sky(self.position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
+        r,g,b,a = self.model.world_generator.sky(self.camera_position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
         glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
         self.set_3d()
@@ -1455,6 +1558,7 @@ class Window(pyglet.window.Window):
         self.set_2d()
         self.draw_reticle()
 
+        glClear(GL_DEPTH_BUFFER_BIT)
         glDisable(GL_COLOR_LOGIC_OP)
         glColor3d(1, 1, 1)
         self.model.hud_batch.draw()
@@ -1468,13 +1572,13 @@ class Window(pyglet.window.Window):
         """
         draw stuff like Position, Rotation, FPS, ...
         """
-        x, y, z = self.position
+        x, y, z = self.player_position
         fps = pyglet.clock.get_fps()
         queue = len(self.model.queue)
         face_buffer = len(self.model.blockface_update_buffer)
         terrain_queue = len(self.model.init_chunk_queue.chunks)
         
-        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d' % (fps, x, y, z, queue, face_buffer, terrain_queue)
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing)
         self.label.draw()
     
     def draw_chat_buffer(self):
@@ -1492,10 +1596,10 @@ class Window(pyglet.window.Window):
         Draw black edges around the block that is currently under the
         crosshairs.
         """
-        vector = self.get_sight_vector()
+        vector = self.get_sight_vector(self.player_rotation)
         if CHUNKSIZE == None:
             return
-        block = Ray(self.position, vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", focus_distance)[1]
+        block = Ray(self.player_position, vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", focus_distance)[1]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)

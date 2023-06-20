@@ -105,6 +105,18 @@ class Vector(tuple):
 
     def normalize(self):
         return self / self.length()
+    
+    def dot(self, other):
+        self._assert_same_length(other)
+        return sum(self*other)
+    
+    def cross(self, other):
+        assert len(self) == len(other) == 3
+        a1,a2,a3 = self
+        b1,b2,b3 = other
+        return Vector(a2*b3 - a3*b2,
+                      a3*b1 - a1*b3,
+                      a1*b2 - a2*b1)
 
     def __str__(self):
         return " ".join(map(str,self))
