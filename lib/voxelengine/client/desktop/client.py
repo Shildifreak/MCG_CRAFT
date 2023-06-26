@@ -16,6 +16,7 @@ import threading
 import urllib.request
 import io
 import base64
+import ctypes
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -26,9 +27,9 @@ sys.path.append(os.path.join(PATH,".."))
 import pyglet
 from pyglet import image
 #pyglet.options["debug_gl"] = False
+#pyglet.options['debug_media'] = True
 pyglet.options['shadow_window'] = False
 pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
-pyglet.options['debug_media'] = True
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
@@ -48,6 +49,8 @@ MSGS_PER_TICK = 100
 ACCEPTABLE_BLOCKFACE_UPDATE_BUFFER_SIZE = CHUNKSIZE**DIMENSION*6
 JOYSTICK_DEADZONE = 0.1
 FOV = 65.0
+ZNEAR = 0.1
+ZFAR = 200.0
 
 focus_distance = 0
 
@@ -1025,6 +1028,8 @@ class Window(pyglet.window.Window):
 
         # mouse pointer
         self._pointer_position = (0, 0)
+        self.pointer_direction = Vector(0, 0, -1)
+        self.pointer_position_3d = Vector(0, 0, -1)
 
         # joysticks
         self.joysticks = pyglet.input.get_joysticks()
@@ -1081,7 +1086,12 @@ class Window(pyglet.window.Window):
         dz = math.sin(math.radians(yaw - 90)) * m
         return Vector((dx, dy, dz))
 
-    def get_pointer_vector(self):
+    def update_pointer_direction(self):
+        """
+        updates the 3D direction corresponding to the current pointer position.
+        The length of this vector is not normalized, the forward component is.
+        This is to support working with z value from depth buffer to get 3D pointer position.
+        """
         front_vector = self.get_sight_vector(self.camera_rotation)
         if self.exclusive:
             return front_vector
@@ -1094,7 +1104,7 @@ class Window(pyglet.window.Window):
         f = math.tan(math.radians(FOV/2))/(0.5*h)
         fx = (x-0.5*w) * f
         fy = (y-0.5*h) * f
-        return front_vector + fx*side_vector + fy*up_vector
+        self.pointer_direction = front_vector + fx*side_vector + fy*up_vector
     
     def update(self, dt):
         global focus_distance
@@ -1188,17 +1198,14 @@ class Window(pyglet.window.Window):
     def update_player_rotation(self):
         previous_rotation = self.player_rotation
         
-        #yaw, pitch = self.camera_rotation
-        # TODO:
-        pointer_vector = self.get_pointer_vector()
-        d = Ray(self.camera_position, pointer_vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", (max(RENDERDISTANCE)+1)*CHUNKSIZE)[0]
-        if d:
-            dx,dy,dz = (self.camera_position + d*pointer_vector.normalize()) - self.player_position
-        else:
-            dx,dy,dz = pointer_vector
+        dx, dy, dz = self.pointer_position_3d - self.player_position
         lxz = Vector(dx,dz).length()
-        pitch = math.degrees(math.atan(dy/lxz))
-        yaw = math.degrees(math.atan2(dz, dx))+90 if lxz else self.camera_rotation[0]
+        if lxz:
+            pitch = math.degrees(math.atan(dy/lxz))
+            yaw = math.degrees(math.atan2(dz, dx))+90 if lxz else self.camera_rotation[0]
+        else:
+            print("could not determine player rotation")
+            return
         
         if (yaw, pitch) != previous_rotation:
             self.player_rotation = (yaw, pitch)
@@ -1230,6 +1237,26 @@ class Window(pyglet.window.Window):
         # monitored area
         for msg in self.model.monitor_around(self.camera_position):
             self.client.send(msg)
+    
+    def update_pointer_position_3d(self):
+        # has to be called after world but before hud draw calls
+
+        # update pointer vector
+        self.update_pointer_direction()
+        
+        # read out pixel depth from framebuffer
+        x, y = self._pointer_position
+        depth = ctypes.c_float()
+        glReadPixels( x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, ctypes.cast(ctypes.addressof(depth), ctypes.c_void_p))
+        clip_z = (depth.value - 0.5) * 2.0
+        d = -2*ZFAR*ZNEAR/(clip_z*(ZFAR-ZNEAR)-(ZFAR+ZNEAR))
+        d += 0 # offset half a block back to better look at center of block?
+
+        # alternative implementation using raycast on model
+        #d = Ray(self.camera_position, pointer_vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", (max(RENDERDISTANCE)+1)*CHUNKSIZE)[0]
+        #d /= pointer_vector.length()
+
+        self.pointer_position_3d = self.camera_position + d * self.pointer_direction
 
     def open_hud(self):
         self.hud_open = True
@@ -1542,7 +1569,7 @@ class Window(pyglet.window.Window):
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(FOV, width / float(height), 0.1, 200.0) #last value is Renderdistance ... was once 60
+        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         yaw, pitch = self.camera_rotation
@@ -1566,6 +1593,8 @@ class Window(pyglet.window.Window):
         block_shader.bind()
         self.model.batch.draw()
         block_shader.unbind()
+        
+        self.update_pointer_position_3d()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
         glColor3d(x, x, x)
