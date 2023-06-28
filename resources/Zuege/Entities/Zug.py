@@ -10,9 +10,10 @@ class Zug(Entity):
     def __init__(self, data = None):
         data_defaults = {
             "texture" : "ZUG",
-            "SPEED" : 68,
+            "SPEED" : 1,
             "JUMPSPEED" : 10,
             "tags" : {"update"},
+            "richtung" : Vector(0,0,1),
         }
         if data != None:
             data_defaults.update(data)
@@ -27,7 +28,18 @@ class Zug(Entity):
             self.mitfahrer.append(character)
 
     def update(self):
-        self["position"] += Vector(0,0,1) * len(self.mitfahrer) * self["SPEED"] * self.dt
+        wir_haben_schienen = False
+        offset = Vector(0, -2, 0)
+        for abstand in range(3):
+            blockpos = self["position"].round() + abstand*self["richtung"] + offset
+            if self.world.blocks[blockpos] == "Schiene":
+                wir_haben_schienen = True
+        if wir_haben_schienen == True:
+            self["position"] += self["richtung"] * len(self.mitfahrer) * self["SPEED"] * self.dt
+        if wir_haben_schienen == False:
+            #drehe dich 180° JETZT!!!
+            self["richtung"] = self["richtung"] * -1
+            self["SPEED"] = self["SPEED"] * 2
         for i, character in enumerate(self.mitfahrer):
             character["position"] = self["position"]+(0,0.8,i)
 
