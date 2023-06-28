@@ -1094,7 +1094,8 @@ class Window(pyglet.window.Window):
         """
         front_vector = self.get_sight_vector(self.camera_rotation)
         if self.exclusive:
-            return front_vector
+            self.pointer_direction = front_vector
+            return
         front_vector = front_vector.normalize()
         up_vector = self.get_sight_vector(self.camera_rotation, 90).normalize()
         side_vector = front_vector.cross(up_vector)
@@ -1377,10 +1378,13 @@ class Window(pyglet.window.Window):
         dx, dy : float
             The movement of the mouse.
         """
-        self._pointer_position = x, y
         if self.exclusive:
             m = 0.15
             self.rotate(dx*m, dy*m)
+            w,h = self.get_size()
+            self._pointer_position = w//2, h//2
+        else:
+            self._pointer_position = x, y
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self.on_mouse_motion(x, y, dx, dy)
