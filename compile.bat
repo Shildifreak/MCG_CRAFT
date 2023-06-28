@@ -1,9 +1,10 @@
-python3 -m PyInstaller -F ^
+python -m PyInstaller -F ^
 --hidden-import json ^
 --hidden-import tkinter ^
 --hidden-import tkinter.filedialog ^
 --hidden-import ctypes ^
 --hidden-import ctypes.util ^
+--hidden-import ctypes.wintypes ^
 --hidden-import ipaddress ^
 --hidden-import pkg_resources ^
 --hidden-import queue ^
