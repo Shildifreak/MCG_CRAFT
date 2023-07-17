@@ -440,7 +440,7 @@ class Player(voxelengine.Player):
                 else:
                     if self.world:
                         if self.entity:
-                            area = Point(self.entity["position"])
+                            area = Sphere(self.entity["position"],1)
                         else:
                             area = SOMEWHERE
                         event = Event("chat",area,"[%s] %s"%(name,msg))
