@@ -542,6 +542,14 @@ class Entity(voxelengine.Entity):
         # no space
         return False
 
+class EntitySoul(object):
+    """
+    Souls control an entity by formulating an intend that is executed by the entity to the best of its ability.
+    Entities may have multiple souls.
+    Players are souls.
+    Soul: Intend <-> Entity: Abilities
+    """
+    pass
 
 class CommandException(Exception):
     pass

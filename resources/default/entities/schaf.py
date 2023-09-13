@@ -1,7 +1,7 @@
 from resources import *
 import random
 
-class SchafAI(object):
+class SchafSoul(EntitySoul):
     def __init__(self, entity):
         self.entity = entity
         self.state = {
@@ -63,7 +63,7 @@ class Schaf(Entity):
         if data != None:
             data_defaults.update(data)
         super().__init__(data_defaults)
-        self.ai = SchafAI(self)
+        self.ai = SchafSoul(self)
 
     def clicked(self, character, item):
         self["texture"] = "SCHAF,GESCHOREN"
