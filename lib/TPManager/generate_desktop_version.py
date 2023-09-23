@@ -7,6 +7,8 @@ FACES = ("top","bottom","front","back","left","right")
 
 class AutoIndex(dict):
 	def __missing__(self, key):
+		if key == None:
+			return self["missing_texture"]
 		index = len(self)
 		self[key] = index
 		return index

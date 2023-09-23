@@ -360,14 +360,11 @@ class Player(voxelengine.Player):
         # just for testing:
         if self.gamemode == "creative":
             character["inventory"] = [{"id":"InstaPick"},{"id":"Schiene","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
-            functional_blocks = resources.blockClasses.keys()
-            for blockname in functional_blocks: # with class in resourcepack/blocks
-                character["inventory"].append({"id":blockname})
-            for blockname in resources.allBlocknames: # includes blocks only mentioned in description.py
-                if blockname not in functional_blocks:
-                    character["inventory"].append({"id":blockname})
-            for itemname in resources.itemClasses.keys():
-                character["inventory"].append({"id":itemname})
+            functional = lambda i: (i in resources.blockClasses) or (i in resources.itemClasses)
+            for b in (True, False):
+                for itemname in resources.allItemnames:
+                    if functional(itemname) == b:
+                        character["inventory"].append({"id":itemname})
         if self.gamemode == "survival":
             character["inventory"] = [{"id":"Axe"},{"id":"Setzling"},{"id":"String","count":100},{"id":"Arrow","count":100},{"id":"Fishing_Rod"}]
 
