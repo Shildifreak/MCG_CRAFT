@@ -615,10 +615,16 @@ class Command(object):
         ]
 
     class AbstractENUM_STRING(object):
+        values = lambda:()
+        allow_other_values = False
+
         @classmethod
         def parse(cls, value, context):
             if value not in cls.values():
-                raise CommandException("invalid argument value: "+repr(value))
+                if cls.allow_other_values:
+                    context.send_feedback("accepted custom value: "+str(value))
+                else:
+                    raise CommandException("invalid argument value: "+repr(value))
             return str(value)
 
         @classmethod
@@ -631,6 +637,11 @@ class Command(object):
 
     class BLOCKNAME(AbstractENUM_STRING):
         values = lambda:allBlocknames
+        allow_other_values = True
+
+    class ITEMNAME(AbstractENUM_STRING):
+        values = lambda:allItemnames
+        allow_other_values = True
 
     class GAMEMODE(AbstractENUM_STRING):
         values = lambda:("creative", "survival")
