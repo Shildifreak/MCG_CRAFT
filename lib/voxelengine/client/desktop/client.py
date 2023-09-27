@@ -1317,15 +1317,17 @@ class Window(pyglet.window.Window):
         """
         if not self.exclusive:
             self.focused_on_mouse_press = self.get_focused(x,y)
-            if self.focused_on_mouse_press == None:
-                if self.hud_open:
-                    self.client.send(("press","inv"))
-                    self.close_hud()
-                    return
-                w,h = self.get_size()
-                if (x-0.5*w)**2 + (y-0.5*h)**2 <= 50**2:
-                    self.set_exclusive_mouse(True)
-                    return
+            if self.focused_on_mouse_press != None:
+                return
+            #if self.hud_open:
+            #    self.client.send(("press","inv"))
+            #    self.close_hud()
+            #    return
+            w,h = self.get_size()
+            if (x-0.5*w)**2 + (y-0.5*h)**2 <= 50**2:
+                self.set_exclusive_mouse(True)
+                return
+            # drop through to sending mouse event to server
         self.mousestates[button] = True
         self.send_input_change(("mouse",button))
     

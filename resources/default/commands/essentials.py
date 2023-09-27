@@ -15,9 +15,9 @@ def skin(context, block_name : Command.BLOCKNAME):
 	context.entity["skin"] = block_name
 
 @register_command("give",4.2)
-def give(context, block_name : Command.BLOCKNAME, count : Command.INT(default=1)):
-	"""give an entity one item of type block_name"""
-	context.entity.pickup_item({"id":block_name, "count":count})
+def give(context, item_name : Command.ITEMNAME, count : Command.INT(default=1)):
+	"""give an entity count items of type item_name"""
+	context.entity.pickup_item({"id":item_name, "count":count})
 
 @register_command("entity", 9)
 def entity(context, entity : Command.ENTITY, subcommand : Command.SUBCOMMAND):

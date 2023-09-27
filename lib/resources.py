@@ -1,5 +1,5 @@
 import sys, os, inspect, imp
-import math, random, time, collections
+import math, random, time, collections, itertools
 import tempfile
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -542,6 +542,14 @@ class Entity(voxelengine.Entity):
         # no space
         return False
 
+class EntitySoul(object):
+    """
+    Souls control an entity by formulating an intend that is executed by the entity to the best of its ability.
+    Entities may have multiple souls.
+    Players are souls.
+    Soul: Intend <-> Entity: Abilities
+    """
+    pass
 
 class CommandException(Exception):
     pass
@@ -607,10 +615,16 @@ class Command(object):
         ]
 
     class AbstractENUM_STRING(object):
+        values = lambda:()
+        allow_other_values = False
+
         @classmethod
         def parse(cls, value, context):
             if value not in cls.values():
-                raise CommandException("invalid argument value: "+repr(value))
+                if cls.allow_other_values:
+                    context.send_feedback("accepted custom value: "+str(value))
+                else:
+                    raise CommandException("invalid argument value: "+repr(value))
             return str(value)
 
         @classmethod
@@ -623,6 +637,11 @@ class Command(object):
 
     class BLOCKNAME(AbstractENUM_STRING):
         values = lambda:allBlocknames
+        allow_other_values = True
+
+    class ITEMNAME(AbstractENUM_STRING):
+        values = lambda:allItemnames
+        allow_other_values = True
 
     class GAMEMODE(AbstractENUM_STRING):
         values = lambda:("creative", "survival")
@@ -783,6 +802,7 @@ blockClasses    = None # initialized in load_resources_from
 itemClasses     = None # initialized in load_resources_from
 entityClasses   = None # initialized in load_resources_from
 allBlocknames   = None # initialized in load_resources_from
+allItemnames    = None # initialized in load_resources_from
 
 def register_item(name):
     def _register_item(item_subclass):
@@ -839,7 +859,7 @@ texturepackPath = texturepackDirectory.name
 tp_compiler = None # initialized in load_resources_from
 
 def load_resources_from(resource_paths):
-    global blockClasses, itemClasses, entityClasses, tp_compiler, allBlocknames
+    global blockClasses, itemClasses, entityClasses, tp_compiler, allBlocknames, allItemnames
 
     blockClasses  = collections.defaultdict(lambda:SolidBlock)
     itemClasses   = collections.defaultdict(lambda:Item)
@@ -866,4 +886,7 @@ def load_resources_from(resource_paths):
             tp_compiler.add_textures_from(textures_path)
     tp_compiler.save_to(texturepackPath)
 
-    allBlocknames = tuple(tp_compiler.description["BLOCKS"].keys())
+    blocks_and_block_models = dict(itertools.chain(tp_compiler.description["BLOCKS"].items(),
+                                                   tp_compiler.description["BLOCK_MODELS"].items()))
+    allBlocknames = tuple(blocks_and_block_models.keys())
+    allItemnames = tuple(name for (name,data) in blocks_and_block_models.items() if data.get("icon"))
