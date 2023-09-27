@@ -1,0 +1,82 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "schiene_neu": [
+            0,
+            0
+        ],
+
+        "schiene_top_bottom_neu": [
+            1,
+            0
+        ],
+
+
+
+
+        "schiene_front_top_1": [
+            0,
+            4
+        ],
+        "schiene_front_top_2": [
+            0,
+            5
+        ],
+        "schiene_front_top_3": [
+            0,
+            6
+        ],
+        "schiene_front_top_4": [
+            1,
+            4
+        ],
+        "schiene_front_top_5": [
+            1,
+            5
+        ],
+        "schiene_front_top_6": [
+            1,
+            6
+        ],
+        "schiene_front_top_7": [
+            2,
+            4
+        ],
+        "schiene_front_top_8": [
+            2,
+            5
+        ],
+        "schiene_front_top_9": [
+            0,
+            6
+        ],
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        "schiene_top_top_neu": [
+            2,
+            0
+        ],
+        "schiene_side_bottom_neu": [
+            1,
+            1
+        ],
+        "schiene_front_bottom_neu": [
+            2,
+            1
+        ],
+        "schiene_side_top_neu": [
+            1,
+            2
+        ]
+    }
+}

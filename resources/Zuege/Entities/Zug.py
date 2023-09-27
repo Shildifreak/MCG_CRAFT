@@ -10,7 +10,7 @@ class Zug(Entity):
     def __init__(self, data = None):
         data_defaults = {
             "texture" : "ZUG",
-            "SPEED" : 1,
+            "SPEED" : 10,
             "JUMPSPEED" : 10,
             "tags" : {"update"},
             "richtung" : Vector(0,0,1),
@@ -32,19 +32,37 @@ class Zug(Entity):
         offset = Vector(0, -2, 0)
         for abstand in range(3):
             blockpos = self["position"].round() + abstand*self["richtung"] + offset
-            if self.world.blocks[blockpos] == "Schiene":
+            if self.world.blocks[blockpos] == "Schiene_Schwelle":
                 wir_haben_schienen = True
         if wir_haben_schienen == True:
             self["position"] += self["richtung"] * len(self.mitfahrer) * self["SPEED"] * self.dt
         if wir_haben_schienen == False:
             #drehe dich 180° JETZT!!!
             self["richtung"] = self["richtung"] * -1
-            self["SPEED"] = self["SPEED"] * 2
+            #self["SPEED"] = self["SPEED"] * 2
         for i, character in enumerate(self.mitfahrer):
             character["position"] = self["position"]+(0,0.8,i)
+
+@register_entity("Zuuug")
+class Zuuug(Zug):
+    def __init__(self, data = None):
+        data_defaults = {
+            "texture" : "ZUUUG",
+            "SPEED" : 10,
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
+        self.mitfahrer = []
 
 @register_item("Zug")
 class ZugItem(Item):
     def use_on_block(self, character, block, face):
         z = EntityFactory({"type":"Zug"})
+        z.set_world(block.world, block.position+(0,3,0))
+
+@register_item("Zuuug")
+class ZuuugItem(ZugItem):
+    def use_on_block(self, character, block, face):
+        z = EntityFactory({"type":"Zuuug"})
         z.set_world(block.world, block.position+(0,3,0))

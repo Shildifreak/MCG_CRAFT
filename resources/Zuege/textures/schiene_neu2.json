@@ -1,0 +1,32 @@
+{
+    "TEXTURE_SIZE": [
+        16,
+        16
+    ],
+    "INDEX": {
+        "schiene_holz_x": [
+            1,
+            1
+        ],
+        "schiene_holz_y": [
+            1,
+            0
+        ],
+        "schiene_holz_z": [
+            2,
+            1
+        ],
+        "schiene_eisen_x": [
+            1,
+            2
+        ],
+        "schiene_eisen_y": [
+            2,
+            0
+        ],
+        "schiene_eisen_z": [
+            0,
+            1
+        ]
+    }
+}
