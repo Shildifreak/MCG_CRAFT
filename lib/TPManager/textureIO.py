@@ -19,7 +19,7 @@ class TextureDirectory(object):
 				if filename.endswith(".png"):
 					texture_file = TextureFile(os.path.join(dirpath, filename))
 					for name in texture_file.list_textures():
-						assert name not in self.texture_files
+						assert name not in self.texture_files or print(name)
 						if name.endswith(".material"):
 							self.material_files[name] = texture_file
 						else:
