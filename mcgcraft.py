@@ -357,7 +357,6 @@ class Player(voxelengine.Player):
         character = resources.EntityFactory({"type":"Mensch"})
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
-        # just for testing:
         if self.gamemode == "creative":
             character["inventory"] = [{"id":"InstaPick"},{"id":"Schiene_Schwelle","count":100},{"id":"Schiene_Gleis","count":100},{"id":"Zuuug","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
             functional = lambda i: (i in resources.blockClasses) or (i in resources.itemClasses)
@@ -488,9 +487,9 @@ class Player(voxelengine.Player):
         #if not self.is_active(): # freeze player if client doesnt respond
         #    return
 
-        #           left click      right click
-        # no shift  mine block      activate block
-        # shift     use l item      use r. item
+        # target    block                 entity                air
+        # no shift  block.clicked         item.use_on_entity    item.use_on_air
+        # shift     item.use_on_block     entity.clicked        item.use_on_air
 
         for event_name in ("left_hand", "right_hand"):
             if self.was_pressed(event_name):

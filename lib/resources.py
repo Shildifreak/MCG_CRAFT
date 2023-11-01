@@ -13,8 +13,10 @@ from voxelengine.modules.observableCollections import observable_from
 from voxelengine.server.event_system import Event
 
 GRAVITY = 35
+WATER_GRAVITY = -10
 AIRSLIDING = 1
 SLIDING = 0.000001
+WATERSLIDING = 0.9
 
 class PowerLevelAccumulator(object):
     __slots__ = ("level", "abs_level")
@@ -386,6 +388,12 @@ class Entity(voxelengine.Entity):
             return False
         return entity.bool_collide_difference(position+(0,-0.2,0),position)
 
+    def inwater(entity):
+        position = entity["position"]
+        area = entity.HITBOX+position
+        b = next(entity.world.blocks.find_blocks(area, "water"),None)
+        return bool(b)
+
     def collide_blocks(entity):
         """blocks entity collides with"""
         return entity.potential_collide_blocks(entity["position"])
@@ -412,19 +420,32 @@ class Entity(voxelengine.Entity):
         #M# can be optimized because only one hit is needed, but it still has to pass the blocks colides_with test, so make sure find_blocks is a generator
         return any(True for _ in entity.collide_difference(new_position, previous_position))
     
-    def horizontal_move(entity,jump): #M# name is misleading
+    def horizontal_move(entity,jump,shift=False): #M# name is misleading
+        inwater = entity.inwater()
         if entity.onground():
             s = SLIDING**entity.dt
+            sy = 1
             ev = entity["velocity"]
-            if ev[1] < 0:
-                ev *= (1,0,1)
+            #if ev[1] < 0:
+            #    ev *= (1,0,1)
             if jump:
                 ev = (ev[0], max(ev[1],entity["JUMPSPEED"]),ev[2])
             entity["velocity"] = ev
         else:
+            if inwater:
+                g = WATER_GRAVITY
+                if jump:
+                    ev = entity["velocity"]
+                    entity["velocity"] = (ev[0], max(ev[1],entity["JUMPSPEED"]),ev[2])
+                elif shift:
+                    g = - WATER_GRAVITY
+                sy = WATERSLIDING**entity.dt
+            else:
+                g = GRAVITY
+                sy = 1
             s = AIRSLIDING**entity.dt
-            entity["velocity"] -= Vector([0,1,0])*GRAVITY*entity.dt
-        sv = Vector([s,1,s]) #no slowing down in y
+            entity["velocity"] -= Vector([0,1,0])*g*entity.dt
+        sv = Vector([s,sy,s]) #no slowing down in y
         entity["velocity"] *= sv
         return sv
 
@@ -465,7 +486,7 @@ class Entity(voxelengine.Entity):
     
     def execute_ai_commands(self):
         """
-        call in update after update_dt, automatically calls update_position
+        call in update, automatically calls update_position
         """
         jump   = bool(sum(self.ai_commands["jump"  ]))
         shift  = bool(sum(self.ai_commands["shift" ]))
@@ -491,7 +512,7 @@ class Entity(voxelengine.Entity):
             return
 
         # Walking
-        sv = self.horizontal_move(jump)
+        sv = self.horizontal_move(jump, shift)
 
         target_velocity = nv*self["SPEED"]*speed_modifier
         ax, _, az = target_velocity - self["velocity"]
