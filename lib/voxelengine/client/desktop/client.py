@@ -51,6 +51,7 @@ JOYSTICK_DEADZONE = 0.1
 FOV = 65.0
 ZNEAR = 0.1
 ZFAR = 200.0
+INITIAL_CAMERA_SMOOTHING = 0
 
 focus_distance = 0
 
@@ -997,7 +998,7 @@ class Window(pyglet.window.Window):
         self.camera_position = Vector((0, 0, 0))
         self.camera_rotation = (0, 0)
         self.camera_distance = 0 # 0 = first person
-        self.camera_smoothing = 0.5
+        self.camera_smoothing = INITIAL_CAMERA_SMOOTHING
         
         self.d_yaw_player_camera = 0
         
