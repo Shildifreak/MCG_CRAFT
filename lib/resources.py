@@ -16,7 +16,7 @@ GRAVITY = 35
 WATER_GRAVITY = -10
 AIRSLIDING = 1
 SLIDING = 0.000001
-WATERSLIDING = 0.9
+WATERSLIDING = 0.2
 
 class PowerLevelAccumulator(object):
     __slots__ = ("level", "abs_level")
@@ -422,7 +422,7 @@ class Entity(voxelengine.Entity):
     
     def horizontal_move(entity,jump,shift=False): #M# name is misleading
         inwater = entity.inwater()
-        if entity.onground():
+        if entity.onground() and not inwater:
             s = SLIDING**entity.dt
             sy = 1
             ev = entity["velocity"]
