@@ -527,7 +527,8 @@ class Entity(voxelengine.Entity):
             self["rotation"] = (yaw + d_yaw, pitch + d_pitch)
         
         # update position
-        self.update_position(shift)
+        sneak = shift and not self.inwater()
+        self.update_position(sneak)
 
     def block_update(self):
         """called when block "near" entity is changed"""
