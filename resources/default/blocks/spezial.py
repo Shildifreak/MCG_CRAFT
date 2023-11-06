@@ -4,8 +4,8 @@ import random
 @register_block("WAND")
 
 class Wand(Block):
-    def collides_with(self,area):
-        return False
+#    def collides_with(self,area):
+#        return False
 
     def get_tags(self):
         return super().get_tags() - {"solid"}

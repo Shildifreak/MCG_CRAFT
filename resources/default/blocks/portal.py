@@ -28,7 +28,7 @@ class Portal(Block):
 		return False #did not change this portal block
 
 	def get_tags(self):
-		return super().get_tags() | {"entity_enter"}
+		return (super().get_tags() - {"solid"}) | {"entity_enter"}
 
-	def collides_with(self,area):
-		return False
+#	def collides_with(self,area):
+#		return False

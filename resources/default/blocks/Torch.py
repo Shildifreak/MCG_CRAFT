@@ -28,8 +28,8 @@ class Torch(Block):
         return False
 
 
-    def collides_with(self,hitbox,position):
-        return False
+    #def collides_with(self,area):
+    #    return False
 
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"block_update", "redstone_update"}
