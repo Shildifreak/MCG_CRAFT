@@ -41,8 +41,8 @@ class Grassblock(Block):
 @register_block("SonnenBlume")
 @register_block("HALM")
 class Plant(Block):
-    def collides_with(self,area):
-        return False
+    #def collides_with(self,area):
+    #    return False
     def handle_event_block_update(self,events):
         if self.relative[(0,-1,0)] != "GRASS":
             self.turn_into("AIR")
@@ -65,5 +65,5 @@ class Setzling(Block):
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"random_tick"}
 
-    def collides_with(self,area):
-        return False
+    #def collides_with(self,area):
+    #    return False

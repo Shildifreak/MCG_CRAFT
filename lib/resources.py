@@ -347,6 +347,10 @@ class Entity(voxelengine.Entity):
 
         self.instances.append(self)
 
+    def get_focused_pos(self, max_distance):
+        blocktest = lambda block, ray: block.collides_with(ray)
+        return super().get_focused_pos(max_distance, blocktest)
+
     def kill(self, verbose = True):
         if self in self.instances:
             self.instances.remove(self)

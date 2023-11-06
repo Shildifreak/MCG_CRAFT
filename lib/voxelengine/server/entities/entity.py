@@ -88,7 +88,7 @@ class Entity(ObservableDict):
         dz = math.sin(math.radians(x - 90)) * m
         return Vector((dx, dy, dz))
     
-    def get_focused_pos(self, max_distance):
+    def get_focused_pos(self, max_distance, blocktest=lambda b,r:b!="AIR"):
         """Line of sight search from current position. If a block is
         intersected it's position is returned, along with the face and distance:
             (distance, position, face)
@@ -97,7 +97,8 @@ class Entity(ObservableDict):
         max_distance : How many blocks away to search for a hit.
         """ 
         line_of_sight = Ray(self["position"], self.get_sight_vector())
-        return line_of_sight.hit_test(lambda v,b=self.world.blocks: b[v]!="AIR", max_distance)
+        postest = lambda v,blocks=self.world.blocks: blocktest(blocks[v],line_of_sight)
+        return line_of_sight.hit_test(postest, max_distance)
 
     def get_focused_entity(self, max_distance):
         """Line of sight search from current position. If an entity is
