@@ -12,7 +12,7 @@ class Kreditkarteninventar(ObservableDict):
         super().__init__()
         for i in range(28):
             item_id = random.choices(["AIR","Muenzen","Scheine"],[5,3,2])[0]
-            self.item["inventory"][i] = {"id":item_id}
+            self[i] = {"id":item_id}
 
     def may_contain(self, item):
         if item["id"] in ("Muenzen", "Scheine", "AIR"):
