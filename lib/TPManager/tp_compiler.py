@@ -102,6 +102,7 @@ class TP_Compiler(object):
 			blockmodel = {"icon" : icon,
 						  "transparent": True,
 						  "connecting": False,
+						  "fog_color": (255,255,255,0),
 						  "faces": {"inside": [(((0,0,0.5),(0,1,0.5),(1,1,0.5),(1,0,0.5)),icon)],
 								   }
 						 }
@@ -113,6 +114,7 @@ class TP_Compiler(object):
 				print("missing icon in", blockmodelname)
 			blockmodel.setdefault("transparent", True)
 			blockmodel.setdefault("connecting", False)
+			blockmodel.setdefault("fog_color", (255,255,255,0))
 			faces = blockmodel.setdefault("faces", {})
 			for face in (*FACES,"inside"):
 				facedata = faces.get(face, [])

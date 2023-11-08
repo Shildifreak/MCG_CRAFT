@@ -124,6 +124,10 @@ void main()
     color = gl_Color;
     gl_Position = ftransform();
     gl_TexCoord[0] = gl_MultiTexCoord0;
+
+    // fog stuff (https://community.khronos.org/t/opengl-fog-and-shaders/52902)
+    vec4 eyePos = gl_ModelViewMatrix * gl_Vertex;
+    gl_FogFragCoord = abs(eyePos.z/eyePos.w);
 }
 """
 
@@ -138,6 +142,10 @@ void main (void)
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
     //float test = dot(normal, vec3(0.0f,1.0f,0.0f));
     gl_FragColor = tex_color * (0.75 + 0.5 * vec4(color));
+    
+    // apply fog
+    float fogFactor = pow((1-gl_Fog.color.a), gl_FogFragCoord);
+    gl_FragColor = vec4(mix(gl_Fog.color.rgb, gl_FragColor.rgb, fogFactor), gl_FragColor.a);
 }
 """
 
@@ -344,7 +352,7 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED
     def url_for(filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
@@ -358,13 +366,17 @@ def load_setup(host, port):
     ENTITY_MODELS = description.get("ENTITY_MODELS",{})
     TEXTURE_URL = url_for("textures.png")
     TRANSPARENCY = {"AIR":True}
+    CONNECTED = {}
+    FOG = {}
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
     BLOCKNAMES = []
-    for name, transparency, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
+    for name, transparency, connected, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
         BLOCKMODELS[name] = block_model(vertices, textures)
         ICON[name] = tex_coord(*icon_coords)
         TRANSPARENCY[name] = transparency
+        CONNECTED[name] = connected
+        FOG[name] = fog
     
     SOUNDS = {}
     sound_files = {}
@@ -378,6 +390,12 @@ def load_setup(host, port):
 
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
+
+def is_connected(block_name):
+    return CONNECTED.get(block_name.rsplit(":",1)[0],False)
+
+def get_fog(block_name):
+    return FOG.get(block_name.rsplit(":",1)[0],(255,255,255,0))
 
 #M# improve order of chunkpositions for better caching!
 CHUNKPOSITIONS = tuple(map(Vector, itertools.product(range(CHUNKSIZE),repeat=DIMENSION)))
@@ -655,8 +673,8 @@ class Model(object):
         else:
             fv = FACES[face]
             b = self.get_block(position+fv)
-            # only show faces facing into transparent blocks and not if blocks are the same
-            if is_transparent(b) and b != self.get_block(position): #M# maybe get current block as argument instead of by position
+            # only show faces facing into transparent blocks and not if blocks are connected and the same
+            if is_transparent(b) and not (is_connected(b) and b == self.get_block(position)): #M# maybe get current block as argument instead of by position
                 self.show_face(position,face)
             else:
                 self.hide_face(position,face)
@@ -1594,6 +1612,8 @@ class Window(pyglet.window.Window):
         r,g,b,a = self.model.world_generator.sky(self.camera_position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
         glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
+        fog_color = get_fog(self.model.get_block(self.camera_position.round()))
+        setup_fog(fog_color)
         self.set_3d()
         glColor3d(1, 1, 1)
         block_shader = self.block_shaders[self.enable_fragment_light][self.enable_fragment_texture]
@@ -1674,23 +1694,23 @@ class Window(pyglet.window.Window):
         else:
             print("unknown sound name", sound_name)
 
-def setup_fog():
+def setup_fog(fog_color):
     """
     Configure the OpenGL fog properties.
     """
     # Enable fog. Fog "blends a fog color with each rasterized pixel fragment's
     # post-texturing color."
-    glEnable(GL_FOG)
+    #glEnable(GL_FOG)
     # Set the fog color.
-    glFogfv(GL_FOG_COLOR, (GLfloat * 4)(0.5, 0.69, 1.0, 1))
+    glFogfv(GL_FOG_COLOR, (GLfloat * 4)(*(c/255 for c in fog_color)))
     # Say we have no preference between rendering speed and quality.
-    glHint(GL_FOG_HINT, GL_DONT_CARE)
+    #glHint(GL_FOG_HINT, GL_DONT_CARE)
     # Specify the equation used to compute the blending factor.
-    glFogi(GL_FOG_MODE, GL_LINEAR)
+    #glFogi(GL_FOG_MODE, GL_LINEAR)
     # How close and far away fog starts and ends. The closer the start and end,
     # the denser the fog in the fog range.
-    glFogf(GL_FOG_START, 20.0)
-    glFogf(GL_FOG_END, 60.0)
+    #glFogf(GL_FOG_START, 0.0)
+    #glFogf(GL_FOG_END, 3.0)
 
 def setup():
     """ Basic OpenGL configuration.

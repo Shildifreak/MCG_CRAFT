@@ -251,7 +251,7 @@
                                                            "back"  : [(((1,0,0),(0,0,0),(0,1,0),(1,1,0)),"not_many_water")],
                                                            "left"  : [(((0,0,0),(0,0,1),(0,1,1),(0,1,0)),"not_many_water")],
                                                            "right" : [(((1,0,1),(1,0,0),(1,1,0),(1,1,1)),"not_many_water")]},
-                      "connecting":True},
+                      "fog_color":(136,170,255,80), "connecting":True},
     "HEBEL"       : {"icon" : "hebel",          "faces" : {"front" : [((    (1,0,1),    (0,0,1),(  0,0.5,1),  (1,0.5,1)),("doppelsteinstufe", 0,0,1, 0.5))],
                                                            "back"  : [((    (0,0,0),    (1,0,0),(  1,0.5,0),  (0,0.5,0)),("doppelsteinstufe", 0,0,1, 0.5))],
                                                            "left"  : [((    (0,0,1),    (0,0,0),(  0,0.5,0),  (0,0.5,1)),("doppelsteinstufe", 0,0,1, 0.5))],
