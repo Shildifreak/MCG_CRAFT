@@ -1,8 +1,26 @@
+﻿
+Ordner, die dich ABSOLUT NICHTS angehen:
+
+MCG_CRAFT:
+  |-.git
+  |-build
+  |-dist
+  |-__pycache__
+  |launcher.spec
+  
+Ignorable Ordner:
+
+MCG_CRAFT:
+  |-config
+  |-saves
+  |-.gitignore
+
 
 
 MCG_CRAFT                           Das MCG-Craft Projekt
   |
   |-launcher.py                     Menü um unter anderem das Spiel zu starten
+  |-launcher.exe		    das selbe wie launcher.py -> existiert nur wenn compile.bat oder compile.sh erfolgreich ausgeführt wurde
   |-mcgcraft.py                     Hauptprogramm von MCGCRAFT
   |
   |-doc                             Dokumentation (siehe auch lib/voxelengine/doc)
@@ -10,6 +28,12 @@ MCG_CRAFT                           Das MCG-Craft Projekt
   |  |-feature_ideas                Liste von Ideen wie man MCG-Craft erweitern könnte -> hier darf man sich gerne bedienen oder inspirieren lassen
   |  |-filetree (was ist wo).txt    diese Datei
   |  |-unsorted notes.txt           Notizen für die noch ein guter Platz gefunden werden muss
+  |
+  |-experimetial resources	    Unveröffendliche Inhalte die in der entwicklung sind.
+  |  				    
+  |-lib                             
+  |  |-resources.py                 Basisklassen von denen neue Blöcke / Entities / Items erben sollten
+  |  |-voxelengine                  GameEngine auf der MCG-Craft aufbaut
   |
   |-resources                       die meisten Schülerprojekte sollten sich mit Resource Packs lösen lassen
   |  |-default                      Basis Resource Pack -> eigene RPs sollten sich hieran orientieren
@@ -25,7 +49,4 @@ MCG_CRAFT                           Das MCG-Craft Projekt
   |  |  |-Welten                    Weltgeneratoren beschreiben wie neue Welten aussehen
   |  |-weihnachtsdeko               ein RP dass einige Texturen durch Weihnachtsversion mit mehr Schnee ersetzt
   |  |-tutorial                     das RP zu den Youtube Videos
-  |
-  |-lib                             
-  |  |-resources.py                 Basisklassen von denen neue Blöcke / Entities / Items erben sollten
-  |  |-voxelengine                  GameEngine auf der MCG-Craft aufbaut
+  
