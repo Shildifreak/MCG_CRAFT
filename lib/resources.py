@@ -268,8 +268,25 @@ class Item(object):
     def entity_blockmodel(self):
         return self.item["id"]
     
+    max_distance = 5
+    interval = 0.1
     def use_on_block(self,character,block,face):
         """whatever this item should do when click on a block... default is to place a block with same id"""
+        self.place(character,block,face)
+
+        # if button is still held down after a short delay, continue by placing more blocks
+        yield from wait(0.2)
+        while True:
+            pressure = yield
+            distance, pos, face = character.get_focused_pos(self.max_distance)
+            if pos:
+                block = character.world.blocks[pos]
+                self.place(character, block, face)
+                if self.item["count"] <= 0: #stop placing if stack is empty
+                    return
+                yield from wait(self.interval)
+
+    def place(self, character, block, face):
         new_pos = block.position + face
 
         # check if block would collide with player
@@ -286,13 +303,19 @@ class Item(object):
         return
     
     def decrease_count(self):
-        self.item["count"] -= 1
+        """
+        tries to decrease the count of this item by 1
+        returns whether that was successful
+        """
         if self.item["count"] <= 0:
+            return False
+        self.item["count"] -= 1
+        if self.item["count"] == 0:
             parent_key = self.item.parent_key
             if parent_key == None:
                 parent_key = self.item.parent.index(self.item)
             self.item.parent.replace(parent_key, {"id": "AIR"})
-        return self.item["count"] >= 0
+        return True
             
 
     def use_on_entity(self,character,entity):
