@@ -8,7 +8,7 @@ from TPManager.tp_compiler import TP_Compiler
 
 import voxelengine
 from voxelengine.modules.shared import *
-from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box
+from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360
 from voxelengine.modules.observableCollections import observable_from
 from voxelengine.server.event_system import Event
 
@@ -346,6 +346,7 @@ def InventoryFactory(inventory):
 class Entity(voxelengine.Entity):
     HITBOX = Hitbox(0,0,0)
     LIMIT = 0
+    PASSENGER_OFFSETS = (Vector(0,1.5,0),)
     instances = []
 
     def __init__(self, data = None):
@@ -368,13 +369,50 @@ class Entity(voxelengine.Entity):
 
         self.ai_commands = collections.defaultdict(list)
 
+        self.riding = None # entity or None
+        self.passengers = [] # list of entities
+
         self.instances.append(self)
 
     def get_focused_pos(self, max_distance):
         blocktest = lambda block, ray: block.collides_with(ray)
         return super().get_focused_pos(max_distance, blocktest)
 
+    def ride(self, entity):
+        """attempt to ride entity
+        return success"""
+        if len(entity.passengers) >= len(entity.PASSENGER_OFFSETS):
+            return False
+        self.unmount_riding()
+        self.riding = entity
+        entity.passengers.append(self)
+        return True
+
+    def unmount_riding(self):
+        if self.riding:
+            self.riding.passengers.remove(self)
+            self.riding = None
+            self["velocity"] = Vector(0,0,0)
+
+    def unmount_passengers(self):
+        for p in self.passengers:
+            p.riding = None
+        self.passengers = []
+
+    def unmount_all(self):
+        self.unmount_riding()
+        self.unmount_passengers()
+    
+    def check_mounts(self):
+        if self.riding:
+            if self not in self.riding.passengers:
+                self.riding = None
+        for p in self.passengers[:]:
+            if p.riding != self:
+                self.passengers.remove(p)
+
     def kill(self, verbose = True):
+        self.unmount_all()
         if self in self.instances:
             self.instances.remove(self)
             self.set_world(None, Vector((0,0,0)))
@@ -505,6 +543,9 @@ class Entity(voxelengine.Entity):
         if velocity != entity["velocity"]:
             dv = (velocity - entity["velocity"]).length()
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
+            if dv > 1 and entity.riding:
+                entity.unmount_riding()
+                print("unmount by collision")
             if dv > 20:
                 entity.take_damage(1)
             entity["velocity"] = velocity
@@ -515,14 +556,37 @@ class Entity(voxelengine.Entity):
         """
         call in update, automatically calls update_position
         """
+        if self.riding:
+            for command, values in self.ai_commands.items():
+                self.riding.ai_commands[command].extend(values)
+
         jump   = bool(sum(self.ai_commands["jump"  ]))
         shift  = bool(sum(self.ai_commands["shift" ]))
         sprint = bool(sum(self.ai_commands["sprint"]))
         x = sum(self.ai_commands["x"])
         z = sum(self.ai_commands["z"])
-        d_yaw = sum(self.ai_commands["yaw"])/(len(self.ai_commands["yaw"]) or 1)
-        d_pitch = sum(self.ai_commands["pitch"])/(len(self.ai_commands["pitch"]) or 1)
+
+        yaw, pitch = self["rotation"]
+        yaw_new, pitch_new = yaw, pitch
+        if self.ai_commands["yaw"]:
+            yaw_new = avg360(self.ai_commands["yaw"], yaw)
+        if self.ai_commands["pitch"]:
+            pitch_new = sum(self.ai_commands["pitch"]) / len(self.ai_commands["pitch"])
+        if (yaw_new, pitch_new) != (yaw, pitch):
+            self["rotation"] = (yaw_new, pitch_new)
+        
         self.ai_commands.clear()
+
+
+        if self.riding:
+            if shift:
+                self.unmount_riding()
+                return
+
+            i = self.riding.passengers.index(self)
+            self["velocity"] = (self.riding["position"] + self.riding.PASSENGER_OFFSETS[i] - self["position"]) / self.dt
+            self.update_position()
+            return
 
         nv = Vector(x,0,z)
         speed_modifier = 2 if sprint else 1
@@ -549,9 +613,6 @@ class Entity(voxelengine.Entity):
         
         self["velocity"] += (ax, 0, az)
 
-        if d_yaw or d_pitch:
-            yaw, pitch = self["rotation"]
-            self["rotation"] = (yaw + d_yaw, pitch + d_pitch)
         
         # update position
         sneak = shift and not self.inwater()

@@ -42,10 +42,10 @@ class SchafSoul(EntitySoul):
             self.entity.ai_commands["jump"].append(jump)
         
         y, p = self.entity["rotation"]
-        dy = self.state["turn"]
-        dp = -self.state["nod"]*50 - p
-        self.entity.ai_commands["yaw"].append(dy)
-        self.entity.ai_commands["pitch"].append(dp)        
+        y += self.state["turn"]
+        p = -self.state["nod"]*50
+        self.entity.ai_commands["yaw"].append(y)
+        self.entity.ai_commands["pitch"].append(p)        
 
 @register_entity("Schaf")
 class Schaf(Entity):

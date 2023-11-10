@@ -564,6 +564,10 @@ class Player(voxelengine.Player):
             pe.ai_commands["shift"].append(1)
         if self.is_pressed("sprint"):
             pe.ai_commands["sprint"].append(1)
+        
+        if pe["rotation"] != self.rotation:
+            pe.ai_commands["yaw"].append(self.rotation[0])
+            pe.ai_commands["pitch"].append(self.rotation[1])
 
     def display_item(self,name,item,position,size,align,border=None):
         w, h = size

@@ -190,6 +190,7 @@
     "InfiniPick"               : {"icon":"infinipick"            },
     "String"                   : {"icon":"string"                },
     "Glue"                     : {"icon":"glue"                  },
+    "Saddle"                   : {"icon":"saddle"                },
     "inventory_background"     : {"icon":"inventory_background"  },
     "inventory_border_right"   : {"icon":"inventory_border_blue" },
     "inventory_border_left"    : {"icon":"inventory_border_red"  },

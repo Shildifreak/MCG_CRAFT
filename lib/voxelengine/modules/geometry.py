@@ -425,6 +425,15 @@ class Hitbox(Box):
                                              for dz in floatrange(-width,width)]
 
 
+def avg360(angles, default):
+    """calculate an average angle from the list of given angles
+    in ambiguous cases return default instead"""
+    x = sum(math.cos(math.radians(a)) for a in angles)
+    y = sum(math.sin(math.radians(a)) for a in angles)
+    if x or y:
+        return math.degrees(math.atan2(y,x))
+    return default
+
 if __name__ == "__main__":
     # TEST CASES
     

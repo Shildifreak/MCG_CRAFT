@@ -62,3 +62,8 @@ class Bow(Item):
             power += (pressure-power)*0.01
 
         print("Pling! W"+"o"*int(power*100)+"osh! Pock!")
+
+@register_item("Saddle")
+class Saddle(Item):
+    def use_on_entity(self, character, entity):
+        character.ride(entity)

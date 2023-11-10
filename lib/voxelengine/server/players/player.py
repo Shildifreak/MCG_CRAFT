@@ -27,6 +27,7 @@ class Player(object):
 		self.block_outbox = BlockMessenger(self.outbox)
 		self.focus_distance = 0
 		self.action_states = {}
+		self.rotation = (0, 0)
 		self.was_pressed_counter = collections.Counter()
 		self.was_released_counter = collections.Counter()
 		self.new_custom_commands_dict = collections.defaultdict(list)
@@ -233,8 +234,7 @@ class Player(object):
 
 		elif cmd == "rot" and argsformat == ((t_number,t_number),):
 			x,y = map(float,args[0])
-			if self.entity:
-				self.entity["rotation"] = (x,y)
+			self.rotation = (x,y)
 
 		elif cmd == "keys" and argsformat == (str,):
 			action_states = base64.decodebytes(args[0].encode("ascii"))
