@@ -358,7 +358,7 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         if self.gamemode == "creative":
-            character["inventory"] = [{"id":"InstaPick"},{"id":"Schiene_Schwelle","count":100},{"id":"Schiene_Gleis","count":100},{"id":"Zuuug","count":100},{"id":"Zug","count":100},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"BARRIER"},{"id":"Redstone","count":128},{"id":"Repeater"},{"id":"Kredidtkarte"},{"id":"TESTBLOCK"}]
+            character["inventory"] = [{"id":"InstaPick"},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Saddle"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"Redstone","count":128},{"id":"Repeater"}]
             functional = lambda i: (i in resources.blockClasses) or (i in resources.itemClasses)
             for b in (True, False):
                 for itemname in resources.allItemnames:
