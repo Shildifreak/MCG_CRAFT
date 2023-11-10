@@ -41,10 +41,13 @@ class Door(Block):
         return {"id":"DOOR","count":1}
 
     def get_tags(self):
-        return super().get_tags() | {"block_update"}
+        tags = super().get_tags() | {"block_update"}
+        if self["state"] == "OPEN":
+            tags.discard("solid")
+        return tags
 
-    def collides_with(self,area):
-        return self["state"] != "OPEN"
+#    def collides_with(self,area):
+#        return self["state"] != "OPEN"
 
 @register_block("DOORTOP")
 
