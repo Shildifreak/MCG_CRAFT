@@ -390,9 +390,9 @@ class Entity(voxelengine.Entity):
 
     def unmount_riding(self):
         if self.riding:
+            self["velocity"] = self.riding["velocity"] #instead of potentially large velocity from trying to reach vehicle
             self.riding.passengers.remove(self)
             self.riding = None
-            self["velocity"] = Vector(0,0,0)
 
     def unmount_passengers(self):
         for p in self.passengers:
@@ -545,6 +545,7 @@ class Entity(voxelengine.Entity):
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             if dv > 1 and entity.riding:
                 entity.unmount_riding()
+                velocity = entity["velocity"]
                 print("unmount by collision")
             if dv > 20:
                 entity.take_damage(1)
