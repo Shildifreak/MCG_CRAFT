@@ -853,7 +853,8 @@ def run():
 
                 # entity update
                 for entity in tuple(w.entities.find_entities(EVERYWHERE, "update")): #M# replace with near player(s) sometime, find a way to avoid need for making copy
-                    entity.update()
+                    if entity.world: # make sure it didn't die inbetween of find_entities and now (killed in update of other entity)
+                        entity.update()
 
                 # random ticks
                 for random_tick_source in w.entities.find_entities(EVERYWHERE, "random_tick_source"):

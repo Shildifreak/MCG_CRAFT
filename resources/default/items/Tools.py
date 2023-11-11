@@ -51,17 +51,61 @@ class FishingRod(Item):
 
 @register_item("Bow")
 class Bow(Item):
+    MAXPOWER = 40
+
     def use_on_block(self, character, block, face):
         return self.use_on_air(character)
 
     def use_on_air(self, character):
-        power = 0
+        power = 0.3
         pressure = None
         while pressure != 0:
             pressure = yield
-            power += (pressure-power)*0.01
+            direction = 1 if pressure > power else -1
+            delta = direction*character.dt
+            limit = abs(pressure-power)
+            power += max(-limit,min(+limit,delta))
 
-        print("Pling! W"+"o"*int(power*100)+"osh! Pock!")
+        if power < 0.3:
+            return
+        arrow = EntityFactory({"type":"Arrow"})
+        arrow.set_world(character.world, character["position"]+character.get_sight_vector()*2)
+        arrow["rotation"] = character["rotation"]
+        arrow["velocity"] = character.get_sight_vector() * power * self.MAXPOWER
+
+@register_entity("Arrow")
+class Arrow(Entity):
+    HITBOX = Hitbox(1,1,0.5)
+    LIMIT = 0
+    instances = []
+    
+    def __init__(self, data = None):
+        data_defaults = {
+            "texture" : "ARROW",
+            "tags" : {"update"},
+        }
+        if data != None:
+            data_defaults.update(data)
+        super().__init__(data_defaults)
+
+    def update(self):
+        #self.set_sight_vector(self["velocity"])
+        y,p = self["rotation"]
+        self["rotation"] = (y,p-90*self.dt)
+        self["velocity"] -= Vector(0, GRAVITY, 0) * self.dt
+        self.update_position()
+        
+        area = self.HITBOX + self["position"]
+        for entity in self.world.entities.find_entities(area):
+            if entity != self:
+                entity.take_damage(3)
+                entity["velocity"] += self["velocity"]
+                self.kill()
+                return
+
+        if self.onground():
+            self.kill()
+            return
 
 @register_item("Saddle")
 class Saddle(Item):
