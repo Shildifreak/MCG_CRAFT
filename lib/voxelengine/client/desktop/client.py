@@ -131,60 +131,6 @@ void main()
 }
 """
 
-default_fragment_shader_code = b"""
-#version 130
-
-varying vec4 color;
-uniform sampler2D color_texture;
-
-void main (void)
-{
-    vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
-    //float test = dot(normal, vec3(0.0f,1.0f,0.0f));
-    gl_FragColor = tex_color * (0.75 + 0.5 * vec4(color));
-    
-    // apply fog
-    float fogFactor = pow((1-gl_Fog.color.a), gl_FogFragCoord);
-    gl_FragColor = vec4(mix(gl_Fog.color.rgb, gl_FragColor.rgb, fogFactor), gl_FragColor.a);
-}
-"""
-
-texture_only_fragment_shader_code = b"""
-#version 130
-
-varying vec4 color;
-uniform sampler2D color_texture;
-
-void main (void)
-{
-    gl_FragColor = texture2D(color_texture, gl_TexCoord[0].st);
-}
-"""
-
-light_only_fragment_shader_code = b"""
-#version 130
-
-varying vec4 color;
-uniform sampler2D color_texture;
-
-void main (void)
-{
-    gl_FragColor = color;
-}
-"""
-
-empty_fragment_shader_code = b"""
-#version 130
-
-varying vec4 color;
-uniform sampler2D color_texture;
-
-void main (void)
-{
-    gl_FragColor = vec4(0.5);
-}
-"""
-
 
 class TextGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -991,14 +937,9 @@ class Window(pyglet.window.Window):
         self.hud_replaced_exclusive = False
 
         glEnable(GL_NORMALIZE)
-        default_block_shader      = Shader([vertex_shader_code], [     default_fragment_shader_code])
-        texture_only_block_shader = Shader([vertex_shader_code], [texture_only_fragment_shader_code])
-        light_only_block_shader   = Shader([vertex_shader_code], [  light_only_fragment_shader_code])
-        empty_fragment_shader     = Shader([vertex_shader_code], [       empty_fragment_shader_code])
-        self.block_shaders = [[empty_fragment_shader, texture_only_block_shader],
-                              [light_only_block_shader,    default_block_shader]]
-        self.enable_fragment_texture = True
-        self.enable_fragment_light   = True
+        self.reload_shaders()
+        self.active_shader_is = [0,0]
+        self.active_shader_ii = 0
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -1068,6 +1009,22 @@ class Window(pyglet.window.Window):
         if not client:
             raise ValueError("There must be some client")
         self.client = client
+
+    def reload_shaders(self):
+        FRAGMENT_SHADERS = dict() # {name: source_code_bytes, ...}
+        for filename in os.listdir("shaders"):
+            shadername, extension = os.path.splitext(filename)
+            if extension == ".frag":
+                path = os.path.join("shaders",filename)
+                with open(path, "rb")  as f:
+                    FRAGMENT_SHADERS[shadername] = f.read()
+
+        self.block_shader_names = sorted(FRAGMENT_SHADERS)
+        self.block_shaders = tuple(
+                Shader([vertex_shader_code], [FRAGMENT_SHADERS[name]])
+            for name in self.block_shader_names
+        )
+
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)
@@ -1471,14 +1428,18 @@ class Window(pyglet.window.Window):
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
-                self.enable_fragment_texture = not self.enable_fragment_texture
+                self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
+                self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
             if symbol == key.F5:
-                self.enable_fragment_light = not self.enable_fragment_light
+                self.active_shader_ii += -1 if modifiers & key.MOD_SHIFT else 1
+                self.active_shader_ii %= len(self.active_shader_is)
             if symbol == key.F6:
                 self.camera_distance = 10 - self.camera_distance
             if symbol == key.F7:
                 ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
                 self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
+            if symbol == key.F9:
+                self.reload_shaders()
             if symbol == key.F11:
                 self.set_fullscreen(not self.fullscreen)
             if self.chat_open:
@@ -1616,7 +1577,7 @@ class Window(pyglet.window.Window):
         setup_fog(fog_color)
         self.set_3d()
         glColor3d(1, 1, 1)
-        block_shader = self.block_shaders[self.enable_fragment_light][self.enable_fragment_texture]
+        block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
         block_shader.bind()
         self.model.batch.draw()
         block_shader.unbind()
@@ -1651,8 +1612,12 @@ class Window(pyglet.window.Window):
         queue = len(self.model.queue)
         face_buffer = len(self.model.blockface_update_buffer)
         terrain_queue = len(self.model.init_chunk_queue.chunks)
+        shader_names = "".join(
+            ("[%s]" if self.active_shader_ii==ii else " %s ") % self.block_shader_names[i]
+            for ii,i in enumerate(self.active_shader_is)
+        )
         
-        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing)
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f \t [F4/F5]: %s' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing, shader_names)
         self.label.draw()
     
     def draw_chat_buffer(self):
