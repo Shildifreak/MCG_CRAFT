@@ -99,7 +99,7 @@ class Arrow(Entity):
         for entity in self.world.entities.find_entities(area):
             if entity != self:
                 entity.take_damage(3)
-                entity["velocity"] += self["velocity"]
+                entity["velocity"] = (entity["velocity"]+self["velocity"])*(1,0,1) + (0,10,0)
                 self.kill()
                 return
 

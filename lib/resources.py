@@ -566,6 +566,7 @@ class Entity(voxelengine.Entity):
         sprint = bool(sum(self.ai_commands["sprint"]))
         x = sum(self.ai_commands["x"])
         z = sum(self.ai_commands["z"])
+        moveintent = bool(self.ai_commands["x"]) or bool(self.ai_commands["z"])
 
         yaw, pitch = self["rotation"]
         yaw_new, pitch_new = yaw, pitch
@@ -606,13 +607,14 @@ class Entity(voxelengine.Entity):
         # Walking
         sv = self.horizontal_move(jump, shift)
 
-        target_velocity = nv*self["SPEED"]*speed_modifier
-        ax, _, az = target_velocity - self["velocity"]
-        a_max = self["ACCELERATION"]
-        ax = max(-a_max, min(a_max, ax))
-        az = max(-a_max, min(a_max, az))
-        
-        self["velocity"] += (ax, 0, az)
+        if moveintent:
+            target_velocity = nv*self["SPEED"]*speed_modifier
+            ax, _, az = target_velocity - self["velocity"]
+            a_max = self["ACCELERATION"]
+            ax = max(-a_max, min(a_max, ax))
+            az = max(-a_max, min(a_max, az))
+            
+            self["velocity"] += (ax, 0, az)
 
         
         # update position

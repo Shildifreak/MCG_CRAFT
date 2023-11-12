@@ -31,8 +31,9 @@ class SchafSoul(EntitySoul):
             self.state["nod"] = True
         
         sx, _, sz = self.entity.get_sight_vector()
-        self.entity.ai_commands["x"].append(sx * self.state["forward"])
-        self.entity.ai_commands["z"].append(sz * self.state["forward"])
+        if self.state["forward"]:
+            self.entity.ai_commands["x"].append(sx)
+            self.entity.ai_commands["z"].append(sz)
 
         if self.state["forward"]:
             jump = self.entity.world.blocks[(self.entity["position"] + Vector(sx,-0.5,sz)).round()] != "AIR"
