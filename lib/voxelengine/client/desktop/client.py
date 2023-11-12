@@ -1012,10 +1012,11 @@ class Window(pyglet.window.Window):
 
     def reload_shaders(self):
         FRAGMENT_SHADERS = dict() # {name: source_code_bytes, ...}
-        for filename in os.listdir("shaders"):
+        shaders_dir = os.path.join(PATH,"shaders")
+        for filename in os.listdir(shaders_dir):
             shadername, extension = os.path.splitext(filename)
             if extension == ".frag":
-                path = os.path.join("shaders",filename)
+                path = os.path.join(shaders_dir,filename)
                 with open(path, "rb")  as f:
                     FRAGMENT_SHADERS[shadername] = f.read()
 
