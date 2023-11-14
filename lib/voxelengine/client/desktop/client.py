@@ -944,6 +944,9 @@ class Window(pyglet.window.Window):
         self.reload_shaders()
         self.active_shader_is = [0,0]
         self.active_shader_ii = 0
+        
+        self.framebuffer_enabled = True
+        self.setup_framebuffer_stuff()
 
         # Current (x, y, z) position in the world, specified with floats. Note
         # that, perhaps unlike in math class, the y-axis is the vertical axis.
@@ -1029,6 +1032,11 @@ class Window(pyglet.window.Window):
                 Shader([vertex_shader_code], [FRAGMENT_SHADERS[name]])
             for name in self.block_shader_names
         )
+        
+        for block_shader in self.block_shaders:
+            block_shader.bind()
+            block_shader.uniformi(b"color_texture",0)
+            block_shader.uniformi(b"loopback",1)
 
 
     def on_close(self):
@@ -1443,6 +1451,8 @@ class Window(pyglet.window.Window):
             if symbol == key.F7:
                 ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
                 self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
+            if symbol == key.F8:
+                self.framebuffer_enabled = not self.framebuffer_enabled
             if symbol == key.F9:
                 self.reload_shaders()
             if symbol == key.F11:
@@ -1515,6 +1525,8 @@ class Window(pyglet.window.Window):
         self.update_reticle(width, height)
         # hud
         self.model.hud_resize(self.get_size())
+        # framebuffer
+        self.resize_framebuffer_stuff()
     
     def update_reticle(self, width, height):
         if self.reticle:
@@ -1571,10 +1583,118 @@ class Window(pyglet.window.Window):
         x, y, z = self.camera_position
         glTranslatef(-x, -y, -z)
 
+    def setup_framebuffer_stuff(self):
+        # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
+        # Create the framebuffer (rendering target).
+        self.framebuffer = gl.GLuint(0)
+        glGenFramebuffers(1, gl.byref(self.framebuffer));
+        glBindFramebuffer(GL_FRAMEBUFFER, self.framebuffer)
+
+        width, height = self.get_size()
+
+        # Create Depthbuffer
+        self.depthbuffer = gl.GLuint(0)
+        glGenRenderbuffers(1, gl.byref(self.depthbuffer));
+        glBindRenderbuffer(GL_RENDERBUFFER, self.depthbuffer);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.depthbuffer);
+
+        # Create textures (internal pixel data for the framebuffer).
+        self.tex_color0 = gl.GLuint(0)
+        glGenTextures(1, gl.byref(self.tex_color0))
+        glBindTexture(GL_TEXTURE_2D, self.tex_color0)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+
+        self.tex_color1_pair = [gl.GLuint(0), gl.GLuint(0)]
+        for tex_color1 in self.tex_color1_pair:
+            glGenTextures(1, gl.byref(tex_color1))
+            glBindTexture(GL_TEXTURE_2D, tex_color1)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        
+        
+        # Bind the textures to the framebuffer.
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.tex_color0, 0)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, self.tex_color1_pair[0], 0)
+
+        # Something may have gone wrong during the process, depending on the
+        # capabilities of the GPU.
+        res = glCheckFramebufferStatus(GL_FRAMEBUFFER)
+        if res != GL_FRAMEBUFFER_COMPLETE:
+          raise RuntimeError('Framebuffer not completed')
+
+        # return to default framebuffer for now
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+    
+    def resize_framebuffer_stuff(self):
+        width, height = self.get_size()
+        glBindRenderbuffer(GL_RENDERBUFFER, self.depthbuffer);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+        glBindTexture(GL_TEXTURE_2D, self.tex_color0)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        for tex_color1 in self.tex_color1_pair:
+            glBindTexture(GL_TEXTURE_2D, tex_color1)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+
+    def begin_framebuffer_stuff(self):
+        # bind framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, self.framebuffer)
+        # swap front and back texture
+        self.tex_color1_pair.reverse()
+        tex_color1_read, tex_color1_draw = self.tex_color1_pair
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, tex_color1_draw, 0)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, tex_color1_read)
+        glGenerateMipmap(GL_TEXTURE_2D)
+        glActiveTexture(GL_TEXTURE0)
+        
+        # turn on both color attachments
+        bufs = ctypes.POINTER(ctypes.c_uint)((ctypes.c_uint * 2)(GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1))
+        glDrawBuffers(2,bufs)
+    
+    def end_framebuffer_stuff(self):
+        # blit image to default framebuffer
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, self.framebuffer)
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        width, height = self.get_size()
+        glBlitFramebuffer(
+            0, 0, width, height,
+            0, 0, width, height,
+            GL_COLOR_BUFFER_BIT,
+            GL_NEAREST)
+
+        # unbind framebuffer (switch back to default)
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        
+#    def test_color_attachment_1(self):
+#        # Read the buffer contents into a numpy array.
+#        glBindFramebuffer(GL_FRAMEBUFFER, self.framebuffer)
+#        glReadBuffer(GL_COLOR_ATTACHMENT1);
+#
+#        ccp = 4
+#        import numpy as np
+#        from ctypes import POINTER
+#
+#        width, height = self.get_size()
+#        data = np.empty((height, width, ccp), dtype=np.float32)
+#        glReadPixels(0, 0, width, height, GL_RGBA, GL_FLOAT, data.ctypes.data_as(POINTER(GLfloat)))
+#
+#        glReadBuffer(GL_COLOR_ATTACHMENT0);
+#        #glBindFramebuffer(GL_FRAMEBUFFER, 0)
+#
+#        # Print Image stats
+#        print(data.shape, np.min(data), np.max(data))
+
     def on_draw(self):
         """
         Called by pyglet to draw the canvas.
         """
+        if self.framebuffer_enabled:
+            self.begin_framebuffer_stuff()
+        
         r,g,b,a = self.model.world_generator.sky(self.camera_position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
         glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
@@ -1584,8 +1704,13 @@ class Window(pyglet.window.Window):
         glColor3d(1, 1, 1)
         block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
         block_shader.bind()
+        width, height = self.get_size()
+        block_shader.uniformf(b"screenSize", width, height)
         self.model.batch.draw()
         block_shader.unbind()
+        
+        if self.framebuffer_enabled:
+            self.end_framebuffer_stuff()
         
         self.update_pointer_position_3d()
         
@@ -1622,7 +1747,7 @@ class Window(pyglet.window.Window):
             for ii,i in enumerate(self.active_shader_is)
         )
         
-        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f \t [F4/F5]: %s' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing, shader_names)
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f \t [F4/F5]: %s \t fb[F8]:%s' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing, shader_names, self.framebuffer_enabled)
         self.label.draw()
     
     def draw_chat_buffer(self):
