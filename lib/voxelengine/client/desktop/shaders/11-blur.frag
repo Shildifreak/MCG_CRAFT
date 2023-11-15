@@ -6,6 +6,7 @@ uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
 
+uniform float d;
 
 vec4 blurred_fetch(int LOD) {
     vec2 texelpos = gl_FragCoord.st/(1<<LOD)-0.5;
@@ -33,7 +34,7 @@ void main (void)
     // loopback
     vec4 loopColor = fragColor;
     
-    vec4 outColor = blurred_fetch(4);
+    vec4 outColor = blurred_fetch(int(4*d));
     
     gl_FragData[0] = vec4(outColor.xyz,fragColor.a);
     gl_FragData[1] = loopColor;

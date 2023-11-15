@@ -1012,6 +1012,16 @@ class Window(pyglet.window.Window):
         # Sound
         self.listener = pyglet.media.get_audio_driver().get_listener()
 
+        # Settings
+        self.settingswindow = None
+        self.slidervalues = {
+            "a": 0,
+            "b": 0.25,
+            "c": 0.5,
+            "d": 0.75,
+            "e": 1,
+        }
+
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
@@ -1041,6 +1051,8 @@ class Window(pyglet.window.Window):
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)
+        if self.settingswindow:
+            self.settingswindow.close()
         super(Window,self).on_close()
 
     def set_exclusive_mouse(self, exclusive):
@@ -1099,6 +1111,7 @@ class Window(pyglet.window.Window):
     def update(self, dt):
         global focus_distance
         with self.update_lock:
+            self.switch_to()
             for command, *args in self.client.receive():
                 #print("client.py:", c)
                 #M# maybe define this function somewhere else
@@ -1438,6 +1451,17 @@ class Window(pyglet.window.Window):
                 self.hud_replaced_exclusive = False
                 self.set_exclusive_mouse(False)
         else:
+            if symbol == key.F1:
+                if not self.settingswindow:
+                    self.set_exclusive_mouse(False)
+                    self.settingswindow = SettingsWindow(self.slidervalues)
+                    @self.settingswindow.event
+                    def on_close():
+                        self.settingswindow = None
+                    self.activate()
+                else:
+                    self.settingswindow.close()
+                    self.settingswindow = None
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
@@ -1706,6 +1730,8 @@ class Window(pyglet.window.Window):
         block_shader.bind()
         width, height = self.get_size()
         block_shader.uniformf(b"screenSize", width, height)
+        for name, value in self.slidervalues.items():
+            block_shader.uniformf(bytes(name,"utf-8"), value)
         self.model.batch.draw()
         block_shader.unbind()
         
@@ -1788,6 +1814,51 @@ class Window(pyglet.window.Window):
             player.position = position
         else:
             print("unknown sound name", sound_name)
+
+class MySlider(pyglet.gui.Slider):
+    bar = None
+    knob = None
+
+    def __init__(self, parent, name, x, y, batch, frame, value):
+        if not MySlider.bar:
+            MySlider.bar = pyglet.resource.image('bar.png')
+            MySlider.knob = pyglet.resource.image('knob.png')
+
+        super().__init__(x, y, self.bar, self.knob, edge=5, batch=batch)
+        frame.add_widget(self)
+        self.label = pyglet.text.Label("", x=x+200, y=y, batch=batch, color=(0, 0, 0, 255))
+        self.parent = parent
+        self.name = name
+        self.value = value*100
+        self.on_change(self.value)
+
+    def on_change(self, value):
+        self.label.text = self.name+f" : {round(value/100, 2)}"
+        self.parent.on_slider_change(self.name, value/100)
+
+class SettingsWindow(pyglet.window.Window):
+    def __init__(self, slidervalues):
+        self.slidervalues = slidervalues
+        height = len(slidervalues) * 50 + 100
+        super().__init__(500, height, caption="Widget Example")
+        self.batch = pyglet.graphics.Batch()
+
+        # A Frame instance to hold all Widgets:
+        self.frame = pyglet.gui.Frame(self, order=4)
+
+        self.sliders = {}
+        for i, (name, value) in enumerate(sorted(slidervalues.items())):
+            y = height - 50*(i+1.5) 
+            self.sliders[name] = MySlider(self, name, 100, y, self.batch, self.frame, value)
+            
+
+    def on_draw(self):
+        pyglet.gl.glClearColor(0.8, 0.8, 0.8, 1.0)
+        self.clear()
+        self.batch.draw()
+    
+    def on_slider_change(self, name, value):
+        self.slidervalues[name] = value
 
 def setup_fog(fog_color):
     """
