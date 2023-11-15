@@ -246,7 +246,7 @@
                                                            "left"  : [(((0,0,0),(0,0,1),(0,1,1),(0,1,0)),"glas")],
                                                            "right" : [(((1,0,1),(1,0,0),(1,1,0),(1,1,1)),"glas")]},
                      "connecting":True},
-    "WATER"       : {"icon" : "many_water",     "faces" : {"top"   : [(((0,1,1),(1,1,1),(1,1,0),(0,1,0)),"many_water")],
+    "WATER"       : {"icon" : "many_water",     "faces" : {"top"   : [(((0,1,1),(1,1,1),(1,1,0),(0,1,0)),"water_surface")], #many_water
                                                            "bottom": [(((1,0,1),(0,0,1),(0,0,0),(1,0,0)),"not_many_water")],
                                                            "front" : [(((0,0,1),(1,0,1),(1,1,1),(0,1,1)),"not_many_water")],
                                                            "back"  : [(((1,0,0),(0,0,0),(0,1,0),(1,1,0)),"not_many_water")],

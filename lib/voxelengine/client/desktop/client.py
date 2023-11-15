@@ -143,19 +143,44 @@ class TextGroup(pyglet.graphics.OrderedGroup):
     def unset_state(self):
         super(TextGroup,self).unset_state()
         glEnable(GL_DEPTH_TEST)
-class ColorkeyGroup(pyglet.graphics.OrderedGroup):
+
+class MaterialGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
-        super(ColorkeyGroup,self).set_state()
+        super().set_state()
+        prog = GLint (0);
+        glGetIntegerv(GL_CURRENT_PROGRAM, gl.byref(prog));
+        if prog.value:
+            location = glGetUniformLocation(prog.value, b"material");
+            glUniform1i(location, self.order)
+
+class ColorkeyMaterialGroup(MaterialGroup):
+    def set_state(self):
+        super().set_state()
         glDisable(GL_CULL_FACE)
         glEnable(GL_ALPHA_TEST)
         glAlphaFunc(GL_GREATER, 0)
     def unset_state(self):
-        super(ColorkeyGroup,self).unset_state()
+        super().unset_state()
         glEnable(GL_CULL_FACE)
         glDisable(GL_ALPHA_TEST)
-textgroup = TextGroup(2)
-colorkey_group = ColorkeyGroup(1)
-normal_group = pyglet.graphics.OrderedGroup(0)
+
+class TransparentMaterialGroup(MaterialGroup):
+    def set_state(self):
+        super().set_state()
+        #glDisable(GL_CULL_FACE)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    def unset_state(self):
+        super().unset_state()
+        #glEnable(GL_CULL_FACE)
+        glDisable(GL_BLEND)
+    
+material_groups = [
+    MaterialGroup(0), # solid
+    ColorkeyMaterialGroup(1), # transparent
+    TransparentMaterialGroup(2), # semi transparent
+]
+textgroup = TextGroup(len(material_groups))
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -302,7 +327,7 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIAL
     def url_for(filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
@@ -318,6 +343,7 @@ def load_setup(host, port):
     TRANSPARENCY = {"AIR":True}
     CONNECTED = {}
     FOG = {}
+    MATERIAL = collections.defaultdict(lambda:0)
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
     BLOCKNAMES = []
@@ -327,6 +353,7 @@ def load_setup(host, port):
         TRANSPARENCY[name] = transparency
         CONNECTED[name] = connected
         FOG[name] = fog
+        MATERIAL[name] = 2 if name=="WATER" else (1 if transparency else 0)
     
     SOUNDS = {}
     sound_files = {}
@@ -484,9 +511,8 @@ class Model(object):
         with urllib.request.urlopen(TEXTURE_URL) as texture_stream:
             texture_buffer = io.BytesIO(texture_stream.read())
             texture = image.load("", file=texture_buffer).get_texture() #possible to use image.load(file=filedescriptor) if necessary
-        self.textured_normal_group = TextureGroup(texture, parent = normal_group) 
-        self.textured_colorkey_group = TextureGroup(texture, parent = colorkey_group)
-
+        self.textured_material_groups = [TextureGroup(texture, parent = g) for g in material_groups]
+ 
         self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = ChunkManager()
         self.blocks = BlockStorage()
@@ -652,7 +678,7 @@ class Model(object):
         if not (vertex_data and texture_data):
             return
         vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
-        group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
+        group = self.textured_material_groups[MATERIAL[block_name]]
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
         length = len(vertex_data)//3
@@ -713,7 +739,7 @@ class Model(object):
                 offset = offset if modelpart in ("head","legl","legr") else relpos
                 block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
                 blockmodel = BLOCKMODELS[block_name]
-                group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
+                group = self.textured_material_groups[MATERIAL[block_name]]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
                     #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
@@ -771,7 +797,7 @@ class Model(object):
             vertex_list = None
         elif not texture.startswith ("/"):
             texture_data = list(ICON[texture])
-            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_colorkey_group,
+            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_material_groups[1],
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:
@@ -1021,6 +1047,17 @@ class Window(pyglet.window.Window):
             "d": 0.75,
             "e": 1,
         }
+        """
+        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+        printf("Active Uniforms: %d\n", count);
+
+        for (i = 0; i < count; i++)
+        {
+            glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, name);
+
+            printf("Uniform #%d Type: %u Name: %s\n", i, type, name);
+        }
+        """
 
         # some function to tell about events
         if not client:
