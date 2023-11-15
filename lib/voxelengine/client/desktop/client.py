@@ -1821,8 +1821,8 @@ class MySlider(pyglet.gui.Slider):
 
     def __init__(self, parent, name, x, y, batch, frame, value):
         if not MySlider.bar:
-            MySlider.bar = pyglet.resource.image('bar.png')
-            MySlider.knob = pyglet.resource.image('knob.png')
+            MySlider.bar = pyglet.image.load(os.path.join(PATH, 'bar.png')).get_texture()
+            MySlider.knob = pyglet.image.load(os.path.join(PATH, 'knob.png')).get_texture()
 
         super().__init__(x, y, self.bar, self.knob, edge=5, batch=batch)
         frame.add_widget(self)
