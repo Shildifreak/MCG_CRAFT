@@ -17,6 +17,7 @@ import urllib.request
 import io
 import base64
 import ctypes
+import re
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -1092,10 +1093,15 @@ class Window(pyglet.window.Window):
 
         def replace_macros(shader_code):
             # material macros
-            for i, material in enumerate(MATERIALS):
-                macro = b"MATERIAL_"+material.upper().encode()
-                value = str(i).encode()
-                shader_code = shader_code.replace(macro, value)
+            def repl(match):
+                material = match.groups()[0].decode()
+                if material in MATERIALS:
+                    i = MATERIALS.index(material)
+                else:
+                    print("shader used unknown material",material)
+                    i = -1
+                return str(i).encode()
+            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
             return shader_code
 
         vertex_shader_code = replace_macros(vertex_shader_code)

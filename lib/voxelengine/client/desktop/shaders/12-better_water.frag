@@ -37,7 +37,7 @@ void main (void)
     
     vec4 outColor;
     int LOD = int(d * 10);
-    if (material == MATERIAL_WATER) {
+    if (material == MATERIAL(water)) {
         outColor = blurred_fetch(LOD);
         //outColor = vec4(0,0,1,1);
         fragColor.a = 1;
