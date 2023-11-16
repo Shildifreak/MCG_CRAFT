@@ -100,7 +100,8 @@
     "KOHLEERZ"                 : {"faces":{"all": "kohle_erz"      }},
     "REDSTONE"                 : {"faces":{"all": "redstone_block" }},
     "Redstone"                 : {"faces":{"all": "redstone_block" }}, # entfernen?
-    #"REDSTONEERZ"              : {"faces":{"all": "redstone_erz"   }},
+    "REDSTONEERZ"              : {"faces":{"all": "redstone_erz"   }},
+    "REDSTONEERZGLOWING"       : {"faces":{"all": "redstone_erz"   },"material":"glowing"},
     "SMARAGTBLOCK"             : {"faces":{"all": "smaragd_block"  }}, # umbenennen zu SMARAGD?
     "SMARAGTERZ"               : {"faces":{"all": "smaragd_erz"    }}, # umbenennen zu SMARAGDERZ?
     "LAPIS"                    : {"faces":{"all": "lapis_block"    }},
@@ -128,7 +129,7 @@
     # REDSTONE
     "Commandblock"             : {"faces":{"all":"commandblock"}},
     "LAMPOFF"                  : {"icon":None, "faces":{"all":"lamp_off"}},
-    "LAMPON"                   : {"icon":None, "faces":{"all":"lamp_on"}},
+    "LAMPON"                   : {"icon":None, "faces":{"all":"lamp_on"},"material":"glowing"},
     "FAN"                      : {"faces":{"top":"fan", "other":"reinforced_stone"}},
     "Repeater"                 : {"faces":{"bottom":"repeater_off", "other":"transparent"}, "icon":"repeater_off", "transparent":True},
     "Piston"                   : {"faces":{"top":"piston_top","bottom":"piston_bottom","other":"piston_side"}, "icon":"piston_side"},
@@ -252,7 +253,7 @@
                                                            "back"  : [(((1,0,0),(0,0,0),(0,1,0),(1,1,0)),"not_many_water")],
                                                            "left"  : [(((0,0,0),(0,0,1),(0,1,1),(0,1,0)),"not_many_water")],
                                                            "right" : [(((1,0,1),(1,0,0),(1,1,0),(1,1,1)),"not_many_water")]},
-                     "fog_color":(136,170,255,80), "connecting":True},
+                     "fog_color":(136,170,255,80), "connecting":True,"material":"water"},
     "HEBEL"       : {"icon" : "hebel",          "faces" : {"front" : [((    (1,0,1),    (0,0,1),(  0,0.5,1),  (1,0.5,1)),("doppelsteinstufe", 0,0,1, 0.5))],
                                                            "back"  : [((    (0,0,0),    (1,0,0),(  1,0.5,0),  (0,0.5,0)),("doppelsteinstufe", 0,0,1, 0.5))],
                                                            "left"  : [((    (0,0,1),    (0,0,0),(  0,0.5,0),  (0,0.5,1)),("doppelsteinstufe", 0,0,1, 0.5))],
@@ -266,9 +267,11 @@
                                                            "bottom": [((    (0,0,0),    (1,0,0),(  1,  0,1),  (0,  0,1)), "steinstufe_surface"           )],
                                                            "inside": [((  (0,0.5,0),  (1,0.5,0),(  1,0.5,1),  (0,0.5,1)), "steinstufe_surface"           )]}},
     "TORCHRED"    : {"icon" : None,             "faces" : {"inside": [(((0,0,0.5), (1,0,0.5), (1,1,0.5), (0,1,0.5)), "torch_red"),
-                                                                      (((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "torch_red")]}},
+                                                                      (((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "torch_red")]},
+                     "material":"glowing"},
     "TORCHBLUE"   : {"icon" : None,             "faces" : {"inside": [(((0,0,0.5), (1,0,0.5), (1,1,0.5), (0,1,0.5)), "torch_blue"),
-                                                                      (((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "torch_blue")]}},
+                                                                      (((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "torch_blue")]},
+                     "material":"glowing"},
     "TORCHOFF"    : {"icon" : None,             "faces" : {"inside": [(((0,0,0.5), (1,0,0.5), (1,1,0.5), (0,1,0.5)), "torch_off"),
                                                                       (((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "torch_off")]}},
     "ROCKET"      : {"icon" : "rocket",         "faces" : {"inside": [(((0.5,0,0), (0.5,0,1), (0.5,1,1), (0.5,1,0)), "rocket"),

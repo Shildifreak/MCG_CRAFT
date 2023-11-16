@@ -25,6 +25,7 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
 		connecting = blockmodeldata["connecting"]
+		material = blockmodeldata["material"]
 		fog_color = blockmodeldata["fog_color"]
 		icon = (0, texture_index[blockmodeldata["icon"]])
 		facecoordslist = []
@@ -44,7 +45,7 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 			facecoordslist.append(facecoords)
 			textcoordslist.append(textcoords)
 		
-		blockmodel = blockmodelname, transparent, connecting, fog_color, icon, facecoordslist, textcoordslist
+		blockmodel = blockmodelname, transparent, connecting, material, fog_color, icon, facecoordslist, textcoordslist
 		description["BLOCK_MODELS"].append(blockmodel)
 	
 	description["ENTITY_MODELS"] = normalized_universal_description["ENTITY_MODELS"]

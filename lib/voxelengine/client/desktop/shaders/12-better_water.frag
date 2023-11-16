@@ -35,13 +35,16 @@ void main (void)
     // loopback
     vec4 loopColor = fragColor;
     
-    vec4 outColor = fragColor;
+    vec4 outColor;
     int LOD = int(d * 10);
-    if (material == 2) {
+    if (material == MATERIAL_WATER) {
         outColor = blurred_fetch(LOD);
+        //outColor = vec4(0,0,1,1);
+        fragColor.a = 1;
     }
     else {
         outColor = texelFetch(loopback, ivec2(gl_FragCoord.st), 0);
+        //outColor = fragColor;
     }
         
     gl_FragData[0] = vec4(outColor.xyz,fragColor.a);
