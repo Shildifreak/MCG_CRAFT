@@ -6,6 +6,7 @@ uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
 
+uniform int material;
 uniform float d;
 
 vec4 blurred_fetch2(int LOD, vec2 offset) {
@@ -42,6 +43,7 @@ vec4 blurred_fetch(float LOD) {
     return c;
 }
 
+
 void main (void)
 {
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
@@ -53,11 +55,20 @@ void main (void)
     fragColor = vec4(mix(gl_Fog.color.rgb, fragColor.rgb, fogFactor), fragColor.a);
 
     // loopback
-    vec4 loopColor = fragColor;
-    
-    //vec4 outColor = blurred_fetch2(int(10*d), vec2(0,0));
-    vec4 outColor = blurred_fetch(10*d);
-    
-    gl_FragData[0] = vec4(outColor.xyz,fragColor.a);
+    vec4 loopColor = vec4(0);
+    if (material == MATERIAL(glowing)) {
+        if (length(fragColor.rgb)*length(fragColor.rgb) > 0.5) {
+            loopColor = 100*fragColor*fragColor;
+        }
+    }
+
+    // output
+    float LOD = d * 10;
+    vec4 light = blurred_fetch(LOD);
+    vec3 outColor = fragColor.rgb; //texelFetch(loopback, ivec2(gl_FragCoord.st), 0).rgb;
+    outColor *= 0.05*light.rgb + 1;
+    //outColor = clamp(outColor, 0, 1);
+        
+    gl_FragData[0] = vec4(outColor, fragColor.a);
     gl_FragData[1] = loopColor;
 }
