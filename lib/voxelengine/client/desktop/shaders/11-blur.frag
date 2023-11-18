@@ -8,12 +8,17 @@ uniform sampler2D loopback;
 
 uniform float d;
 
+vec4 clampedTexelFetch(sampler2D texture, ivec2 position, int LOD) {
+    ivec2 clampedPosition = clamp(position, ivec2(1,1), (ivec2(screenSize)>>LOD)-1);
+    return texelFetch(texture, clampedPosition, LOD);
+}
+
 vec4 blurred_fetch2(int LOD, vec2 offset) {
     vec2 texelpos = gl_FragCoord.st/(1<<LOD)-0.5 + offset;
-    vec4 c00 = texelFetch(loopback, ivec2(texelpos)+ivec2(0,0), LOD);
-    vec4 c01 = texelFetch(loopback, ivec2(texelpos)+ivec2(0,1), LOD);
-    vec4 c10 = texelFetch(loopback, ivec2(texelpos)+ivec2(1,0), LOD);
-    vec4 c11 = texelFetch(loopback, ivec2(texelpos)+ivec2(1,1), LOD);
+    vec4 c00 = clampedTexelFetch(loopback, ivec2(texelpos)+ivec2(0,0), LOD);
+    vec4 c01 = clampedTexelFetch(loopback, ivec2(texelpos)+ivec2(0,1), LOD);
+    vec4 c10 = clampedTexelFetch(loopback, ivec2(texelpos)+ivec2(1,0), LOD);
+    vec4 c11 = clampedTexelFetch(loopback, ivec2(texelpos)+ivec2(1,1), LOD);
     vec2 k = fract(texelpos);
     vec4 c0 = mix(c00, c01, k.y);
     vec4 c1 = mix(c10, c11, k.y);
