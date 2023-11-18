@@ -554,7 +554,8 @@ class Player(voxelengine.Player):
         nv += Vector(-sz,0, sx) * self.get_pressure("right")
         nv += Vector( sz,0,-sx) * self.get_pressure("left")
         
-        if nv != (0,0,0):
+        just_stopped = self.was_released("for") or self.was_released("back") or self.was_released("right") or self.was_released("left")
+        if nv != (0,0,0) or just_stopped:
             pe.ai_commands["x"].append(nv[0])
             pe.ai_commands["z"].append(nv[2])
         
