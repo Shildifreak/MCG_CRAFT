@@ -5,22 +5,9 @@ varying vec4 viewpos;
 uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
+uniform sampler2D loopback2;
 
 uniform int material;
-uniform float d;
-
-vec4 blurred_fetch(int LOD) {
-    vec2 texelpos = gl_FragCoord.st/(1<<LOD)-0.5;
-    vec4 c00 = texelFetch(loopback, ivec2(texelpos)+ivec2(0,0), LOD);
-    vec4 c01 = texelFetch(loopback, ivec2(texelpos)+ivec2(0,1), LOD);
-    vec4 c10 = texelFetch(loopback, ivec2(texelpos)+ivec2(1,0), LOD);
-    vec4 c11 = texelFetch(loopback, ivec2(texelpos)+ivec2(1,1), LOD);
-    vec2 k = fract(texelpos);
-    vec4 c0 = mix(c00, c01, k.y);
-    vec4 c1 = mix(c10, c11, k.y);
-    vec4 c = mix(c0, c1, k.x);
-    return c;
-}
 
 void main (void)
 {
@@ -34,19 +21,34 @@ void main (void)
 
     // loopback
     vec4 loopColor = fragColor;
+    vec4 loopColor2 = vec4(viewpos.xyz, 1);
     
-    vec4 outColor;
-    int LOD = int(d * 10);
+    // output
+    ivec2 st = ivec2(gl_FragCoord.st);
+    vec4 outColor = texelFetch(loopback, st, 0);
     if (material == MATERIAL(water)) {
-        outColor = blurred_fetch(LOD);
-        //outColor = vec4(0,0,1,1);
-        fragColor.a = 1;
+        outColor = vec4(0.5,0.7,1.0,1.0);
+        vec4 startpos = texelFetch(loopback2, st, 0);
+//        vec4 nextpos = texelFetch(loopback2, st + ivec2(0,10), 0);
+//        vec3 direction = normalize(nextpos.xyz-startpos.xyz);
+//        outColor.xyz = vec3(abs(normalize(nextpos.xyz-startpos.xyz)).z);
+        vec3 direction = normalize(dFdy(startpos.xyz));
+        for (int i = 10; i < 2000; i++) {
+            if (st.y + i >= screenSize.y) {
+                break;
+            }
+            vec4 pos = texelFetch(loopback2, st + ivec2(0,i), 0);
+            vec3 reflectDir = normalize(pos.xyz-startpos.xyz);
+            if (dot(reflectDir, direction) < dot(normalize(startpos.xyz-vec3(0,0,0)), direction)) {
+                outColor = texelFetch(loopback, st + ivec2(0,i), 0);
+                break;
+            }
+        }
+//        fragColor.a = 1;
     }
-    else {
-        outColor = texelFetch(loopback, ivec2(gl_FragCoord.st), 0);
-        //outColor = fragColor;
-    }
+//    outColor.xyz = vec3(1/abs(texelFetch(loopback2, st, 0).z));
         
     gl_FragData[0] = vec4(outColor.xyz,fragColor.a);
     gl_FragData[1] = loopColor;
+    gl_FragData[2] = loopColor2;
 }
