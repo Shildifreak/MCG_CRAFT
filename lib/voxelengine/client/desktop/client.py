@@ -1117,6 +1117,7 @@ class Window(pyglet.window.Window):
             block_shader.bind()
             block_shader.uniformi(b"color_texture",0)
             block_shader.uniformi(b"loopback",1)
+            block_shader.uniformi(b"loopback2",2)
 
 
     def on_close(self):
@@ -1698,20 +1699,28 @@ class Window(pyglet.window.Window):
         glGenTextures(1, gl.byref(self.tex_color0))
         glBindTexture(GL_TEXTURE_2D, self.tex_color0)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        #glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        #glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
         self.tex_color1_pair = [gl.GLuint(0), gl.GLuint(0)]
-        for tex_color1 in self.tex_color1_pair:
-            glGenTextures(1, gl.byref(tex_color1))
-            glBindTexture(GL_TEXTURE_2D, tex_color1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        self.tex_color2_pair = [gl.GLuint(0), gl.GLuint(0)]
+        for tex in self.tex_color1_pair + self.tex_color2_pair:
+            glGenTextures(1, gl.byref(tex))
+            glBindTexture(GL_TEXTURE_2D, tex)
+#            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         
+        glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE)
         
         # Bind the textures to the framebuffer.
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.tex_color0, 0)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, self.tex_color1_pair[0], 0)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, self.tex_color2_pair[0], 0)
 
         # Something may have gone wrong during the process, depending on the
         # capabilities of the GPU.
@@ -1727,10 +1736,10 @@ class Window(pyglet.window.Window):
         glBindRenderbuffer(GL_RENDERBUFFER, self.depthbuffer);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
         glBindTexture(GL_TEXTURE_2D, self.tex_color0)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
-        for tex_color1 in self.tex_color1_pair:
-            glBindTexture(GL_TEXTURE_2D, tex_color1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        for tex in self.tex_color1_pair + self.tex_color2_pair:
+            glBindTexture(GL_TEXTURE_2D, tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
     def begin_framebuffer_stuff(self):
         # bind framebuffer
@@ -1742,11 +1751,20 @@ class Window(pyglet.window.Window):
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, tex_color1_read)
         glGenerateMipmap(GL_TEXTURE_2D)
+
+        self.tex_color2_pair.reverse()
+        tex_color2_read, tex_color2_draw = self.tex_color2_pair
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, tex_color2_draw, 0)
+        glActiveTexture(GL_TEXTURE2)
+        glBindTexture(GL_TEXTURE_2D, tex_color2_read)
+        glGenerateMipmap(GL_TEXTURE_2D)
+
         glActiveTexture(GL_TEXTURE0)
         
         # turn on both color attachments
-        bufs = ctypes.POINTER(ctypes.c_uint)((ctypes.c_uint * 2)(GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1))
-        glDrawBuffers(2,bufs)
+        bufs = ctypes.POINTER(ctypes.c_uint)(
+            (ctypes.c_uint * 3)(GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2))
+        glDrawBuffers(3,bufs)
     
     def end_framebuffer_stuff(self):
         # blit image to default framebuffer
