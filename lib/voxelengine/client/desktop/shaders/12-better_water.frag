@@ -2,6 +2,7 @@
 
 varying vec4 color;
 varying vec4 viewpos;
+varying vec4 normal;
 uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
@@ -29,18 +30,20 @@ void main (void)
     if (material == MATERIAL(water)) {
         outColor = vec4(0.5,0.7,1.0,1.0);
         vec4 startpos = texelFetch(loopback2, st, 0);
-//        vec4 nextpos = texelFetch(loopback2, st + ivec2(0,10), 0);
-//        vec3 direction = normalize(nextpos.xyz-startpos.xyz);
-//        outColor.xyz = vec3(abs(normalize(nextpos.xyz-startpos.xyz)).z);
-        vec3 direction = normalize(dFdy(startpos.xyz));
-        for (int i = 10; i < 2000; i++) {
-            if (st.y + i >= screenSize.y) {
+        vec4 viewDir = normalize(startpos - vec4(0,0,0,1));
+        vec4 reflectDir = reflect(viewDir, normal);
+        vec4 clippos = gl_ProjectionMatrix * (startpos + reflectDir);
+        vec2 fragCoord2 = (0.5*clippos.xy/clippos.w + vec2(0.5,0.5)) * screenSize;
+        vec2 st_dir = normalize(fragCoord2 - gl_FragCoord.st);
+        for (int i = 10; i < 1080; i++) {
+            ivec2 st2 = ivec2(st + st_dir*i);
+            if (st2.y >= screenSize.y) {
                 break;
             }
-            vec4 pos = texelFetch(loopback2, st + ivec2(0,i), 0);
-            vec3 reflectDir = normalize(pos.xyz-startpos.xyz);
-            if (dot(reflectDir, direction) < dot(normalize(startpos.xyz-vec3(0,0,0)), direction)) {
-                outColor = texelFetch(loopback, st + ivec2(0,i), 0);
+            vec4 pos = texelFetch(loopback2, st2, 0);
+            vec4 direction = normalize(pos - startpos);
+            if (dot(direction, normal) > dot(-viewDir, normal)) {
+                outColor = texelFetch(loopback, st2, 0);
                 break;
             }
         }
