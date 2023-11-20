@@ -26,6 +26,12 @@ class EntityWorld(Serializable):
 			if entity.get("id",None) == entity_id:
 				return entity
 		raise KeyError()
+	
+	def get(self, entity_id, default=None):
+		try:
+			return self[entity_id]
+		except KeyError:
+			return default
 
 	def find_entities(self, area=EVERYWHERE, tags=frozenset()):
 		"""entities may be different in size in regards to different tags"""
