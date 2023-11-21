@@ -6,7 +6,7 @@ uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
 
-uniform float d;
+uniform float blur = 0.5;
 
 vec4 clampedTexelFetch(sampler2D texture, ivec2 position, int LOD) {
     ivec2 clampedPosition = clamp(position, ivec2(1,1), (ivec2(screenSize)>>LOD)-1);
@@ -61,7 +61,7 @@ void main (void)
     vec4 loopColor = fragColor;
     
     //vec4 outColor = blurred_fetch2(int(10*d), vec2(0,0));
-    vec4 outColor = blurred_fetch(10*d);
+    vec4 outColor = blurred_fetch(10*blur);
     
     gl_FragData[0] = vec4(outColor.xyz,fragColor.a);
     gl_FragData[1] = loopColor;

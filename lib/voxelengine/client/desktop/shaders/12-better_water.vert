@@ -7,6 +7,9 @@ varying vec4 normal;
 uniform int material;
 uniform float time = 0;
 
+uniform float height = 0.2;
+uniform float speed = 0.1;
+
 void main()
 {
     //normal = gl_NormalMatrix * gl_Normal;
@@ -44,10 +47,10 @@ void main()
         float sy_sum = 0;
         for (int i=0; i<yxzt_scale.length(); i++) {
             vec4 s = yxzt_scale[i];
-            sy_sum += s[0];
-            dy   += s[0] *      sin(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*time);
-            dydx += s[0] * s[1]*cos(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*time);
-            dydz += s[0] * s[2]*cos(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*time);
+            sy_sum += s[0]*5*height;
+            dy     += s[0]*5*height *      sin(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*10*speed*time);
+            dydx   += s[0]*5*height * s[1]*cos(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*10*speed*time);
+            dydz   += s[0]*5*height * s[2]*cos(s[1]*gl_Vertex.x + s[2]*gl_Vertex.z + s[3]*10*speed*time);
         }
         gl_Position.y += dy;
         gl_Position.y -= sy_sum;

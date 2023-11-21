@@ -1034,30 +1034,39 @@ class Window(pyglet.window.Window):
 
         # Settings
         self.settingswindow = None
-        self.slidervalues = {
-            "a": 0,
-            "b": 0.25,
-            "c": 0.5,
-            "d": 0.75,
-            "e": 1,
-        }
-        """
-        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
-        printf("Active Uniforms: %d\n", count);
-
-        for (i = 0; i < count; i++)
-        {
-            glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, name);
-
-            printf("Uniform #%d Type: %u Name: %s\n", i, type, name);
-        }
-        """
+        self.slidervalues = {}
+        self.update_settings_options()
         self.t0 = time.time()
 
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
         self.client = client
+        
+    def update_settings_options(self):
+        self.slidervalues.clear()
+
+        block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        active_uniforms = block_shader.get_active_uniforms()
+
+        for u in active_uniforms:
+            if u.type != GL_FLOAT:
+                continue
+            if u.name.startswith(b"gl_"):
+                continue
+            if u.name == b"time":
+                continue
+            self.slidervalues[u.name.decode()] = block_shader.get_uniformf(u.name)
+        
+        if self.settingswindow:
+            self.settingswindow.reload()
+        
+    def open_settingswindow(self):
+        if self.settingswindow: #using activate has inconsistent behaviour so just close and reopen
+            self.settingswindow.close()
+            self.switch_to() # switch opengl context
+        self.set_exclusive_mouse(False)
+        self.settingswindow = SettingsWindow(self.slidervalues)
 
     def reload_shaders(self):
         fragment_shaders = dict() # {name: source_code_bytes, ...}
@@ -1506,24 +1515,17 @@ class Window(pyglet.window.Window):
                 self.set_exclusive_mouse(False)
         else:
             if symbol == key.F1:
-                if not self.settingswindow:
-                    self.set_exclusive_mouse(False)
-                    self.settingswindow = SettingsWindow(self.slidervalues)
-                    @self.settingswindow.event
-                    def on_close():
-                        self.settingswindow = None
-                    self.activate()
-                else:
-                    self.settingswindow.close()
-                    self.settingswindow = None
+                self.open_settingswindow()
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
                 self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
+                self.update_settings_options()
             if symbol == key.F5:
                 self.active_shader_ii += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_ii %= len(self.active_shader_is)
+                self.update_settings_options()
             if symbol == key.F6:
                 self.camera_distance = 10 - self.camera_distance
             if symbol == key.F7:
@@ -1866,7 +1868,7 @@ class Window(pyglet.window.Window):
         vector = self.get_sight_vector(self.player_rotation)
         if CHUNKSIZE == None:
             return
-        block = Ray(self.player_position, vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", focus_distance)[1]
+        block = Ray(self.player_position, vector).hit_test(lambda pos:self.model.get_block(pos)not in("AIR","WATER"), focus_distance)[1]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
@@ -1910,19 +1912,27 @@ class MySlider(pyglet.gui.Slider):
 
 class SettingsWindow(pyglet.window.Window):
     def __init__(self, slidervalues):
+        super().__init__(500, 500, caption="Widget Example")#, style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
         self.slidervalues = slidervalues
-        height = len(slidervalues) * 50 + 100
-        super().__init__(500, height, caption="Widget Example")
+        self.closed = False
+        self.reload()
+
+    def reload(self):
+        height = len(self.slidervalues) * 50 + 100
+        self.height = height
         self.batch = pyglet.graphics.Batch()
 
         # A Frame instance to hold all Widgets:
         self.frame = pyglet.gui.Frame(self, order=4)
 
         self.sliders = {}
-        for i, (name, value) in enumerate(sorted(slidervalues.items())):
+        for i, (name, value) in enumerate(sorted(self.slidervalues.items())):
             y = height - 50*(i+1.5) 
             self.sliders[name] = MySlider(self, name, 100, y, self.batch, self.frame, value)
             
+    def on_key_press(self, symbol, modifiers):
+        if symbol == key.F1:
+            self.close()
 
     def on_draw(self):
         pyglet.gl.glClearColor(0.8, 0.8, 0.8, 1.0)
@@ -1931,6 +1941,17 @@ class SettingsWindow(pyglet.window.Window):
     
     def on_slider_change(self, name, value):
         self.slidervalues[name] = value
+
+    def on_close(self):
+        self.closed = True
+        super().on_close()
+    
+    def close(self):
+        self.closed = True
+        super().close()
+
+    def __bool__(self):
+        return not self.closed
 
 def setup_fog(fog_color):
     """
