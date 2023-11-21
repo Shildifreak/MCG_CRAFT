@@ -114,33 +114,6 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
-vertex_shader_code = b"""
-#version 130
-
-varying vec4 color;
-varying vec4 viewpos;
-varying vec4 normal;
-
-void main()
-{
-    //normal = gl_NormalMatrix * gl_Normal;
-    // hack: using up vector only works on top surface of blocks
-    // notice: there are issues with using modelViewMatrix instead of proper normalMatrix when doing non-uniform scale
-    normal = gl_ModelViewMatrix * vec4(0,1,0,0);
-
-    color = gl_Color;
-    gl_Position = ftransform(); // fixed pipeline equivalent of gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
-    gl_TexCoord[0] = gl_MultiTexCoord0;
-
-    // fog stuff (https://community.khronos.org/t/opengl-fog-and-shaders/52902)
-    vec4 eyePos = gl_ModelViewMatrix * gl_Vertex;
-    gl_FogFragCoord = abs(eyePos.z/eyePos.w);
-    
-    // more info for fragment shaders to play with
-    viewpos = gl_ModelViewMatrix * gl_Vertex;
-}
-"""
-
 
 class TextGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -1079,6 +1052,7 @@ class Window(pyglet.window.Window):
             printf("Uniform #%d Type: %u Name: %s\n", i, type, name);
         }
         """
+        self.t0 = time.time()
 
         # some function to tell about events
         if not client:
@@ -1086,15 +1060,17 @@ class Window(pyglet.window.Window):
         self.client = client
 
     def reload_shaders(self):
-        global vertex_shader_code
         fragment_shaders = dict() # {name: source_code_bytes, ...}
+        vertex_shaders = dict()
         shaders_dir = os.path.join(PATH,"shaders")
         for filename in os.listdir(shaders_dir):
             shadername, extension = os.path.splitext(filename)
-            if extension == ".frag":
+            if extension in (".frag", ".vert"):
                 path = os.path.join(shaders_dir,filename)
                 with open(path, "rb")  as f:
-                    fragment_shaders[shadername] = f.read()
+                    {".frag":fragment_shaders,
+                     ".vert":vertex_shaders,
+                    }[extension][shadername] = f.read()
 
         def replace_macros(shader_code):
             # material macros
@@ -1109,12 +1085,14 @@ class Window(pyglet.window.Window):
             shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
             return shader_code
 
-        vertex_shader_code = replace_macros(vertex_shader_code)
+        vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
         fragment_shaders = {k:replace_macros(v) for k,v in fragment_shaders.items()}
 
-        self.block_shader_names = sorted(fragment_shaders)
+        self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
+        default = self.block_shader_names[0]
         self.block_shaders = tuple(
-                Shader([vertex_shader_code], [fragment_shaders[name]])
+                Shader([vertex_shaders.get(name,vertex_shaders[default])],
+                       [fragment_shaders.get(name,fragment_shaders[default])])
             for name in self.block_shader_names
         )
         
@@ -1823,6 +1801,7 @@ class Window(pyglet.window.Window):
         block_shader.bind()
         width, height = self.get_size()
         block_shader.uniformf(b"screenSize", width, height)
+        block_shader.uniformf(b"time", time.time()-self.t0)
         for name, value in self.slidervalues.items():
             block_shader.uniformf(bytes(name,"utf-8"), value)
         self.model.batch.draw()
