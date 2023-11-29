@@ -3,6 +3,7 @@ import _thread as thread
 import threading
 import time
 import base64
+import hashlib
 
 from voxelengine.modules.message_buffer import MessageBuffer
 from voxelengine.modules.shared import ACTIONS
@@ -145,9 +146,12 @@ class Player(object):
 	### it follows a long list of private methods that make sure a player acts like one ###
 
 	def _control_request(self, entity_id, password):
-		for entity in itertools.chain(*(world.entities.entities for world in self.universe.worlds)):
-			if entity.get("id",object()) == entity_id:
-				if entity.get("password",object()) == password:
+		password_hash = hashlib.sha256(password.encode()).hexdigest()
+		del password
+		for world in self.universe.worlds:
+			entity = world.entities.get(entity_id, None)
+			if entity is not None:
+				if entity.get("password_hash",object()) == password_hash:
 					break
 				else:
 					self.outbox.add("error", "Wrong password for controlling entity %s"%entity_id, True)
@@ -161,7 +165,7 @@ class Player(object):
 				is_tmp = False
 			entity = self.create_character()
 			entity["id"] = entity_id
-			entity["password"] = password
+			entity["password_hash"] = password_hash
 			entity["is_tmp"] = is_tmp
 		self.control(entity)
 		

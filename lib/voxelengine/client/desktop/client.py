@@ -17,6 +17,7 @@ import urllib.request
 import io
 import base64
 import ctypes
+import re
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -113,28 +114,6 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
-vertex_shader_code = b"""
-#version 130
-
-varying vec4 color;
-varying vec4 viewpos;
-
-void main()
-{
-    //normal = gl_NormalMatrix * gl_Normal;
-    color = gl_Color;
-    gl_Position = ftransform(); // fixed pipeline equivalent of gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
-    gl_TexCoord[0] = gl_MultiTexCoord0;
-
-    // fog stuff (https://community.khronos.org/t/opengl-fog-and-shaders/52902)
-    vec4 eyePos = gl_ModelViewMatrix * gl_Vertex;
-    gl_FogFragCoord = abs(eyePos.z/eyePos.w);
-    
-    // more info for fragment shaders to play with
-    viewpos = gl_ModelViewMatrix * gl_Vertex;
-}
-"""
-
 
 class TextGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -143,19 +122,37 @@ class TextGroup(pyglet.graphics.OrderedGroup):
     def unset_state(self):
         super(TextGroup,self).unset_state()
         glEnable(GL_DEPTH_TEST)
-class ColorkeyGroup(pyglet.graphics.OrderedGroup):
+
+class MaterialGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
-        super(ColorkeyGroup,self).set_state()
+        super().set_state()
+        prog = GLint (0);
+        glGetIntegerv(GL_CURRENT_PROGRAM, gl.byref(prog));
+        if prog.value:
+            location = glGetUniformLocation(prog.value, b"material");
+            glUniform1i(location, self.order)
+
+class TransparentMaterialGroup(MaterialGroup):
+    def set_state(self):
+        super().set_state()
         glDisable(GL_CULL_FACE)
         glEnable(GL_ALPHA_TEST)
         glAlphaFunc(GL_GREATER, 0)
     def unset_state(self):
-        super(ColorkeyGroup,self).unset_state()
+        super().unset_state()
         glEnable(GL_CULL_FACE)
         glDisable(GL_ALPHA_TEST)
-textgroup = TextGroup(2)
-colorkey_group = ColorkeyGroup(1)
-normal_group = pyglet.graphics.OrderedGroup(0)
+
+class SemiTransparentMaterialGroup(MaterialGroup):
+    def set_state(self):
+        super().set_state()
+        #glDisable(GL_CULL_FACE)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    def unset_state(self):
+        super().unset_state()
+        #glEnable(GL_CULL_FACE)
+        glDisable(GL_BLEND)
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -302,7 +299,7 @@ class BlockModelDict(dict):
         return model
         
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIALS, MATERIAL, material_groups, textgroup
     def url_for(filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
@@ -318,15 +315,17 @@ def load_setup(host, port):
     TRANSPARENCY = {"AIR":True}
     CONNECTED = {}
     FOG = {}
+    MATERIAL = {}
     ICON = collections.defaultdict(lambda:ICON["missing_texture"])
     BLOCKMODELS = BlockModelDict()
-    BLOCKNAMES = []
-    for name, transparency, connected, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
+    #BLOCKNAMES = []
+    for name, transparency, connected, material, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
         BLOCKMODELS[name] = block_model(vertices, textures)
         ICON[name] = tex_coord(*icon_coords)
         TRANSPARENCY[name] = transparency
         CONNECTED[name] = connected
         FOG[name] = fog
+        MATERIAL[name] = material
     
     SOUNDS = {}
     sound_files = {}
@@ -337,6 +336,23 @@ def load_setup(host, port):
         sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
     for sound, filename in description["SOUNDS"].items():
         SOUNDS[sound] = sound_files[filename]
+    
+    MATERIALS = sorted(set(MATERIAL.values())) #M# find better order than just alphabetically?
+    print("detected materials:", MATERIALS)
+    material_class_map = collections.defaultdict(
+        lambda:TransparentMaterialGroup,
+        {
+        "solid" : MaterialGroup,
+        "transparent" : TransparentMaterialGroup,
+        "water" : SemiTransparentMaterialGroup,
+        }
+    )
+    material_groups = {
+        material : material_class_map[material](i)
+        for i, material in enumerate(MATERIALS)
+    }
+    textgroup = TextGroup(len(material_groups))
+
 
 def is_transparent(block_name):
     return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
@@ -346,6 +362,9 @@ def is_connected(block_name):
 
 def get_fog(block_name):
     return FOG.get(block_name.rsplit(":",1)[0],(255,255,255,0))
+
+def get_material(block_name):
+    return MATERIAL.get(block_name.rsplit(":",1)[0], "solid")
 
 #M# improve order of chunkpositions for better caching!
 CHUNKPOSITIONS = tuple(map(Vector, itertools.product(range(CHUNKSIZE),repeat=DIMENSION)))
@@ -484,9 +503,10 @@ class Model(object):
         with urllib.request.urlopen(TEXTURE_URL) as texture_stream:
             texture_buffer = io.BytesIO(texture_stream.read())
             texture = image.load("", file=texture_buffer).get_texture() #possible to use image.load(file=filedescriptor) if necessary
-        self.textured_normal_group = TextureGroup(texture, parent = normal_group) 
-        self.textured_colorkey_group = TextureGroup(texture, parent = colorkey_group)
-
+        self.textured_material_groups = {
+            name:TextureGroup(texture, parent = g) for name,g in material_groups.items()
+        }
+ 
         self.shown = {} #{(position,face):vertex_list(batch_element)}
         self.chunks = ChunkManager()
         self.blocks = BlockStorage()
@@ -652,7 +672,7 @@ class Model(object):
         if not (vertex_data and texture_data):
             return
         vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
-        group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
+        group = self.textured_material_groups[get_material(block_name)]
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
         length = len(vertex_data)//3
@@ -713,7 +733,7 @@ class Model(object):
                 offset = offset if modelpart in ("head","legl","legr") else relpos
                 block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
                 blockmodel = BLOCKMODELS[block_name]
-                group = self.textured_colorkey_group if is_transparent(block_name) else self.textured_normal_group
+                group = self.textured_material_groups[get_material(block_name)]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
                     #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
@@ -771,7 +791,7 @@ class Model(object):
             vertex_list = None
         elif not texture.startswith ("/"):
             texture_data = list(ICON[texture])
-            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_colorkey_group,
+            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_material_groups["transparent"],
                             ('v3f/static', corners),
                             ('t2f/static', texture_data))
         else:
@@ -1014,32 +1034,74 @@ class Window(pyglet.window.Window):
 
         # Settings
         self.settingswindow = None
-        self.slidervalues = {
-            "a": 0,
-            "b": 0.25,
-            "c": 0.5,
-            "d": 0.75,
-            "e": 1,
-        }
+        self.slidervalues = {}
+        self.update_settings_options()
+        self.t0 = time.time()
 
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
         self.client = client
+        
+    def update_settings_options(self):
+        self.slidervalues.clear()
+
+        block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        active_uniforms = block_shader.get_active_uniforms()
+
+        for u in active_uniforms:
+            if u.type != GL_FLOAT:
+                continue
+            if u.name.startswith(b"gl_"):
+                continue
+            if u.name == b"time":
+                continue
+            self.slidervalues[u.name.decode()] = block_shader.get_uniformf(u.name)
+        
+        if self.settingswindow:
+            self.settingswindow.reload()
+        
+    def open_settingswindow(self):
+        if self.settingswindow: #using activate has inconsistent behaviour so just close and reopen
+            self.settingswindow.close()
+            self.switch_to() # switch opengl context
+        self.set_exclusive_mouse(False)
+        self.settingswindow = SettingsWindow(self.slidervalues)
 
     def reload_shaders(self):
-        FRAGMENT_SHADERS = dict() # {name: source_code_bytes, ...}
+        fragment_shaders = dict() # {name: source_code_bytes, ...}
+        vertex_shaders = dict()
         shaders_dir = os.path.join(PATH,"shaders")
         for filename in os.listdir(shaders_dir):
             shadername, extension = os.path.splitext(filename)
-            if extension == ".frag":
+            if extension in (".frag", ".vert"):
                 path = os.path.join(shaders_dir,filename)
                 with open(path, "rb")  as f:
-                    FRAGMENT_SHADERS[shadername] = f.read()
+                    {".frag":fragment_shaders,
+                     ".vert":vertex_shaders,
+                    }[extension][shadername] = f.read()
 
-        self.block_shader_names = sorted(FRAGMENT_SHADERS)
+        def replace_macros(shader_code):
+            # material macros
+            def repl(match):
+                material = match.groups()[0].decode()
+                if material in MATERIALS:
+                    i = MATERIALS.index(material)
+                else:
+                    print("shader used unknown material",material)
+                    i = -1
+                return str(i).encode()
+            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
+            return shader_code
+
+        vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
+        fragment_shaders = {k:replace_macros(v) for k,v in fragment_shaders.items()}
+
+        self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
+        default = self.block_shader_names[0]
         self.block_shaders = tuple(
-                Shader([vertex_shader_code], [FRAGMENT_SHADERS[name]])
+                Shader([vertex_shaders.get(name,vertex_shaders[default])],
+                       [fragment_shaders.get(name,fragment_shaders[default])])
             for name in self.block_shader_names
         )
         
@@ -1047,6 +1109,7 @@ class Window(pyglet.window.Window):
             block_shader.bind()
             block_shader.uniformi(b"color_texture",0)
             block_shader.uniformi(b"loopback",1)
+            block_shader.uniformi(b"loopback2",2)
 
 
     def on_close(self):
@@ -1452,24 +1515,17 @@ class Window(pyglet.window.Window):
                 self.set_exclusive_mouse(False)
         else:
             if symbol == key.F1:
-                if not self.settingswindow:
-                    self.set_exclusive_mouse(False)
-                    self.settingswindow = SettingsWindow(self.slidervalues)
-                    @self.settingswindow.event
-                    def on_close():
-                        self.settingswindow = None
-                    self.activate()
-                else:
-                    self.settingswindow.close()
-                    self.settingswindow = None
+                self.open_settingswindow()
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F4:
                 self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
+                self.update_settings_options()
             if symbol == key.F5:
                 self.active_shader_ii += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_ii %= len(self.active_shader_is)
+                self.update_settings_options()
             if symbol == key.F6:
                 self.camera_distance = 10 - self.camera_distance
             if symbol == key.F7:
@@ -1628,20 +1684,28 @@ class Window(pyglet.window.Window):
         glGenTextures(1, gl.byref(self.tex_color0))
         glBindTexture(GL_TEXTURE_2D, self.tex_color0)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        #glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        #glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
         self.tex_color1_pair = [gl.GLuint(0), gl.GLuint(0)]
-        for tex_color1 in self.tex_color1_pair:
-            glGenTextures(1, gl.byref(tex_color1))
-            glBindTexture(GL_TEXTURE_2D, tex_color1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        self.tex_color2_pair = [gl.GLuint(0), gl.GLuint(0)]
+        for tex in self.tex_color1_pair + self.tex_color2_pair:
+            glGenTextures(1, gl.byref(tex))
+            glBindTexture(GL_TEXTURE_2D, tex)
+#            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         
+        glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE)
         
         # Bind the textures to the framebuffer.
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.tex_color0, 0)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, self.tex_color1_pair[0], 0)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, self.tex_color2_pair[0], 0)
 
         # Something may have gone wrong during the process, depending on the
         # capabilities of the GPU.
@@ -1657,10 +1721,10 @@ class Window(pyglet.window.Window):
         glBindRenderbuffer(GL_RENDERBUFFER, self.depthbuffer);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
         glBindTexture(GL_TEXTURE_2D, self.tex_color0)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
-        for tex_color1 in self.tex_color1_pair:
-            glBindTexture(GL_TEXTURE_2D, tex_color1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
+        for tex in self.tex_color1_pair + self.tex_color2_pair:
+            glBindTexture(GL_TEXTURE_2D, tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None)
 
     def begin_framebuffer_stuff(self):
         # bind framebuffer
@@ -1672,11 +1736,20 @@ class Window(pyglet.window.Window):
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, tex_color1_read)
         glGenerateMipmap(GL_TEXTURE_2D)
+
+        self.tex_color2_pair.reverse()
+        tex_color2_read, tex_color2_draw = self.tex_color2_pair
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, tex_color2_draw, 0)
+        glActiveTexture(GL_TEXTURE2)
+        glBindTexture(GL_TEXTURE_2D, tex_color2_read)
+        glGenerateMipmap(GL_TEXTURE_2D)
+
         glActiveTexture(GL_TEXTURE0)
         
         # turn on both color attachments
-        bufs = ctypes.POINTER(ctypes.c_uint)((ctypes.c_uint * 2)(GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1))
-        glDrawBuffers(2,bufs)
+        bufs = ctypes.POINTER(ctypes.c_uint)(
+            (ctypes.c_uint * 3)(GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2))
+        glDrawBuffers(3,bufs)
     
     def end_framebuffer_stuff(self):
         # blit image to default framebuffer
@@ -1730,6 +1803,7 @@ class Window(pyglet.window.Window):
         block_shader.bind()
         width, height = self.get_size()
         block_shader.uniformf(b"screenSize", width, height)
+        block_shader.uniformf(b"time", time.time()-self.t0)
         for name, value in self.slidervalues.items():
             block_shader.uniformf(bytes(name,"utf-8"), value)
         self.model.batch.draw()
@@ -1794,7 +1868,7 @@ class Window(pyglet.window.Window):
         vector = self.get_sight_vector(self.player_rotation)
         if CHUNKSIZE == None:
             return
-        block = Ray(self.player_position, vector).hit_test(lambda pos:self.model.get_block(pos)!="AIR", focus_distance)[1]
+        block = Ray(self.player_position, vector).hit_test(lambda pos:self.model.get_block(pos)not in("AIR","WATER"), focus_distance)[1]
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
@@ -1821,8 +1895,8 @@ class MySlider(pyglet.gui.Slider):
 
     def __init__(self, parent, name, x, y, batch, frame, value):
         if not MySlider.bar:
-            MySlider.bar = pyglet.resource.image('bar.png')
-            MySlider.knob = pyglet.resource.image('knob.png')
+            MySlider.bar = pyglet.image.load(os.path.join(PATH, 'bar.png')).get_texture()
+            MySlider.knob = pyglet.image.load(os.path.join(PATH, 'knob.png')).get_texture()
 
         super().__init__(x, y, self.bar, self.knob, edge=5, batch=batch)
         frame.add_widget(self)
@@ -1838,19 +1912,27 @@ class MySlider(pyglet.gui.Slider):
 
 class SettingsWindow(pyglet.window.Window):
     def __init__(self, slidervalues):
+        super().__init__(500, 500, caption="Widget Example")#, style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
         self.slidervalues = slidervalues
-        height = len(slidervalues) * 50 + 100
-        super().__init__(500, height, caption="Widget Example")
+        self.closed = False
+        self.reload()
+
+    def reload(self):
+        height = len(self.slidervalues) * 50 + 100
+        self.height = height
         self.batch = pyglet.graphics.Batch()
 
         # A Frame instance to hold all Widgets:
         self.frame = pyglet.gui.Frame(self, order=4)
 
         self.sliders = {}
-        for i, (name, value) in enumerate(sorted(slidervalues.items())):
+        for i, (name, value) in enumerate(sorted(self.slidervalues.items())):
             y = height - 50*(i+1.5) 
             self.sliders[name] = MySlider(self, name, 100, y, self.batch, self.frame, value)
             
+    def on_key_press(self, symbol, modifiers):
+        if symbol == key.F1:
+            self.close()
 
     def on_draw(self):
         pyglet.gl.glClearColor(0.8, 0.8, 0.8, 1.0)
@@ -1859,6 +1941,17 @@ class SettingsWindow(pyglet.window.Window):
     
     def on_slider_change(self, name, value):
         self.slidervalues[name] = value
+
+    def on_close(self):
+        self.closed = True
+        super().on_close()
+    
+    def close(self):
+        self.closed = True
+        super().close()
+
+    def __bool__(self):
+        return not self.closed
 
 def setup_fog(fog_color):
     """

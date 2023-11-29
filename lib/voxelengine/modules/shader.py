@@ -1,5 +1,6 @@
 #
 # Copyright Tristam Macdonald 2008.
+# Edited by Joram Brenz 2023
 #
 # Distributed under the Boost Software License, Version 1.0
 # (see http://www.boost.org/LICENSE_1_0.txt)
@@ -10,6 +11,7 @@
 
 from pyglet.gl import *
 from ctypes import *
+import collections
 
 class Shader:
 	# vert, frag and geom take arrays of source strings
@@ -114,10 +116,34 @@ class Shader:
 	# as well as euclid matrices
 	def uniform_matrixf(self, name, mat):
 		# obtian the uniform location
-		loc = glGetUniformLocation(self.Handle, name)
+		loc = glGetUniformLocation(self.handle, name)
 		# uplaod the 4x4 floating point matrix
 		glUniformMatrix4fv(loc, 1, False, (c_float * 16)(*mat))
 
+	def get_active_uniforms(self):
+		active_uniforms = []
+		Uniform = collections.namedtuple("Uniform", ["name", "type", "size"])
 
+		count = c_int()
+		glGetProgramiv(self.handle, GL_ACTIVE_UNIFORMS, byref(count));
 
+		bufSize = 100
+		length = GLsizei()
+		size = GLint()
+		type = GLenum()
+		name = (GLchar * bufSize)()
+		for i in range(count.value):
+			glGetActiveUniform(self.handle, GLuint(i), bufSize, byref(length), byref(size), byref(type), name);
+			assert length.value == len(name.value)
+			active_uniforms.append(Uniform(name.value, type.value, size.value))
+		return active_uniforms
 
+	def get_uniformf(self, name, n=None):
+		"""set n to read vector of size n
+		if n is None, returns float directly instead of tuple with one float inside"""
+		params = (GLfloat*(n or 1))()
+		loc = glGetUniformLocation(self.handle, name)
+		glGetUniformfv(self.handle, loc, params)
+		if n is None:
+			return tuple(params)[0]
+		return tuple(params)
