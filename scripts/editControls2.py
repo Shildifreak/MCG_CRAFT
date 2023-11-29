@@ -97,6 +97,7 @@ def on_draw():
 
 def assign_action(event_type, event_id):
     global recording, changed_since_save
+    print(event_type, event_id)
     if recording == None:
         return
     event = (event_type, event_id)
@@ -210,7 +211,11 @@ for joystick in joysticks:
     joystick.open()
     joystick.resting_positions = {}
     joystick.push_handlers(JoystickHandler())
-    
+
+remote = pyglet.input.get_apple_remote()
+if remote:
+    print("apple remote not supported")
+
 recording_label = pyglet.text.Label('Placeholder Text',
                           font_name='Times New Roman',
                           font_size=36,
