@@ -10,12 +10,11 @@ import traceback
 import pprint
 
 from voxelengine.server.blocks.block_world import BlockWorld
-from voxelengine.server.event_system import EventSystem, Event
+from voxelengine.server.event_system import EventSystem
 from voxelengine.server.entities.entity_world import EntityWorld
 from voxelengine.server.players.player_world import PlayerWorld
 
-from voxelengine.modules.serializableCollections import Serializable, serialize, extended_literal_eval
-from voxelengine.modules.geometry import Vector, Box, Sphere
+from voxelengine.modules.serializableCollections import Serializable
 from voxelengine.server.blocks.block import BlockFactory
 from voxelengine.server.entities.entity import EntityFactory
 
@@ -42,7 +41,8 @@ class Clock(dict):
 		self.tick_event.set(); self.tick_event.clear()
 
 class World(Serializable):
-	def __init__(self, data, blockFactory=BlockFactory, entityFactory=EntityFactory):
+	def __init__(self, universe, data, blockFactory=BlockFactory, entityFactory=EntityFactory):
+		self.universe = universe
 		self.data = data
 		self.clock        = data["metadata"]["clock"] = Clock(data["metadata"]["clock"])
 		self.event_system = data["events"]            = EventSystem(self, data["events"])
@@ -67,18 +67,6 @@ class World(Serializable):
 		# tick
 		self.event_system.tick()
 		self.clock.tick(dt)
-
-	@staticmethod
-	def parse_data_from_string(string):
-		save_constructors = {"Vector":Vector,
-		                     "Box"   :Box,
-		                     "Sphere":Sphere,
-		                     "Event" :Event,
-		                     }
-		return extended_literal_eval(string, save_constructors)
-	
-	def serialize(self):
-		return serialize(self, (Vector, Box, Sphere, Event))
 
 if __name__ == "__main__":
 	from voxelengine.server.world import World

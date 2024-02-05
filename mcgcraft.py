@@ -718,8 +718,9 @@ def run():
     if os.path.exists(savegamepath):
         print("== Loading World ==")
         with open(savegamepath) as savegamefile:
-            data = World.parse_data_from_string(savegamefile.read())
-        w = World(data)
+            data = voxelengine.Universe.parse_data_from_string(savegamefile.read())
+        u = voxelengine.Universe(data, WorldFactory=World)
+        #w = u.new_world(data, WorldClass=World)
     else:
         print("== Preparing World ==")
         data = copy.deepcopy(voxelengine.server.world_data_template.data)
@@ -740,7 +741,8 @@ def run():
         else:
                 generator_data["code_js"] = ""
         print("== Creating World ==", flush=True)
-        w = World(data)
+        u = voxelengine.Universe(WorldFactory=World)
+        w = u.new_world(data)
         print("== Initialising world ==", flush=True)
         t = time.time()
         w.blocks.world_generator.init(w)
@@ -750,11 +752,11 @@ def run():
 
     def save():
         print("Preparing Savestate", flush=True)
-        data = w.serialize()
+        data = u.serialize()
         data_string = repr(data)
         print("Checking Savestate ... ", end="", flush=True)
         try:
-            World.parse_data_from_string(data_string)
+            voxelengine.Universe.parse_data_from_string(data_string)
         except Exception as e:
             print("failed: world data not parsable")
             pprint.pprint(data)
@@ -769,9 +771,6 @@ def run():
             else:
                 print("skipped: missing path")
         config["save"] = False
-
-    u = voxelengine.Universe()
-    u.worlds.append(w)
 
     settings = {"wait" : False,
                 "name" : config["name"],
