@@ -540,7 +540,10 @@ class Entity(voxelengine.Entity):
                     velocity *= inverted_mask
                 else:
                     pos = new
+        if pos != entity["position"]:
+            entity["position"] = pos
         if velocity != entity["velocity"]:
+            entity["velocity"] = velocity
             dv = (velocity - entity["velocity"]).length()
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             if dv > 1 and entity.riding:
@@ -549,9 +552,6 @@ class Entity(voxelengine.Entity):
                 print("unmount by collision")
             if dv > 20:
                 entity.take_damage(1)
-            entity["velocity"] = velocity
-        if pos != entity["position"]:
-            entity["position"] = pos
     
     def execute_ai_commands(self):
         """
