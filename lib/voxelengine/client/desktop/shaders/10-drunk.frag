@@ -5,6 +5,8 @@ uniform vec2 screenSize;
 uniform sampler2D color_texture;
 uniform sampler2D loopback;
 
+uniform float e;
+
 void main (void)
 {
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
@@ -23,7 +25,7 @@ void main (void)
     
     vec4 loopColor = mix(loopbackColor, fragColor, 0.03);
     
-    vec2 offset = vec2(-100, 0);
+    vec2 offset = vec2(-100*e, 0);
     vec4 loopbackColorL = texelFetch(loopback, ivec2((gl_FragCoord.st+smearing-offset)/(1<<LOD)), LOD);
     vec4 loopbackColorR = texelFetch(loopback, ivec2((gl_FragCoord.st+smearing+offset)/(1<<LOD)), LOD);
     vec4 outColor = mix(loopbackColorL, loopbackColorR, (gl_FragCoord.s+offset.x)/(screenSize.x+2*offset.x));

@@ -3,6 +3,9 @@
 varying vec4 color;
 uniform sampler2D color_texture;
 
+uniform float d;
+uniform float e;
+
 void main (void)
 {
     vec4 tex_color = texture2D(color_texture, gl_TexCoord[0].st);
@@ -14,8 +17,8 @@ void main (void)
     gl_FragColor = vec4(mix(gl_Fog.color.rgb, gl_FragColor.rgb, fogFactor), gl_FragColor.a);
 
     // raster stuff
-    vec2 fc = floor(gl_FragCoord.xy / 1);
-    vec2 f = fract(fc / 3);
+    vec2 fc = floor(gl_FragCoord.xy / (1+10*e));
+    vec2 f = fract(fc / int(2+100*d));
     float o = (0.3*f.x + 0.7*f.y - 0.5);
     
     // mix up signs to make less blocky
