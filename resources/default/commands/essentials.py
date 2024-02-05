@@ -4,6 +4,15 @@ def _help(context, command:Command.COMMAND):
 	"""print a commands docstring to chat"""
 	context.send_feedback(command.__doc__)
 
+@register_command("list",0)
+def _list(context):
+	"""print list of commands"""
+	text = "\n".join(command_name
+		for command_name, command_func in Command.commands.items()
+		if context.permission_level >= command_func.permission_level
+	)
+	context.send_feedback(text)
+
 @register_command("goto",4.1)
 def goto(context, x : Command.FLOAT, y : Command.FLOAT, z : Command.FLOAT):
 	"""teleport entity to the given position"""
@@ -25,6 +34,12 @@ def entity(context, entity : Command.ENTITY, subcommand : Command.SUBCOMMAND):
 	context.entity = entity
 	context.execute(subcommand)
 
+@register_command("at", 9)
+def goto(context, x : Command.FLOAT, y : Command.FLOAT, z : Command.FLOAT, subcommand : Command.SUBCOMMAND):
+	"""execute subcommand at given position"""
+	context.position = Vector(x,y,z)
+	context.execute(subcommand)
+
 @register_command("log",0)
 def log(context, message : Command.FREETEXT):
 	"""add timestamp and message to the server log"""
@@ -39,3 +54,10 @@ def gamemode(context, gamemode : Command.GAMEMODE):
 def damage(context, amount:Command.INT(1)):
 	"""damage entity"""
 	context.entity.take_damage(amount)
+
+@register_command("spawnpoint",4.0)
+def spawnpoint(context):
+	world_index = context.world.universe.worlds.index(context.world)
+	position = context.position
+	context.entity["spawn"] = (world_index, position)
+	context.send_feedback("new spawnpoint was set")

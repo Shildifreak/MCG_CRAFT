@@ -26,6 +26,7 @@ class Mensch(Entity):
             "open_inventory" : False, #set player.entity.foreign_inventory then trigger opening by setting this attribute
             "lives" : 9,
             "tags" : {"random_tick_source","update"},
+            "spawn" : (None, None), # (world_index, position)
         }
         if data != None:
             data_defaults.update(data)
@@ -60,6 +61,14 @@ class Mensch(Entity):
 
     def die_and_respawn(self):
         # die
-        self["position"] = self.world.blocks.world_generator.spawnpoint
+        world_index, position = self["spawn"]
+        if world_index is None:
+            world = self.world.universe.get_spawn_world()
+        else:
+            world = self.world.universe.worlds[world_index]
+        if position is None:
+            position = self.world.blocks.world_generator.spawnpoint
+        self.set_world(world,position)
+        print("respawn", world_index, position)
         # respawn
         self["lives"] = 9

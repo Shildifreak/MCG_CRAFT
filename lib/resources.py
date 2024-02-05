@@ -680,7 +680,8 @@ class Command(object):
         insight
            3 - commands with slight insight (locate, ...)
         positive to self
-           4.1 - commands with slight positive effects (goto, ...)
+           4.0 - commands with small positive effects (spawn, ...)
+           4.1 - commands with medium positive effects (goto, ...)
            4.2 - commands with great positive effect (give, ...)
            4.9 - commands with creative power (gamemode, ...)
         directly affect world and other entities
