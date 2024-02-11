@@ -476,14 +476,6 @@
             12,
             7
         ],
-        "missing_texture": [
-            15,
-            0
-        ],
-        "transparent": [
-            14,
-            0
-        ],
         "kaktus_side": [
             4,
             14
@@ -647,10 +639,6 @@
         "door": [
             14,
             11
-        ],
-        "ARROW": [
-            7,
-            9
         ],
         "bluestone_dust_0": [
             0,
@@ -851,22 +839,6 @@
         "noteblock": [
             7,
             10
-        ],
-        "inventory_background": [
-            13,
-            0
-        ],
-        "inventory_border_blue": [
-            10,
-            0
-        ],
-        "inventory_border_red_blue": [
-            11,
-            0
-        ],
-        "inventory_border_red": [
-            12,
-            0
         ],
         "nether_gold_erz": [
             8,

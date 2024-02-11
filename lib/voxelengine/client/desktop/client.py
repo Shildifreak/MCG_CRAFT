@@ -336,8 +336,9 @@ def load_setup(host, port):
         sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
     for sound, filename in description["SOUNDS"].items():
         SOUNDS[sound] = sound_files[filename]
-    
-    MATERIALS = sorted(set(MATERIAL.values())) #M# find better order than just alphabetically?
+
+    MATERIALS = set(MATERIAL.values()) | {"transparent"} # always add transparent for gui
+    MATERIALS = sorted(MATERIALS) #M# find better order than just alphabetically?
     print("detected materials:", MATERIALS)
     material_class_map = collections.defaultdict(
         lambda:TransparentMaterialGroup,

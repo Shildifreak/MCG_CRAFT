@@ -358,14 +358,37 @@ class Player(voxelengine.Player):
         character.set_world(world,world.blocks.world_generator.spawnpoint)
 
         if self.gamemode == "creative":
-            character["inventory"] = [{"id":"InstaPick"},{"id":"SAND","count":100},{"id":"GLAS","count":100},{"id":"CHEST"},{"id":"Fertilizer","count":1000},{"id":"Saddle"},{"id":"Setzling"},{"id":"HEBEL"},{"id":"LAMP"},{"id":"TORCH"},{"id":"FAN"},{"id":"Redstone","count":128},{"id":"Repeater"}]
+            items = [
+                {"id":"InstaPick"},
+                {"id":"SAND","count":100},
+                {"id":"GLAS","count":100},
+                {"id":"CHEST"},
+                {"id":"Fertilizer","count":1000},
+                {"id":"Saddle"},
+                {"id":"Setzling"},
+                {"id":"HEBEL"},
+                {"id":"LAMP"},
+                {"id":"TORCH"},
+                {"id":"FAN"},
+                {"id":"Redstone","count":128},
+                {"id":"Repeater"},
+                ]
             functional = lambda i: (i in resources.blockClasses) or (i in resources.itemClasses)
             for b in (True, False):
                 for itemname in resources.allItemnames:
                     if functional(itemname) == b:
-                        character["inventory"].append({"id":itemname})
+                        items.append({"id":itemname})
         if self.gamemode == "survival":
-            character["inventory"] = [{"id":"Axe"},{"id":"Setzling"},{"id":"String","count":100},{"id":"Arrow","count":100},{"id":"Fishing_Rod"}]
+            items = [
+                {"id":"Axe"},
+                {"id":"Setzling"},
+                {"id":"String","count":100},
+                {"id":"Arrow","count":100},
+                {"id":"Fishing_Rod"},
+                ]
+        #filter for items available in selected resource packs and apply
+        character["inventory"] = [item for item in items if item["id"] in resources.allItemnames and item["id"] != "missing_texture"]
+        print("inventory",character["inventory"])
 
         # inventory stuff
         for i in range(60):
@@ -419,7 +442,7 @@ class Player(voxelengine.Player):
         for x in range(lives,10):
             self.del_hud("heart"+str(x))
         for x in range(lives):
-            self.set_hud("heart"+str(x),"HERZ",Vector((-0.95+x/10.0,0.95,0)),0,(0.05,0.05),INNER|LEFT)
+            self.set_hud("heart"+str(x),"heart",Vector((-0.95+x/10.0,0.95,0)),0,(0.05,0.05),INNER|LEFT)
 
     def update(self):
         for msg in self.new_chat_messages():

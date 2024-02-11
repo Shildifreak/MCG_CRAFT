@@ -16,7 +16,7 @@ FACES = {"top","bottom","front","back","left","right"}
 
 class TP_Compiler(object):
 	def __init__(self):
-		self.description = {"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{},"SOUNDS":{}}
+		self.description = {"ICONS":{},"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{},"SOUNDS":{}}
 		self.texture_directories = []
 		self.sound_files = {}
 	
@@ -44,6 +44,7 @@ class TP_Compiler(object):
 		description.setdefault("ITEMS", {})
 		description.setdefault("ENTITY_MODELS", {})
 		description.setdefault("SOUNDS", {})
+		description.setdefault("ICONS", {})
 		
 		for blockname, block in description["BLOCKS"].items():
 			block.setdefault("transparent", False)
@@ -129,6 +130,8 @@ class TP_Compiler(object):
 					texture = texture + ("missing_texture", 0, 0, 1, 1)[len(texture):]
 					new_facedata.append((corners, texture))
 				faces[face] = new_facedata
+			# add icon to icons
+			description["ICONS"][blockmodelname] = blockmodel["icon"]
 		
 		# update self.description
 		for section in self.description:

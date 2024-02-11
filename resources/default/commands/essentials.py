@@ -1,3 +1,4 @@
+from resources import *
 
 @register_command("help",0)
 def _help(context, command:Command.COMMAND):

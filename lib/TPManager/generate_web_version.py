@@ -45,6 +45,10 @@ def generate_description(texture_index, normalized_universal_description):
 	description["properties"]["renderbits"].append(0x80)
 	description["icons"]["AIR"] = 0
 	
+	# ICONS
+	for iconname, texturename in normalized_universal_description["ICONS"].items():
+		description["icons"][iconname] = texture_index[texturename]
+	
 	# BLOCKS
 	blocknames = list(normalized_universal_description["BLOCKS"].keys())
 	assert "AIR" not in blocknames
@@ -117,10 +121,10 @@ def generate_textures_file(texture_index, texture_directories):
 	if unused_textures:
 		print("unused_textures:\n\t"+"\n\t".join(unused_textures))
 	#get output size
-	output_size = tuple(map(max, *(texture_directory.read_texture(name).get_size()
+	output_size = tuple(map(max, zip(*(texture_directory.read_texture(name).get_size()
 	                               for texture_directory in texture_directories
 	                               for name in texture_directory.list_textures() if name in used_textures
-	                              )))
+	                              ))))
 	print("TEXTURE_SIZE:", output_size)
 	height = output_size[1]*TEXTURE_COUNT
 	textures = pygame.surface.Surface((output_size[0], height), pygame.SRCALPHA)

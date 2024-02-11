@@ -31,7 +31,6 @@
 
 {
 "BLOCKS" : {
-    "missing_texture"          : {},
 
     # INVENTAR 1
     "SAND"                     : {"faces":{                                       "other":"sand"       }                      },
@@ -174,10 +173,8 @@
     "Muenzen"                  : {"icon":"muenze"                },
     "Scheine"                  : {"icon":"schein"                },
     "Kredidtkarte"             : {"icon":"kredidtkarte"          },
-    "ARROW"                    : {"icon":"ARROW"                 },
     "TORCH"                    : {"icon":"torch_red"             },
     "LAMP"                     : {"icon":"lamp_off"              },
-    "HERZ"                     : {"icon":"herz"                  },
     "DOOR"                     : {"icon":"door"                  },
     "Fertilizer"               : {"icon":"fairy_dust"            },
     "Stick1"                   : {"icon":"stick1"                },
@@ -191,35 +188,7 @@
     "String"                   : {"icon":"string"                },
     "Glue"                     : {"icon":"glue"                  },
     "Saddle"                   : {"icon":"saddle"                },
-    "inventory_background"     : {"icon":"inventory_background"  },
-    "inventory_border_right"   : {"icon":"inventory_border_blue" },
-    "inventory_border_left"    : {"icon":"inventory_border_red"  },
-    "inventory_border_mixed"   : {"icon":"inventory_border_red_blue"},
     },
-
-#"ICONS" : {
-#    "ARROW"                    : "ARROW",
-#    "inventory_background"     : "inventory_background",
-#    "inventory_border_right"   : "inventory_border_blue",
-#    "inventory_border_left"    : "inventory_border_red",
-#    "inventory_border_mixed"   : "inventory_border_red_blue",
-#}
-
-#{
-#   "NAME" : {
-#       "icon" : "missing_texture",
-#       "transparent" : True,
-#       "faces" : {
-#           "top"    : [],
-#           "bottom" : [],
-#           "front"  : [],
-#           "back"   : [],
-#           "left"   : [],
-#           "right"  : [],
-#           "inside" : [],
-#       }
-#   }
-#}
 
 "BLOCK_MODELS": {
     "Setzling"    : {"icon" : "setzling",       "faces" : {"inside": [(((0,0,0),(1,0,1),(1,1,1),(0,1,0)),"setzling"),

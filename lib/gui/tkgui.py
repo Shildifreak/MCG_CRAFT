@@ -271,7 +271,7 @@ class GUI(object):
             resourcepaths_menubutton.configure(
                 text=", ".join(p.split("/")[-1] for p in self.serverconfig["resource_paths"]) or "nothing selected",
                 foreground="black", activeforeground="black")
-            if not "default" in self.serverconfig["resource_paths"]:
+            if not "essential" in self.serverconfig["resource_paths"]:
                 resourcepaths_menubutton.configure(foreground="orange red", activeforeground="orange red")
         update_text()
         

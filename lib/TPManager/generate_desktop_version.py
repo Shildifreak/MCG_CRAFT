@@ -22,6 +22,17 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 
 	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{},"SOUNDS":{}}
 	
+	for iconname, texturename in normalized_universal_description["ICONS"].items():
+		transparent = True
+		connecting = False
+		material = "transparent"
+		fog_color = (255,255,255,0)
+		icon = (0, texture_index[texturename])
+		facecoordslist = []
+		textcoordslist = []
+		fake_blockmodel = iconname, transparent, connecting, material, fog_color, icon, facecoordslist, textcoordslist
+		description["BLOCK_MODELS"].append(fake_blockmodel)
+	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
 		connecting = blockmodeldata["connecting"]
@@ -66,10 +77,10 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 	if unused_textures:
 		print("unused_textures:\n\t"+"\n\t".join(unused_textures))
 	#get output size
-	output_size = tuple(map(max, *(texture_directory.read_texture(name).get_size()
+	output_size = tuple(map(max, zip(*(texture_directory.read_texture(name).get_size()
 	                               for texture_directory in texture_directories
 	                               for name in texture_directory.list_textures() if name in used_textures
-	                              )))
+	                              ))))
 	print("TEXTURE_SIZE:", output_size)
 	height = output_size[1]*TEXTURE_COUNT
 	textures = pygame.surface.Surface((output_size[0], height), pygame.SRCALPHA)

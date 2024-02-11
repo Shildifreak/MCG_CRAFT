@@ -57,7 +57,7 @@ default_serverconfig = {
             "mobspawning": True,
             "whitelist"  : ["127.0.0.1","host"],
             "parole"     : "",
-            "resource_paths": ["default"],
+            "resource_paths": ["essential","default"],
             "resource_path_options": [],
             "gamemode"   : "creative",
 
