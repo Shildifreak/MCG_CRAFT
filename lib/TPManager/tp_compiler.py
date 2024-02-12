@@ -9,7 +9,7 @@ if __name__ == "__main__":
 from . import textureIO
 from .generate_desktop_version import generate_desktop_version
 from .generate_web_version     import generate_web_version
-
+from .convert import load_blockmodel
 
 
 FACES = {"top","bottom","front","back","left","right"}
@@ -30,6 +30,7 @@ class TP_Compiler(object):
 			description = ast.literal_eval(description_file.read())
 		self.texture_directories.append(textureIO.TextureDirectory(path))
 		
+		model_files = {}
 		for dirpath, dirnames, filenames in os.walk(path, topdown=True):
 			for filename in filenames:
 				_, ext = os.path.splitext(filename)
@@ -37,6 +38,10 @@ class TP_Compiler(object):
 					if filename in self.sound_files:
 						print("multiple files for sound", filename)
 					self.sound_files[filename] = os.path.join(dirpath, filename)
+				if ext in (".bbmodel",):
+					if filename in model_files:
+						print("multiple files with name", filename)
+					model_files[filename] = os.path.join(dirpath, filename)
 		
 		# refine description
 		description.setdefault("BLOCKS", {})
@@ -113,6 +118,10 @@ class TP_Compiler(object):
 			description["BLOCK_MODELS"][itemname] = blockmodel
 
 		for blockmodelname, blockmodel in description["BLOCK_MODELS"].items():
+			if "include" in blockmodel:
+				include_model = load_blockmodel(model_files[blockmodel["include"]])
+				for k,v in include_model.items():
+					blockmodel.setdefault(k,v)
 			if not "icon" in blockmodel:
 				blockmodel["icon"] = "missing_texture"
 				print("missing icon in", blockmodelname)
@@ -180,12 +189,16 @@ class TP_Compiler(object):
 
 if __name__ == "__main__":
 	
-	path = os.path.join("..","..","resources","default","textures")
-	path = os.path.abspath(path)
-	print(path)
+	paths = [
+		os.path.abspath(os.path.join("..","..","features","essential","data")),
+		#os.path.abspath(os.path.join("..","..","features","default","data")),
+		os.path.abspath(os.path.join("..","..","features","bbmodeltest","data")),
+		]
+	print(paths)
 	
 	tp_compiler = TP_Compiler()
-	tp_compiler.add_textures_from(path)
+	for path in paths:
+		tp_compiler.add_textures_from(path)
 
 	print(tp_compiler.description["BLOCKS"].keys())
 	

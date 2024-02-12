@@ -1,5 +1,5 @@
 {
 "BLOCK_MODELS": {
-    "EmeraldStairs" : {"icon" : "emerald_ore", "faces" : "EmeraldStairs.bbmodel"},
+    "EmeraldStairs" : {"icon" : "emerald_ore", "include" : "EmeraldStairs.bbmodel"},
     },
 }

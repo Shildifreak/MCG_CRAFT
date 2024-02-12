@@ -23,15 +23,16 @@ def generate_desktop_version(normalized_universal_description, texture_directori
 	description = {"BLOCK_MODELS":[],"ENTITY_MODELS":{},"SOUNDS":{}}
 	
 	for iconname, texturename in normalized_universal_description["ICONS"].items():
-		transparent = True
-		connecting = False
-		material = "transparent"
-		fog_color = (255,255,255,0)
-		icon = (0, texture_index[texturename])
-		facecoordslist = []
-		textcoordslist = []
-		fake_blockmodel = iconname, transparent, connecting, material, fog_color, icon, facecoordslist, textcoordslist
-		description["BLOCK_MODELS"].append(fake_blockmodel)
+		if iconname not in normalized_universal_description["BLOCK_MODELS"]:
+			transparent = True
+			connecting = False
+			material = "transparent"
+			fog_color = (255,255,255,0)
+			icon = (0, texture_index[texturename])
+			facecoordslist = []
+			textcoordslist = []
+			fake_blockmodel = iconname, transparent, connecting, material, fog_color, icon, facecoordslist, textcoordslist
+			description["BLOCK_MODELS"].append(fake_blockmodel)
 	
 	for blockmodelname, blockmodeldata in normalized_universal_description["BLOCK_MODELS"].items():
 		transparent = blockmodeldata["transparent"]
