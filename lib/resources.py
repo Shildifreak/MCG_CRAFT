@@ -982,22 +982,22 @@ def load_features_from(feature_paths):
     for feature_path in feature_paths:
         structure_path = os.path.join(PATH, "..", "features", feature_path, "structures")
         sys.path.append(structure_path)
-        for directory in ("blocks","entities","items","commands"):
-            path = os.path.join(PATH, ".." , "features", feature_path, directory) #everything before feature_path is dropped in case of absolute path
-            sys.path.append(path)
-            if os.path.isdir(path):
-                for fn in os.listdir(path):
-                    if fn.endswith(".py") and not fn.startswith("_"):
-                        imp.load_source(fn[:-3],os.path.join(path,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
-            sys.path.remove(path)
+        src_path = os.path.join(PATH, "..", "features", feature_path, "src")
+        tree = tuple(os.walk(src_path))
+        for dirpath, dirnames, filenames in tree:
+            sys.path.append(dirpath)
+            for fn in filenames:
+                if fn.endswith(".py") and not fn.startswith("_"):
+                    imp.load_source(fn[:-3],os.path.join(dirpath,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+            sys.path.remove(dirpath)
         sys.path.remove(structure_path)
 
     tp_compiler = TP_Compiler()
     for feature_path in feature_paths:
-        textures_path = os.path.join(PATH, "..", "features", feature_path, "textures")
-        if os.path.isdir(textures_path):
-            print(textures_path)
-            tp_compiler.add_textures_from(textures_path)
+        data_path = os.path.join(PATH, "..", "features", feature_path, "data")
+        if os.path.isdir(data_path):
+            print(data_path)
+            tp_compiler.add_textures_from(data_path)
     tp_compiler.save_to(texturepackPath)
 
     blocks_and_block_models = dict(itertools.chain(tp_compiler.description["BLOCKS"].items(),
