@@ -912,11 +912,11 @@ class CommandContext(object):
             self.send_feedback(f"Command {command_name}: {error_msg}")
 
 
-blockClasses    = None # initialized in load_resources_from
-itemClasses     = None # initialized in load_resources_from
-entityClasses   = None # initialized in load_resources_from
-allBlocknames   = None # initialized in load_resources_from
-allItemnames    = None # initialized in load_resources_from
+blockClasses    = None # initialized in load_features_from
+itemClasses     = None # initialized in load_features_from
+entityClasses   = None # initialized in load_features_from
+allBlocknames   = None # initialized in load_features_from
+allItemnames    = None # initialized in load_features_from
 
 def register_item(name):
     def _register_item(item_subclass):
@@ -970,20 +970,20 @@ def ItemFactory(data):
 
 texturepackDirectory = tempfile.TemporaryDirectory()
 texturepackPath = texturepackDirectory.name
-tp_compiler = None # initialized in load_resources_from
+tp_compiler = None # initialized in load_features_from
 
-def load_resources_from(resource_paths):
+def load_features_from(feature_paths):
     global blockClasses, itemClasses, entityClasses, tp_compiler, allBlocknames, allItemnames
 
     blockClasses  = collections.defaultdict(lambda:SolidBlock)
     itemClasses   = collections.defaultdict(lambda:Item)
     entityClasses = collections.defaultdict(lambda:Entity)
         
-    for resource_path in resource_paths:
-        structure_path = os.path.join(PATH, "..", "resources", resource_path, "structures")
+    for feature_path in feature_paths:
+        structure_path = os.path.join(PATH, "..", "features", feature_path, "structures")
         sys.path.append(structure_path)
         for directory in ("blocks","entities","items","commands"):
-            path = os.path.join(PATH, ".." , "resources", resource_path, directory) #everything before resource_path is dropped in case of absolute path
+            path = os.path.join(PATH, ".." , "features", feature_path, directory) #everything before feature_path is dropped in case of absolute path
             sys.path.append(path)
             if os.path.isdir(path):
                 for fn in os.listdir(path):
@@ -993,8 +993,8 @@ def load_resources_from(resource_paths):
         sys.path.remove(structure_path)
 
     tp_compiler = TP_Compiler()
-    for resource_path in resource_paths:
-        textures_path = os.path.join(PATH, "..", "resources", resource_path, "textures")
+    for feature_path in feature_paths:
+        textures_path = os.path.join(PATH, "..", "features", feature_path, "textures")
         if os.path.isdir(textures_path):
             print(textures_path)
             tp_compiler.add_textures_from(textures_path)

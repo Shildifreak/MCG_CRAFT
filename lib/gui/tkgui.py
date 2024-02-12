@@ -261,73 +261,72 @@ class GUI(object):
         self.row += 1
         
 
-    def addwidgets_resourcepaths(self):
-        # Resource Paths
-        self.add_label("Resource Paths")
-        resourcepaths_menubutton = Tkinter.Menubutton(self.root, relief="raised")
-        resourcepaths_menubutton["menu"] = resourcepaths_menu = Tkinter.Menu(resourcepaths_menubutton, tearoff=0)
+    def addwidgets_featurepaths(self):
+        self.add_label("Features")
+        featurepaths_menubutton = Tkinter.Menubutton(self.root, relief="raised")
+        featurepaths_menubutton["menu"] = featurepaths_menu = Tkinter.Menu(featurepaths_menubutton, tearoff=0)
         
         def update_text():
-            resourcepaths_menubutton.configure(
-                text=", ".join(p.split("/")[-1] for p in self.serverconfig["resource_paths"]) or "nothing selected",
+            featurepaths_menubutton.configure(
+                text=", ".join(p.split("/")[-1] for p in self.serverconfig["feature_paths"]) or "nothing selected",
                 foreground="black", activeforeground="black")
-            if not "essential" in self.serverconfig["resource_paths"]:
-                resourcepaths_menubutton.configure(foreground="orange red", activeforeground="orange red")
+            if not "essential" in self.serverconfig["feature_paths"]:
+                featurepaths_menubutton.configure(foreground="orange red", activeforeground="orange red")
         update_text()
         
-        def update_selection(resource_path, v):
+        def update_selection(feature_path, v):
             enabled = v.get()
             if enabled:
-                if resource_path in self.serverconfig["resource_paths"]:
+                if feature_path in self.serverconfig["feature_paths"]:
                     return
-                self.serverconfig["resource_paths"].append(resource_path)
+                self.serverconfig["feature_paths"].append(feature_path)
             else:
-                if not resource_path in self.serverconfig["resource_paths"]:
+                if not feature_path in self.serverconfig["feature_paths"]:
                     return
-                self.serverconfig["resource_paths"].remove(resource_path)
+                self.serverconfig["feature_paths"].remove(feature_path)
             update_text()
-            self.serverconfig["resource_paths"] = self.serverconfig["resource_paths"] # to trigger save
+            self.serverconfig["feature_paths"] = self.serverconfig["feature_paths"] # to trigger save
             self.update_worldtypes()
 
         def add_path():
-            path = filedialog.folder_dialog(".","select resource folder")
+            path = filedialog.folder_dialog(".","select feature folder")
             if path == False:
                 return
-            if path not in self.serverconfig["resource_path_options"]:
-                self.serverconfig["resource_path_options"].append(path)
-                self.serverconfig["resource_path_options"] = self.serverconfig["resource_path_options"] # trigger save
-                update_resourcepaths_menu()
+            if path not in self.serverconfig["feature_path_options"]:
+                self.serverconfig["feature_path_options"].append(path)
+                self.serverconfig["feature_path_options"] = self.serverconfig["feature_path_options"] # trigger save
+                update_featurepaths_menu()
             else:
                 print("path is already registered")
 
         def remove_path(path):
-            if path in self.serverconfig["resource_path_options"]:
-                self.serverconfig["resource_path_options"].remove(path)
-                self.serverconfig["resource_path_options"] = self.serverconfig["resource_path_options"] # trigger save
-                if path in self.serverconfig["resource_paths"]:
-                    self.serverconfig["resource_paths"].remove(path)
-                    self.serverconfig["resource_paths"] = self.serverconfig["resource_paths"] # trigger save
+            if path in self.serverconfig["feature_path_options"]:
+                self.serverconfig["feature_path_options"].remove(path)
+                self.serverconfig["feature_path_options"] = self.serverconfig["feature_path_options"] # trigger save
+                if path in self.serverconfig["feature_paths"]:
+                    self.serverconfig["feature_paths"].remove(path)
+                    self.serverconfig["feature_paths"] = self.serverconfig["feature_paths"] # trigger save
                     update_text()
-                update_resourcepaths_menu()
+                update_featurepaths_menu()
             else:
                 print("warning: path couldn't be removed because it wasn't in there")
 
-        def update_resourcepaths_menu():
-            resourcepaths_menu.delete(0,"end")
-            removal_menu = Tkinter.Menu(resourcepaths_menu, tearoff=0)
-            for path in self.serverconfig["resource_path_options"]:
+        def update_featurepaths_menu():
+            featurepaths_menu.delete(0,"end")
+            removal_menu = Tkinter.Menu(featurepaths_menu, tearoff=0)
+            for path in self.serverconfig["feature_path_options"]:
                 v = Tkinter.BooleanVar()
-                v.set(path in self.serverconfig["resource_paths"])
-                resourcepaths_menu.add_checkbutton(label=path, onvalue=True, offvalue=False, variable=v, command=lambda p=path, v=v:update_selection(p, v))
+                v.set(path in self.serverconfig["feature_paths"])
+                featurepaths_menu.add_checkbutton(label=path, onvalue=True, offvalue=False, variable=v, command=lambda p=path, v=v:update_selection(p, v))
                 if path != "default":
                     removal_menu.add_command(label=path, command=lambda p=path:remove_path(p))
-            resourcepaths_menu.add_separator()
-            resourcepaths_menu.add_command(label="add path", command=add_path)
-            resourcepaths_menu.add_cascade(label="remove path",menu=removal_menu)
-        update_resourcepaths_menu()
+            featurepaths_menu.add_separator()
+            featurepaths_menu.add_command(label="add path", command=add_path)
+            featurepaths_menu.add_cascade(label="remove path",menu=removal_menu)
+        update_featurepaths_menu()
 
-        resourcepaths_menubutton.grid(column = 1, columnspan=3, row = self.row, sticky = Tkinter.W+Tkinter.E)
-        resourcepaths_menubutton.configure(takefocus=1)
+        featurepaths_menubutton.grid(column = 1, columnspan=3, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        featurepaths_menubutton.configure(takefocus=1)
         self.row += 1
 
 
@@ -469,7 +468,7 @@ class ServerGUI(GUI):
     def init_widgets(self):
         self.addwidgets_name()
         self.addwidgets_file()
-        self.addwidgets_resourcepaths()
+        self.addwidgets_featurepaths()
         self.addwidgets_worldtype()
         self.addwidgets_mobspawning()
         self.addwidgets_gamemode()
@@ -497,8 +496,8 @@ if __name__ == "__main__":
                 "gamemode" : "creative",
                 "whitelist": "127.0.0.1",
                 "parole"   : "",
-                "resource_paths": ["default"],
-                "resource_path_options": ["default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
+                "feature_paths": ["default"],
+                "feature_path_options": ["default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
     }
     clientconfig = {
                 "username" : "",

@@ -388,7 +388,6 @@ class Player(voxelengine.Player):
                 ]
         #filter for items available in selected resource packs and apply
         character["inventory"] = [item for item in items if item["id"] in resources.allItemnames and item["id"] != "missing_texture"]
-        print("inventory",character["inventory"])
 
         # inventory stuff
         for i in range(60):
@@ -727,12 +726,12 @@ def zeitstats(timer, tps_history = [0]*200):
 
 def run():
     global w, g
-    resources.load_resources_from(config["resource_paths"])
+    resources.load_features_from(config["feature_paths"])
     worldtype_paths = {}
-    for resource_path in config["resource_paths"]:
-        worldtypes_dir = os.path.join(PATH,"resources",resource_path,"Welten")
+    for feature_path in config["feature_paths"]:
+        worldtypes_dir = os.path.join(PATH,"features",feature_path,"Welten")
         if os.path.isdir(worldtypes_dir):
-            worldtype_names = os.listdir(worldtypes_dir) #everything before resource_path is dropped in case of absolute path
+            worldtype_names = os.listdir(worldtypes_dir) #everything before feature_path is dropped in case of absolute path
             for worldtype_name in worldtype_names:
                 if worldtype_name.endswith(".py") or worldtype_name.endswith(".js"):
                     worldtype_name = worldtype_name[:-3]

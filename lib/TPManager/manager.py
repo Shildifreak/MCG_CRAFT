@@ -32,7 +32,7 @@ def input(prompt=""):
 	
 
 import os
-BASE_PATH = os.path.join("..","..","resources")
+BASE_PATH = os.path.join("..","..","features")
 
 TD_PATHS = [
 	os.path.join(BASE_PATH, "default",        "textures"),

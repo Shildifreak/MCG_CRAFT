@@ -35,8 +35,8 @@ MCG_CRAFT                           Das MCG-Craft Projekt
   |  |-resources.py                 Basisklassen von denen neue Blöcke / Entities / Items erben sollten
   |  |-voxelengine                  GameEngine auf der MCG-Craft aufbaut
   |
-  |-resources                       die meisten Schülerprojekte sollten sich mit Resource Packs lösen lassen
-  |  |-default                      Basis Resource Pack -> eigene RPs sollten sich hieran orientieren
+  |-features                        die meisten Schülerprojekte sollten sich als features implementieren lassen
+  |  |-default                      Basis Features -> eigene Features sollten sich hieran orientieren
   |  |  |-blocks                    Klassen für die Beschreibung des Verhaltens von Blöcken
   |  |  |-entities                  Klassen für die Beschreibung des Verhaltens von Entities
   |  |  |-items                     Klassen für die Beschreibung des Verhaltens von Items
@@ -47,6 +47,6 @@ MCG_CRAFT                           Das MCG-Craft Projekt
   |  |  |  |-textures.png           Texturatlas mit mehreren Texturen -> einfacher ist es am Anfang für jede Textur eine extra .png Datei zu benutzen
   |  |  |  |-textures.json          Namen für die einzelnen Texturen in textures.png -> nicht nötig wenn die .png Datei nur eine Textur enthält
   |  |  |-Welten                    Weltgeneratoren beschreiben wie neue Welten aussehen
-  |  |-weihnachtsdeko               ein RP dass einige Texturen durch Weihnachtsversion mit mehr Schnee ersetzt
-  |  |-tutorial                     das RP zu den Youtube Videos
+  |  |-weihnachtsdeko               alternative Texturen mit mehr Schnee
+  |  |-tutorial                     Material zu den Youtube Videos
   

@@ -74,17 +74,17 @@ class CommandHandler(object):
 
 command_handler = CommandHandler()
 
-for pathname in serverconfig["resource_paths"]:
-    if pathname not in serverconfig["resource_path_options"]:
-        serverconfig["resource_path_options"].append(pathname)
-for pathname in os.listdir(os.path.join(PATH,"..","resources")):
-    if pathname not in serverconfig["resource_path_options"]:
-        serverconfig["resource_path_options"].append(pathname)
+for pathname in serverconfig["feature_paths"]:
+    if pathname not in serverconfig["feature_path_options"]:
+        serverconfig["feature_path_options"].append(pathname)
+for pathname in os.listdir(os.path.join(PATH,"..","features")):
+    if pathname not in serverconfig["feature_path_options"]:
+        serverconfig["feature_path_options"].append(pathname)
 
 def get_worldtypes():
     worldtypes = []
-    for resource_path in serverconfig["resource_paths"]:
-        worldtypes_dir = os.path.join(PATH,"..","resources",resource_path,"Welten") #everything before resource_path is dropped in case of absolute path
+    for feature_path in serverconfig["feature_paths"]:
+        worldtypes_dir = os.path.join(PATH,"..","features",feature_path,"Welten") #everything before feature_path is dropped in case of absolute path
         if os.path.isdir(worldtypes_dir):
             worldtypes.extend(os.listdir(worldtypes_dir))
     worldtypes = sorted(set([x[:-3] for x in worldtypes if (x.endswith(".py") or x.endswith(".js")) and not x.startswith("_")]))
