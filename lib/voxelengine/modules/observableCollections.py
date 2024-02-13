@@ -13,6 +13,8 @@ import collections, itertools
 from voxelengine.modules.serializableCollections import Serializable
 
 def observable_from(data):
+    if isinstance(data, Observable):
+        raise ValueError("is already Observable") #there are multiple ways to deal with parent / sanitizers / items can't be copied only moved / ... so do this outside
     if isinstance(data, collections.abc.MutableMapping):
         return ObservableDict(data)
     if isinstance(data, collections.abc.MutableSequence):
@@ -133,6 +135,7 @@ class ObservableDict(Observable, collections.abc.MutableMapping):
         self.dict_update(data)
 
     def dict_update(self,data):
+        assert not isinstance(data, Observable)
         for key in data:
             self[key] = data[key]
 
@@ -151,6 +154,7 @@ class ObservableList(Observable, collections.abc.MutableSequence):
         self.extend(data)
 
     def extend(self,values):
+        assert not isinstance(values, Observable)
         self.data.extend(map(self._adopted_value,values))
         self.trigger(None)
 
@@ -182,18 +186,22 @@ class ObservableList(Observable, collections.abc.MutableSequence):
         return range(len(self.data))
 
 if __name__ == "__main__":
-    root = observable_from({"a":7,"b":[1,2,3]})
-    root.setdefault("c",[4])
-    root["c"].append(2)
-    root["c"].remove(4)
-    print(type(root["c"]), root["c"])
-    a = observable_from({1:2})
-    b = observable_from({1:2})
-
-    print("----")
-    x = observable_from({"test":[1,2,3]})
-    dict_containing_child_of_other_observable = {"aha": x["test"]}
-    try:
-        y = observable_from(dict_containing_child_of_other_observable)
-    except ValueError as e:
-        print("Expected Error:", e)
+    f = observable_from
+    test = observable_from({"a":{"b":1}})
+    observable_from(test)
+    
+#    root = observable_from({"a":7,"b":[1,2,3]})
+#    root.setdefault("c",[4])
+#    root["c"].append(2)
+#    root["c"].remove(4)
+#    print(type(root["c"]), root["c"])
+#    a = observable_from({1:2})
+#    b = observable_from({1:2})
+#
+#    print("----")
+#    x = observable_from({"test":[1,2,3]})
+#    dict_containing_child_of_other_observable = {"aha": x["test"]}
+#    try:
+#        y = observable_from(dict_containing_child_of_other_observable)
+#    except ValueError as e:
+#        print("Expected Error:", e)

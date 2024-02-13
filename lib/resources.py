@@ -9,7 +9,7 @@ from TPManager.tp_compiler import TP_Compiler
 import voxelengine
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360
-from voxelengine.modules.observableCollections import observable_from
+from voxelengine.modules.observableCollections import observable_from, Observable
 from voxelengine.server.event_system import Event
 
 GRAVITY = 35
@@ -339,7 +339,8 @@ class ItemData(dict):
     pass
 
 def InventoryFactory(inventory):
-    inventory = observable_from(inventory)
+    if not isinstance(inventory, Observable):
+        inventory = observable_from(inventory)
     inventory.register_default_item_sanitizer(ItemData)
     return inventory
 
@@ -364,6 +365,9 @@ class Entity(voxelengine.Entity):
         assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses or use EntityFactory
         assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
+        if "inventory" in self:
+            print(type(self["inventory"][0]))
+            print(type(data_defaults["inventory"][0]))
         self.register_item_sanitizer(Vector,"velocity")
         self.register_item_sanitizer(InventoryFactory, "inventory")
 
