@@ -364,9 +364,6 @@ class Entity(voxelengine.Entity):
         
         assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
-        if "inventory" in self:
-            print(type(self["inventory"][0]))
-            print(type(data_defaults["inventory"][0]))
         self.register_item_sanitizer(Vector,"velocity")
         self.register_item_sanitizer(InventoryFactory, "inventory")
 
