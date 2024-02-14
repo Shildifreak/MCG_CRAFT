@@ -24,7 +24,7 @@ class Grassblock(Block):
                                               "LilaBlume","WeisseBlume","RoteBlume",
                                               "BlaueBlume","GelbeBlume","SonnenBlume"])
                 self.world.request_set_block(block_above.position, flower_block)
-        elif block_above not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume","HALM",]:
+        elif block_above not in ["AIR","grass","LilaBlume","WeisseBlume","RoteBlume","BlaueBlume","GelbeBlume","SonnenBlume","HALM","Fence"]:
             self.turn_into("DIRT")
             return True
         return False

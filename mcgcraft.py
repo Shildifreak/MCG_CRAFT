@@ -360,6 +360,7 @@ class Player(voxelengine.Player):
         if self.gamemode == "creative":
             items = [
                 {"id":"InstaPick"},
+                {"id":"Fence","count":100},
                 {"id":"SAND","count":100},
                 {"id":"GLAS","count":100},
                 {"id":"CHEST"},
