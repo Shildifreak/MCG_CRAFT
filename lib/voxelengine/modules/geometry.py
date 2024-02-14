@@ -390,6 +390,8 @@ class Everywhere(Area):
         if isinstance(other, Nowhere):
             return 1
         return -1
+    def __add__(self, other):
+        return self
 EVERYWHERE = Everywhere()
 
 class Somewhere(Area):
@@ -400,6 +402,8 @@ class Somewhere(Area):
             return -1
         else:
             return 1
+    def __add__(self, other):
+        return self
 SOMEWHERE = Somewhere()
 
 class Nowhere(Area):
@@ -409,6 +413,8 @@ class Nowhere(Area):
         return 1
     def __bool__(self):
         raise NotImplementedError()
+    def __add__(self, other):
+        return self
 NOWHERE = Nowhere()
 
 class Point(Sphere):

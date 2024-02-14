@@ -8,7 +8,7 @@ from TPManager.tp_compiler import TP_Compiler
 
 import voxelengine
 from voxelengine.modules.shared import *
-from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360
+from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360, NOWHERE
 from voxelengine.modules.observableCollections import observable_from, Observable
 from voxelengine.server.event_system import Event
 
@@ -345,7 +345,7 @@ def InventoryFactory(inventory):
     return inventory
 
 class Entity(voxelengine.Entity):
-    HITBOX = Hitbox(0,0,0)
+    HITBOX = NOWHERE #Hitbox(0,0,0)
     LIMIT = 0
     PASSENGER_OFFSETS = (Vector(0,1.5,0),)
     instances = []
@@ -362,7 +362,6 @@ class Entity(voxelengine.Entity):
             data_defaults.update(data)
         super().__init__(data_defaults)
         
-        assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses or use EntityFactory
         assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
         
         if "inventory" in self:
@@ -963,6 +962,8 @@ def EntityFactory(data):
         data = {"type":data}
     entity_type = data["type"]
     entityClass = entityClasses[entity_type]
+    if entityClass == Entity:
+        print("no entity class found for:", entity_type)
     return entityClass(data)
 
 def ItemFactory(data):
