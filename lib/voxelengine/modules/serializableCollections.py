@@ -79,11 +79,10 @@ def extended_literal_eval(node_or_string, additional_literals={}):
         elif isinstance(node, Call) and isinstance(node.func, Name):
             if node.func.id == 'set' and node.args == node.keywords == []:
                 return set()
-            constructor = additional_literals.get(node.func.id, None)
-            if constructor:
-                args = map(_convert, node.args)
-                kwargs = {keyword.arg:_convert(keyword.value) for keyword in node.keywords}
-                return constructor(*args,**kwargs)
+            constructor = additional_literals[node.func.id]
+            args = map(_convert, node.args)
+            kwargs = {keyword.arg:_convert(keyword.value) for keyword in node.keywords}
+            return constructor(*args,**kwargs)
         elif isinstance(node, Dict):
             return dict(zip(map(_convert, node.keys),
                             map(_convert, node.values)))

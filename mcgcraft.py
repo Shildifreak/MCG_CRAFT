@@ -793,7 +793,7 @@ def run():
                 print("done")
             else:
                 print("skipped: missing path")
-        config["save"] = False
+#        config["save"] = False
 
     settings = {"wait" : False,
                 "name" : config["name"],

@@ -40,6 +40,12 @@ def get_launch_client_command():
 class CommandHandler(object):
     def __init__(self):
         self.game_process = None
+        self.on_game_start = lambda:None
+        self.on_game_exit = lambda:None
+
+    @property
+    def running(self):
+        return self.game_process and self.game_process.poll() == None
 
     def start_game(self):
         path = os.path.join(PATH, "..", "mcgcraft.py")
@@ -47,9 +53,16 @@ class CommandHandler(object):
         command = [python, path, serverconfigfn,"--stats-port=%i"%stats_port]
         self.game_process = subprocess.Popen(command,stdin=subprocess.PIPE)
 
+        self.on_game_start()
+        def watchdog_thread_function():
+            self.game_process.wait()
+            self.on_game_exit()
+        watchdog_thread = threading.Thread(target=watchdog_thread_function,daemon=False)
+        watchdog_thread.start()
+
     def handle_command(self, command):
         """returns boolean that indicates whether the command worked"""
-        if self.game_process and self.game_process.poll() == None:
+        if self.running:
             if command == "run":
                 return False
             else:
@@ -99,6 +112,10 @@ ui = UI(serverconfig, clientconfig,
         get_worldtypes, get_clienttypes,
         callback=command_handler.handle_command,
         background=False)
+command_handler.on_game_start = lambda:ui.set_running(True)
+command_handler.on_game_exit  = lambda:ui.set_running(False)
+serverconfig.on_save_callback = lambda:command_handler.handle_command("reload") if command_handler.running else None
+
 ui.mainloop()
 command_handler.close()
 print("finished")

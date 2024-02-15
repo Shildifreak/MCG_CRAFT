@@ -17,6 +17,7 @@ class Config(dict):
         """fn: filename of file to load from and save to"""
         self.fn = fn
         self.autosave_enabled = False
+        self.on_save_callback = None
         super().__init__(*args, **kwargs)
         if self.fn:
             self.load()
@@ -47,6 +48,8 @@ class Config(dict):
             os.makedirs(os.path.dirname(self.fn))
         with open(self.fn,"w") as configfile:
             json.dump(self, configfile, indent=4)
+        if self.on_save_callback:
+            self.on_save_callback()
 
 default_serverconfig = {
             # Exposed via GUI

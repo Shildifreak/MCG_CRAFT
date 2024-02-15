@@ -17,6 +17,9 @@ from . import filedialog
 from .tkscroll import VerticalScrolledFrame
 
 import collections
+import traceback
+
+from voxelengine.modules.serializableCollections import extended_literal_eval
 
 class GUI(object):
     def __init__(self, serverconfig, clientconfig,
@@ -26,6 +29,9 @@ class GUI(object):
         self.stats = collections.OrderedDict()
         self.lock = thread.allocate_lock() #lock that shows whether it is save to do window stuff
         self.closed = False
+        self.disabled_when_running = []
+        self.running = False
+
         self.serverconfig = serverconfig
         self.clientconfig = clientconfig
         self.get_worldtypes = get_worldtypes
@@ -83,7 +89,8 @@ class GUI(object):
         def setname(name):
             self.serverconfig["name"] = name
         self.add_label("Name")
-        self.add_entry(self.serverconfig["name"], setname)
+        e = self.add_entry(self.serverconfig["name"], setname)
+        self.disabled_when_running.append(e)
 
     def addwidgets_file(self):
         # Speicherort
@@ -98,6 +105,7 @@ class GUI(object):
             self.serverconfig["file"] = fn
             if fn:
                 fileentry.configure(fg=defaultfg)
+            self.update_worldtypes()
         def setfile_from_entry(*_):
             fn = fileentry.get()
             setfile(fn)
@@ -106,7 +114,6 @@ class GUI(object):
             if not self.serverconfig["file"]:
                 fileentry.insert(0,"Welt nicht speichern")
                 fileentry.configure(fg="grey")
-            print(self.serverconfig["file"])
         def file_focus_in(event):
             if not self.serverconfig["file"]:
                 fileentry.delete(0, Tkinter.END)
@@ -132,29 +139,56 @@ class GUI(object):
                 setfile(fn, True)
         filenewbutton = Tkinter.Button(self.root, text="neu", command=newfile)
         filenewbutton.grid(column = 3, row = self.row-1, sticky = Tkinter.W+Tkinter.E)
+        self.disabled_when_running.append(fileopenbutton)
 
     def addwidgets_worldtype(self):
         # Worldtype #http://effbot.org/tkinterbook/optionmenu.htm
         def setworldtype(*args):
             self.serverconfig["worldtype"] = self.wtvar.get()
+            if self.serverconfig["worldtype"] not in self.worldtypes:
+                self.wtmenu.configure(foreground="orange red", activeforeground="orange red")
+            else:
+                self.wtmenu.configure(foreground="black", activeforeground="black")
+
         self.wtvar = Tkinter.StringVar(self.root)
-        self.wtvar.set(self.serverconfig["worldtype"]) # default value
-        self.wtvar.trace("w",setworldtype)
 
         self.add_label("Welttyp")
         self.wtmenu = Tkinter.OptionMenu(self.root, self.wtvar, "placeholder")
+
         self.update_worldtypes()
+        self.wtvar.set(self.serverconfig["worldtype"]) # default value
+        self.wtvar.trace("w",setworldtype)
+
         self.wtmenu.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         self.wtmenu.configure(takefocus=1)
         self.row += 1
     
     def update_worldtypes(self):
-        worldtypes = self.get_worldtypes()
-        if self.serverconfig["worldtype"] not in worldtypes:
-            worldtypes = (self.serverconfig["worldtype"],) + tuple(worldtypes)
+        if not self.running:
+            if os.path.exists(self.serverconfig["file"]):
+                try:
+                    with open(self.serverconfig["file"]) as f:
+                        c = f.read()
+                    ignore_custom_nodes = collections.defaultdict(lambda:(lambda*a,**kw:None))
+                    data = extended_literal_eval(c, ignore_custom_nodes)
+                    worldtype = data[0]["block_world"]["generator"]["name"]
+                except Exception as e:
+                    traceback.print_exc()
+                    worldtype = "error"
+                self.wtvar.set(worldtype)
+                self.wtmenu.configure(state="disabled")
+            else:
+                self.wtmenu.configure(state="normal")
+        else:
+            self.wtmenu.configure(state="disabled")
+        self.worldtypes = self.get_worldtypes()
+        if self.serverconfig["worldtype"] not in self.worldtypes:
+            self.wtmenu.configure(foreground="orange red", activeforeground="orange red")
+        else:
+            self.wtmenu.configure(foreground="black", activeforeground="black")
 
         self.wtmenu["menu"].delete(0,"end")
-        for wt in worldtypes:
+        for wt in self.worldtypes:
             self.wtmenu["menu"].add_command(label=wt, command=Tkinter._setit(self.wtvar, wt))
 
     def addwidgets_mobspawning(self):
@@ -200,13 +234,15 @@ class GUI(object):
         whitelist_button_LAN = Tkinter.Radiobutton(text = "LAN", variable = whitelistvar, value = "192.168.0.0/16,10.0.0.0/8,127.0.0.1")
         whitelist_button_LAN.grid(column = 3, row = self.row, sticky = Tkinter.W)
         self.row += 3
+        self.disabled_when_running.extend([whitelist_entry, whitelist_button_local, whitelist_button_LAN])
 
     def addwidgets_server_parole(self):
         # Parole
         def setparole(parole):
             self.serverconfig["parole"] = parole
         self.add_label("Parole")
-        self.add_entry(self.serverconfig["parole"], setparole)
+        e = self.add_entry(self.serverconfig["parole"], setparole)
+        self.disabled_when_running.append(e)
 
     def addwidgets_client_parole(self):
         # Parole
@@ -328,44 +364,46 @@ class GUI(object):
         featurepaths_menubutton.grid(column = 1, columnspan=3, row = self.row, sticky = Tkinter.W+Tkinter.E)
         featurepaths_menubutton.configure(takefocus=1)
         self.row += 1
+        
+        self.disabled_when_running.append(featurepaths_menubutton)
 
+    def set_running(self, value):
+        self.queue["set_running"] = (self._set_running, (value,))
+
+    def _set_running(self, value):
+        if self.lock.acquire(False): # doing stuff when the window is already closed will block the application, so use lock to avoid destroying root while window get's used
+            self.running = value
+            self.startbutton.configure(text = "Stop" if self.running else "Start")
+            self.playbutton.configure(text = "Play" if self.running else "Start & Play")
+            for element in self.disabled_when_running:
+                element.configure(state=("disabled" if self.running else "normal"))
+            self.update_worldtypes()
+            self.lock.release()
 
     def addwidgets_run_play(self):
-        self.running = False
         # Start/Stop
         def togglerun():
             self.root.focus()
             if not self.running:
-                self.running = self.callback("run")
+                self.callback("run")
             else:
                 self.callback("quit")
-                self.running = False
-            update_buttontexts()
-        startbutton = Tkinter.Button(self.root, command = togglerun)
-        startbutton.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
+        self.startbutton = Tkinter.Button(self.root, command = togglerun)
+        self.startbutton.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
 
         # Play
         def play():
             self.root.focus()
             if not self.running:
-                self.running = self.callback("run")
-            if self.running:
-                self.callback("play")
-            update_buttontexts()
-        playbutton = Tkinter.Button(self.root, command = play)
-        playbutton.grid(column = 2, columnspan = 2, row = self.row, sticky = Tkinter.W+Tkinter.E)
+                self.callback("run")
+            self.callback("play")
+        self.playbutton = Tkinter.Button(self.root, command = play)
+        self.playbutton.grid(column = 2, columnspan = 2, row = self.row, sticky = Tkinter.W+Tkinter.E)
         
-        # SAVE?
-        
-        # BUTTONS
-        def update_buttontexts():
-            startbutton.configure(text = "Stop" if self.running else "Start")
-            playbutton.configure(text = "Play" if self.running else "Start & Play")
-        update_buttontexts()
         self.row += 1
+        self.set_running(False)
+        self.playbutton.focus()
 
-        playbutton.focus()
-        
     def addwidgets_play(self):
         # Play
         def play():
@@ -405,11 +443,15 @@ class GUI(object):
     def add_entry(self, content, callback):
         def apply_changes(event):
             callback(entry.get())
+        def select_all(event):
+            entry.select_range(0, 'end')
+            #entry.icursor('end')
         entry = Tkinter.Entry(self.root)
         entry.insert(0, content)
         entry.grid(column = 1, row = self.row, sticky = Tkinter.W+Tkinter.E)
         entry.bind("<Return>",apply_changes)
         entry.bind("<FocusOut>",apply_changes)
+        entry.bind('<Control-KeyRelease-a>', select_all)
         self.row += 1
         return entry
         
@@ -494,10 +536,10 @@ if __name__ == "__main__":
                 "worldtype": "Colorland",
                 "mobspawning": False,
                 "gamemode" : "creative",
-                "whitelist": "127.0.0.1",
+                "whitelist": ["127.0.0.1"],
                 "parole"   : "",
-                "feature_paths": ["default"],
-                "feature_path_options": ["default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
+                "feature_paths": ["essential","default"],
+                "feature_path_options": ["essential","default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
     }
     clientconfig = {
                 "username" : "",
@@ -506,11 +548,17 @@ if __name__ == "__main__":
                 "parole"   : "",
                 "address"  : "",
     }
-    gui = ServerGUI(serverconfig, clientconfig, lambda:("one","two","three"), lambda:("desktop","web"), background = True)
+    def callback(cmd):
+        if cmd == "run":
+            gui.set_running(True)
+        if cmd == "quit":
+            gui.set_running(False)
+    gui = ServerGUI(serverconfig, clientconfig, lambda:("one","two","three"), lambda:("desktop","web"), callback, background = True)
     #gui = ClientGUI(None, clientconfig, lambda:(), lambda:("desktop","web"))
 
     #import time
     #time.sleep(1)
+    #gui.set_running(True)
     #gui.set_stats("fps","16")
     #gui.show_servers([])
-    gui.mainloop()
+    #gui.mainloop()
