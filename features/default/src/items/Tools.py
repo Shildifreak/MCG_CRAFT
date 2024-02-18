@@ -111,3 +111,27 @@ class Arrow(Entity):
 class Saddle(Item):
     def use_on_entity(self, character, entity):
         character.ride(entity)
+
+@register_item("BallEmpty")
+class BallEmpty(Item):
+    def use_on_entity(self, character, entity):
+        entity.set_world(None,(0,0,0))
+        entity = serialize(entity, (Vector, Box, Sphere, Event))
+        self.decrease_count()
+        character.pickup_item({"id":"BallFull", "entity":entity})
+
+@register_item("BallFull")
+class BallFull(Item):
+    def use_on_air(self, character):
+        self._use(character, character["position"]+character.get_sight_vector()*3)
+
+    def use_on_block(self, character, block, face):
+        self._use(character, block.position+(0,2,0))
+        
+    def _use(self, character, position):
+        if "entity" in self.item:
+            entity = serialize(self.item.pop("entity"), (Vector, Box, Sphere, Event))
+            entity = EntityFactory(entity)
+            entity.set_world(character.world, position)
+        self.decrease_count()
+        character.pickup_item({"id":"BallEmpty"})

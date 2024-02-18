@@ -188,6 +188,8 @@
     "String"                   : {"icon":"string"                },
     "Glue"                     : {"icon":"glue"                  },
     "Saddle"                   : {"icon":"saddle"                },
+    "BallEmpty"                : {"icon":"ball_white"            },
+    "BallFull"                 : {"icon":"ball_black"            },
     },
 
 "BLOCK_MODELS": {

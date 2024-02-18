@@ -35,8 +35,8 @@ import os
 BASE_PATH = os.path.join("..","..","features")
 
 TD_PATHS = [
-	os.path.join(BASE_PATH, "default",        "textures"),
-	os.path.join(BASE_PATH, "weihnachtsdeko", "textures"),
+	os.path.join(BASE_PATH, "default",        "data"),
+	os.path.join(BASE_PATH, "weihnachtsdeko", "data"),
 #	os.path.join("..","..","tests","old_texturepacks","default_stable"),
 ]
 TF_PATH  = os.path.join(TD_PATHS[0], "textures.png")

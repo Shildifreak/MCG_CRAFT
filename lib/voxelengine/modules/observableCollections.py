@@ -71,7 +71,11 @@ class Observable(Serializable):
         self.trigger(static_key)
     
     def __delitem__(self,key):
-        raise NotImplementedError()
+        prev_value = self[key]
+        if isinstance(prev_value, Observable):
+            prev_value.parent = None
+        static_key = key if self.static_keys else None
+        self.trigger(static_key)
 
     def replace(self,key,value):
         prev_value = self[key]

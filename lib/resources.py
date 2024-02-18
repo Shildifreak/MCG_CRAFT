@@ -10,6 +10,7 @@ import voxelengine
 from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360, NOWHERE
 from voxelengine.modules.observableCollections import observable_from, Observable
+from voxelengine.modules.serializableCollections import Serializable, serialize, extended_literal_eval
 from voxelengine.server.event_system import Event
 
 GRAVITY = 35
@@ -634,7 +635,10 @@ class Entity(voxelengine.Entity):
         """return first inventory slot that contains matching item (ignoring count)"""
         for i,inv_item in enumerate(self["inventory"]):
             if inv_item["id"] == item["id"]:
-                return i
+                keys = set(inv_item.keys())-{"count"}
+                if keys == set(item.keys())-{"count"}:
+                    if all(inv_item[key] == item[key] for key in keys):
+                        return i
         return None
 
     def pickup_item(self,item):
