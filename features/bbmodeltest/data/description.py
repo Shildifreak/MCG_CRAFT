@@ -20,5 +20,7 @@
     "Fence13" : {"icon" : None, "include" : "fence13.bbmodel"},
     "Fence14" : {"icon" : None, "include" : "fence14.bbmodel"},
     "Fence15" : {"icon" : None, "include" : "fence15.bbmodel"},
+    "Button"        : {"icon" : "button", "include" : "Button.bbmodel"       },
+    "ButtonPressed" : {"icon" : None    , "include" : "ButtonPressed.bbmodel"},
     },
 }

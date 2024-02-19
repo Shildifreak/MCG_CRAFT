@@ -4,6 +4,7 @@ from resources import *
 @register_item("HERZ")
 @register_item("GESICHT")
 @register_item("HEBEL")
+@register_item("Button")
 @register_item("FAN")
 @register_item("TORCH")
 @register_item("HOLZ")
