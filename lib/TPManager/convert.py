@@ -147,9 +147,9 @@ class BBModel(object):
 					vertices = scale_buffer(vertices, vertex_scale)
 					vertices = offset_buffer(vertices, vertex_offset)
 					u0, v0, u1, v1 = facedata["uv"]
-					uvs = [(u0,v0),(u1,v0),(u1,v1),(u0,v1)]
+					uvs = [(u1,v1),(u0,v1),(u0,v0),(u1,v0)]
 					r = int(facedata.get("rotation",0)//90)
-					uvs = [uvs[(i+r)%len(uvs)] for i in range(len(uvs))]
+					uvs = [uvs[(i-r)%len(uvs)] for i in range(len(uvs))]
 					uvs = scale_buffer(uvs, uv_scale)
 					faces.append(face(vertices, texture, uvs))
 			else:
@@ -166,5 +166,5 @@ def load_blockmodel(fname):
 	return model.to_blockmodel()
 	
 if __name__ == "__main__":
-	fname = os.path.join("..","..","features","bbmodeltest","data","fence","fence15.bbmodel")
+	fname = os.path.join("..","..","features","bbmodeltest","data","snail.bbmodel")
 	print(load_blockmodel(fname))
