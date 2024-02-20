@@ -22,5 +22,6 @@
     "Fence15" : {"icon" : None, "include" : "fence15.bbmodel"},
     "Button"        : {"icon" : "button", "include" : "Button.bbmodel"       },
     "ButtonPressed" : {"icon" : None    , "include" : "ButtonPressed.bbmodel"},
+    "Snail"   : {"icon" : "snail", "include" : "snail.bbmodel"},
     },
 }
