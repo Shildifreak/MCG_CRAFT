@@ -24,4 +24,13 @@
     "ButtonPressed" : {"icon" : None    , "include" : "ButtonPressed.bbmodel"},
     "Snail"   : {"icon" : "snail", "include" : "snail.bbmodel"},
     },
+
+"ENTITY_MODELS": {
+    "SNAIL":{
+        "head":[((0,0,0),(0,0,0),(1,1,1),"Snail")],
+        "body":[],
+        "legl":[],
+        "legr":[],
+        },
+    },
 }
