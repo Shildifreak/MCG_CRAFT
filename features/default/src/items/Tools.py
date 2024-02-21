@@ -1,4 +1,5 @@
 from resources import *
+from voxelengine.modules.geometry import Ray
 import resources
 import random
 import time
@@ -41,7 +42,18 @@ class InfiniPick(Item):
 
 @register_item("Fishing_Rod")
 class FishingRod(Item):
+    max_distance = 5
     def use_on_block(self, character, block, face):
+        return self.use_on_air(character)
+
+    def use_on_air(self, character):
+        line_of_sight = Ray(character["position"], character.get_sight_vector())
+        def blocktest(pos):
+            block = character.world.blocks[pos]
+            return block.collides_with(line_of_sight) or block == "WATER"
+        d_block, pos, face = line_of_sight.hit_test(blocktest, self.max_distance)
+        if pos:
+            block = character.world.blocks[pos]
         if block == "WATER":
             blockname = random.choice(resources.allBlocknames)
             character.pickup_item({"id":blockname})
