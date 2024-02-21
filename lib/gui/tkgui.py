@@ -192,12 +192,31 @@ class GUI(object):
             self.wtmenu["menu"].add_command(label=wt, command=Tkinter._setit(self.wtvar, wt))
 
     def addwidgets_mobspawning(self):
+        # entity Limit
+        def setentitylimit(*args):
+            self.serverconfig["entitylimit"] = entitylimitvar.get()
+        entitylimitvar = Tkinter.IntVar(self.root)
+        entitylimitvar.set(self.serverconfig["entitylimit"])
+        entitylimitvar.trace("w",setentitylimit)
+        def only_numbers(char):
+            return char.isdigit()
+        validation = self.root.register(str.isdigit) # Register func
+        entitylimit_entry = Tkinter.Entry(self.root, 
+            textvariable = entitylimitvar, 
+            validate="key", 
+            validatecommand=(validation, '%P'),
+            )
+        entitylimit_entry.grid(column = 2, row = self.row, sticky = Tkinter.W)
         # Mob Spawning
         def setmobspawning(*args):
             self.serverconfig["mobspawning"] = bool(mobspawningvar.get())
+            if self.serverconfig["mobspawning"]:
+                entitylimit_entry.configure(state="normal")
+            else:
+                entitylimit_entry.configure(state="disabled")
         mobspawningvar = Tkinter.IntVar(self.root)
-        mobspawningvar.set(self.serverconfig["mobspawning"])
         mobspawningvar.trace("w",setmobspawning)
+        mobspawningvar.set(self.serverconfig["mobspawning"])
         self.add_label("Mob Spawning")
         mobspawning_checkbutton = Tkinter.Checkbutton(self.root, variable = mobspawningvar)
         mobspawning_checkbutton.grid(column = 1, row = self.row, sticky = Tkinter.W)
@@ -535,6 +554,7 @@ if __name__ == "__main__":
                 "file"     : "",
                 "worldtype": "Colorland",
                 "mobspawning": False,
+                "moblimit" : 5,
                 "gamemode" : "creative",
                 "whitelist": ["127.0.0.1"],
                 "parole"   : "",

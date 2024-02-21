@@ -58,6 +58,7 @@ default_serverconfig = {
             "file"       : "",
             "worldtype"  : "BeispielWelt_Infinity",
             "mobspawning": True,
+            "entitylimit": 5,
             "whitelist"  : ["127.0.0.1","host"],
             "parole"     : "",
             "feature_paths": ["essential","default"],
