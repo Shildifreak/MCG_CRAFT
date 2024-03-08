@@ -985,6 +985,7 @@ class Window(pyglet.window.Window):
         self.camera_position = Vector((0, 0, 0))
         self.camera_rotation = (0, 0)
         self.camera_distance = 0 # 0 = first person
+        self.camera_distance_interpolation = self.camera_distance
         self.camera_smoothing = INITIAL_CAMERA_SMOOTHING
         
         self.d_yaw_player_camera = 0
@@ -1295,7 +1296,8 @@ class Window(pyglet.window.Window):
         dy = AH*(math.cos(math.radians(pitch))-1)
         eye_position = self.player_position + (dx,dy,dz)
         # third person
-        camera_position_target = eye_position - self.get_sight_vector(self.camera_rotation)*self.camera_distance
+        self.camera_distance_interpolation = 0.7*self.camera_distance_interpolation + 0.3*self.camera_distance
+        camera_position_target = eye_position - self.get_sight_vector(self.camera_rotation)*self.camera_distance_interpolation
         # smooth camera
         self.camera_position = self.camera_smoothing*self.camera_position + (1-self.camera_smoothing)*camera_position_target
 
@@ -1515,27 +1517,32 @@ class Window(pyglet.window.Window):
                 self.hud_replaced_exclusive = False
                 self.set_exclusive_mouse(False)
         else:
-            if symbol == key.F1:
+            if symbol == key.F2:
                 self.open_settingswindow()
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
-            if symbol == key.F4:
+            if symbol == key.F5:
+                self.reload_shaders()
+            if symbol == key.F6:
                 self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
                 self.update_settings_options()
-            if symbol == key.F5:
+            if symbol == key.F7:
                 self.active_shader_ii += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_ii %= len(self.active_shader_is)
                 self.update_settings_options()
-            if symbol == key.F6:
-                self.camera_distance = 10 - self.camera_distance
-            if symbol == key.F7:
-                ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
-                self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
             if symbol == key.F8:
                 self.framebuffer_enabled = not self.framebuffer_enabled
             if symbol == key.F9:
-                self.reload_shaders()
+                if modifiers & key.MOD_SHIFT:
+                    self.camera_distance -= 2
+                elif modifiers & key.MOD_CTRL:
+                    self.camera_distance += 2
+                else:
+                    self.camera_distance = 0 if self.camera_distance else 10
+            if symbol == key.F10:
+                ds = -0.1 if modifiers & key.MOD_SHIFT else +0.1
+                self.camera_smoothing = max(0,min(0.99, self.camera_smoothing+ds))
             if symbol == key.F11:
                 self.set_fullscreen(not self.fullscreen)
             if self.chat_open:
@@ -1761,7 +1768,7 @@ class Window(pyglet.window.Window):
         glBlitFramebuffer(
             0, 0, width, height,
             0, 0, width, height,
-            GL_COLOR_BUFFER_BIT,
+            GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
             GL_NEAREST)
 
         # unbind framebuffer (switch back to default)
@@ -1831,6 +1838,8 @@ class Window(pyglet.window.Window):
         
         if self.debug_info_visible:
             self.draw_debug_info()
+        if self.keystates[key.F1]:
+            self.draw_help()
         if self.chat_open:
             self.draw_chat_buffer()
     
@@ -1848,7 +1857,7 @@ class Window(pyglet.window.Window):
             for ii,i in enumerate(self.active_shader_is)
         )
         
-        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F6]:%.1f cs[F7]:%.2f \t [F4/F5]: %s \t fb[F8]:%s' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing, shader_names, self.framebuffer_enabled)
+        self.label.text = 'FPS: %03d \t Position: (%.2f, %.2f, %.2f) \t Buffer: %04d, %04d, %04d \t cd[F9]:%.1f cs[F10]:%.2f \t [F6/F7]: %s \t fb[F8]:%s' % (fps, x, y, z, queue, face_buffer, terrain_queue, self.camera_distance, self.camera_smoothing, shader_names, self.framebuffer_enabled)
         self.label.draw()
     
     def draw_chat_buffer(self):
@@ -1882,6 +1891,58 @@ class Window(pyglet.window.Window):
         Draw the crosshairs in the center of the screen.
         """
         self.reticle.draw(GL_LINES)
+    
+    def draw_help(self):
+        text = """\
+F1: help
+F2: settings
+F3: debug
+F4: -
+F5: reload
+F6: shader [Shift] ~next/previous
+F7: shader bookmark
+F8: toggle framebuffer
+F9: camera distance [Shift] zoom in [Ctrl] zoom out
+F10: camera smooting [Shift] ~increase/decrease
+F11: fullscreen
+Esc: mouse mode
+click circle: camera mode
+"""
+        document = pyglet.text.decode_text(text)
+        document.set_style(0, len(document.text), {
+            'font_name': "Arial",
+            'font_size': 20,
+            #'bold': bold,
+            #'italic': italic,
+            'color': (0,0,0,255),
+            'align': "left",
+            })
+        w,h = self.get_size()
+        label = pyglet.text.layout.TextLayout(document,
+                                  #batch=self.hud_batch,
+                                  group=textgroup,
+                                  multiline=True,
+                                  wrap_lines=False,
+                                  #, width=w-20, height=h-20,
+                                  )
+        label.begin_update()
+        label.x = w//2
+        label.y = h//2
+        label.anchor_x = "center"
+        label.anchor_y = "center"
+        label.end_update()
+
+        label.draw()
+
+        # second draw in white to get drop shadow effect
+        document.set_style(0, len(document.text), {
+            'color': (255,255,255,255),
+            })
+        label.begin_update()
+        label.x -= 2
+        label.y += 2
+        label.end_update()
+        label.draw()
 
     def play_sound(self, sound_name, position):
         if sound_name in SOUNDS:
@@ -1932,7 +1993,7 @@ class SettingsWindow(pyglet.window.Window):
             self.sliders[name] = MySlider(self, name, 100, y, self.batch, self.frame, value)
             
     def on_key_press(self, symbol, modifiers):
-        if symbol == key.F1:
+        if symbol == key.F2:
             self.close()
 
     def on_draw(self):
