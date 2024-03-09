@@ -88,6 +88,7 @@ KEYMAP = [
     (("key"  , key.RIGHT  ),"+yaw"    ),
     (("key"  , key.DOWN   ),"-pitch"    ),
     (("key"  , key.UP     ),"+pitch"    ),
+    (("key"  , key.TAB    ),"autocomplete"),
     ]
 import appdirs
 configdir = appdirs.user_config_dir("MCGCraft","ProgrammierAG")
@@ -366,6 +367,16 @@ def get_fog(block_name):
 
 def get_material(block_name):
     return MATERIAL.get(block_name.rsplit(":",1)[0], "solid")
+
+def scroll_through(options, current, direction, insert=False):
+    if current in options:
+        i = (options.index(current) + direction) % len(options)
+    elif insert:
+        options.insert(0, current)
+        i = direction % len(options)
+    else:
+        i = 0
+    return options[i]
 
 #M# improve order of chunkpositions for better caching!
 CHUNKPOSITIONS = tuple(map(Vector, itertools.product(range(CHUNKSIZE),repeat=DIMENSION)))
@@ -1040,6 +1051,11 @@ class Window(pyglet.window.Window):
         self.update_settings_options()
         self.t0 = time.time()
 
+        # chat history and autocomplete
+        self.chat_history = []
+        self.textsuggestions = []
+        self.autocomplete_prompt = "a prompt that produces empty textsuggestions"
+
         # some function to tell about events
         if not client:
             raise ValueError("There must be some client")
@@ -1248,6 +1264,9 @@ class Window(pyglet.window.Window):
                     assert type(sound_name) == str
                     position = Vector(position)
                     self.play_sound(sound_name, position)
+                elif test("textsuggestions", 1):
+                    self.textsuggestions, = args
+                    self.autocomplete()
                 else:
                     print("unknown command", command, args)
             self.model.process_queue()
@@ -1466,7 +1485,7 @@ class Window(pyglet.window.Window):
             for e, action in KEYMAP:
                 (event_type, symbol) = e
                 value = 0
-                if (event_type == "key"   and self.keystates[symbol] and not self.chat_open):
+                if (event_type == "key"   and self.keystates[symbol]):
                     value = 255
                 if (event_type == "mouse" and self.mousestates[symbol]):
                     value = 255
@@ -1487,7 +1506,8 @@ class Window(pyglet.window.Window):
             self.actionstates["for"]   = max(0, min(255, int(round(-dz))))
             actionstates = bytearray(self.actionstates[a] for a in ACTIONS)
             actionstates_b64 = base64.encodebytes(actionstates.rstrip(b"\00")).decode("ascii")
-            self.client.send(("keys",actionstates_b64))
+            if not self.chat_open:
+                self.client.send(("keys",actionstates_b64))
 
     def handle_input_action(self, action, value):
         if action == "inv" and value > 0:
@@ -1495,6 +1515,9 @@ class Window(pyglet.window.Window):
                 self.close_hud()
         if action == "chat" and value == 0: #do this on release, so key is not printed into chat
             self.chat_open = True
+        if action == "autocomplete" and value > 0:
+            if self.chat_open:
+                self.autocomplete()
 
     def on_key_press(self, symbol, modifiers):
         """
@@ -1557,6 +1580,7 @@ class Window(pyglet.window.Window):
             for c in text:
                 if c in ("\n","\r"):
                     self.client.send(("text",self.chat_input_buffer))
+                    self.chat_history.insert(0, self.chat_input_buffer)
                     self.chat_input_buffer = ""
                     self.chat_cursor_position = 0
                 else:
@@ -1571,8 +1595,6 @@ class Window(pyglet.window.Window):
         """
         if not self.chat_open:
             return
-        
-        l = len(self.chat_input_buffer)
 
         if motion == key.MOTION_BACKSPACE:
             self.chat_input_buffer = (self.chat_input_buffer[:self.chat_cursor_position-1] + 
@@ -1588,20 +1610,37 @@ class Window(pyglet.window.Window):
         elif motion in (key.MOTION_BEGINNING_OF_LINE, key.MOTION_PREVIOUS_PAGE, key.MOTION_BEGINNING_OF_FILE):
             self.chat_cursor_position = 0
         elif motion in (key.MOTION_END_OF_LINE, key.MOTION_NEXT_PAGE, key.MOTION_END_OF_FILE):
-            self.chat_cursor_position = l
+            self.chat_cursor_position = float("inf")
         elif motion == key.MOTION_UP:
-            print("chat history is not implemented yet")
+            self.chat_input_buffer = scroll_through(self.chat_history, self.chat_input_buffer, +1, insert=True)
+            self.chat_cursor_position = float("inf")
         elif motion == key.MOTION_DOWN:
-            print("chat history is not implemented yet")
+            self.chat_input_buffer = scroll_through(self.chat_history, self.chat_input_buffer, -1, insert=True)
+            self.chat_cursor_position = float("inf")
         elif motion == key.MOTION_NEXT_WORD:
-            print("moving cursor to next word is not implemented yet")
+            m = re.match("\s*[^\s]*", self.chat_input_buffer[self.chat_cursor_position:])
+            self.chat_cursor_position += m.span(0)[1]
         elif motion == key.MOTION_PREVIOUS_WORD:
-            print("moving cursor to previous word is not implemented yet")
+            m = re.match("\s*[^\s]*", self.chat_input_buffer[:self.chat_cursor_position][::-1])
+            self.chat_cursor_position -= m.span(0)[1]
         else:
             print("encountered unknown text motion", motion)
 
+        l = len(self.chat_input_buffer)
         self.chat_cursor_position = max(0, min(l, self.chat_cursor_position))
 
+    def autocomplete(self):
+        prompt = self.chat_input_buffer[:self.chat_cursor_position]
+        if prompt != self.autocomplete_prompt:
+            # request new suggestions
+            self.autocomplete_prompt = prompt
+            self.client.send(("autocomplete", prompt))
+        # suggestions are up to date, but are there any (yet)?
+        elif self.textsuggestions:
+            # autocomplete
+            self.chat_input_buffer = scroll_through(self.textsuggestions, self.chat_input_buffer, +1)
+            # move cursor to end of common prefix
+            self.chat_cursor_position = len(os.path.commonprefix(self.textsuggestions))
 
     def on_resize(self, width, height):
         """
