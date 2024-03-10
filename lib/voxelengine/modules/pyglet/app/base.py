@@ -279,8 +279,14 @@ class EventLoop(event.EventDispatcher):
         :py:attr:`has_exit` to ``True``.  All waiting threads will be
         interrupted (see :py:meth:`sleep`).
         """
+        self._legacy_exit()
         self.has_exit = True
         app.platform_event_loop.notify()
+
+    def _legacy_exit(self):
+        # Reenable event queuing for dispatch_events
+        from pyglet.window import Window
+        Window._enable_event_queue = True
 
     def sleep(self, timeout):
         """Wait for some amount of time, or until the :py:attr:`has_exit` flag
