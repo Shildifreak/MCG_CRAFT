@@ -1,4 +1,9 @@
+cd ..
 python -m PyInstaller -F ^
+--distpath . ^
+--specpath build ^
+--splash ..\lib\1495.gif ^
+--icon ..\lib\favicon.ico ^
 --hidden-import json ^
 --hidden-import tkinter ^
 --hidden-import tkinter.filedialog ^

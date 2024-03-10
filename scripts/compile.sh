@@ -1,4 +1,8 @@
+cd ..
 python3 -m PyInstaller -F \
+--distpath . \
+--specpath build \
+--splash ../lib/1495.gif \
 --hidden-import json \
 --hidden-import tkinter \
 --hidden-import tkinter.filedialog \

@@ -4,6 +4,10 @@
 import sys, os
 import runpy
 
+if getattr(sys, 'frozen', False):
+    import pyi_splash
+    pyi_splash.close()
+
 if len(sys.argv) > 1:
 	path = sys.argv.pop(1)
 else:
