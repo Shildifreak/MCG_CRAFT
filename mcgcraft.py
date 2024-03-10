@@ -403,6 +403,7 @@ class Player(voxelengine.Player):
             self.entity.unregister_item_callback(self._update_lives,"lives")
         super().control(entity)
         if self.entity:
+            self.entity.foreign_inventory = None
             self.inventory_display.register(self.entity["inventory"])
             self.entity.register_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.register_item_callback(self.inventory_display.callback,"left_hand")
