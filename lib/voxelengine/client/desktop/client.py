@@ -1661,6 +1661,16 @@ class Window(pyglet.window.Window):
         elif motion == key.MOTION_PREVIOUS_WORD:
             m = re.match("\s*[^\s]*", self.chat_input_buffer[:self.chat_cursor_position][::-1])
             self.chat_cursor_position -= m.span(0)[1]
+# not supported until pyglet 2.18 (or backport)
+#        elif motion == key.MOTION_COPY:
+#            self.set_clipboard_text(self.chat_input_buffer)
+#        elif motion == key.MOTION_PASTE:
+#            text = self.get_clipboard_text()
+#            self.chat_input_buffer = (
+#                self.chat_input_buffer[:self.chat_cursor_position]
+#               +text
+#               +self.chat_input_buffer[self.chat_cursor_position:])
+#            self.chat_cursor_position += len(text)
         else:
             print("encountered unknown text motion", motion)
 
