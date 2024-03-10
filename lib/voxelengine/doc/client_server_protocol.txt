@@ -44,6 +44,9 @@ server -> client
 		delarea <xmin ymin zmin> <xmax ymax zmax>
 			setzt alle Blöcke in dem Gebiet auf ihren Wert in der Terrainfunktion zurück
 
+	reload
+		lade Resourcen und Welt neu
+
 client -> server
 	tick
 	

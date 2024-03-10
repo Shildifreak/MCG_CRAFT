@@ -123,6 +123,7 @@ class TextGroup(pyglet.graphics.OrderedGroup):
     def unset_state(self):
         super(TextGroup,self).unset_state()
         glEnable(GL_DEPTH_TEST)
+textgroup = TextGroup(float("inf"))
 
 class MaterialGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -299,8 +300,15 @@ class BlockModelDict(dict):
             model = r_y(model)
         return model
         
+class Resources(object):
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+    def reload(self):
+        load_setup(self.host, self.port)
+
 def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIALS, MATERIAL, material_groups, textgroup
+    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIALS, MATERIAL, material_groups
     def url_for(filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
         netloc = "%s:%i" % (host,port)
@@ -353,7 +361,6 @@ def load_setup(host, port):
         material : material_class_map[material](i)
         for i, material in enumerate(MATERIALS)
     }
-    textgroup = TextGroup(len(material_groups))
 
 
 def is_transparent(block_name):
@@ -505,7 +512,7 @@ class InitChunkQueue(object):
 
 class Model(object):
 
-    def __init__(self, chunk_priority_callback):
+    def __init__(self, chunk_priority_callback, world_generator=None):
 
         # A Batch is a collection of vertex lists for batched rendering.
         self.batch = pyglet.graphics.Batch()
@@ -531,7 +538,10 @@ class Model(object):
 
         self.occlusion_cache = collections.OrderedDict()
         
-        self.load_generator({"code_js":""})
+        if world_generator:
+            self.load_generator(world_generator)
+        else:
+            self.load_generatordata({"code_js":""})
 
     def add_block(self, position, block_name):
         """for immediate execution use private method"""
@@ -572,8 +582,11 @@ class Model(object):
                 continue
             break
 
-    def load_generator(self, generator_data):
-        self.world_generator = world_generation.WorldGenerator(generator_data, init_py = False)
+    def load_generatordata(self, generator_data):
+        self.load_generator(world_generation.WorldGenerator(generator_data, init_py = False))
+
+    def load_generator(self, generator):
+        self.world_generator = generator
         self.init_chunk_queue.world_generator = self.world_generator
         self.blocks.set_terrain_function(self.world_generator.client_terrain)
 
@@ -882,7 +895,7 @@ class Model(object):
         self.blocks.clear()
         self.chunks.clear()
         self.init_chunk_queue.clear()
-        self.load_generator(generator_data)
+        self.load_generatordata(generator_data)
 
     def _del_area(self, position):
         for relpos in iterchunk():
@@ -960,9 +973,8 @@ class Window(pyglet.window.Window):
 #        context = config.create_context(None)
 #        kwargs.setdefault("context",context)
 
-        pyglet.window.Window.__init__(self,*args, **kwargs)
-        #super(Window, self).__init__(*args, **kwargs)
-
+        super().__init__(*args, **kwargs)
+        
         # Whether or not the window exclusively captures the mouse and other status info
         self.exclusive = False
         self.hud_open = False
@@ -973,7 +985,6 @@ class Window(pyglet.window.Window):
         self.hud_replaced_exclusive = False
 
         glEnable(GL_NORMALIZE)
-        self.reload_shaders()
         self.active_shader_is = [0,0]
         self.active_shader_ii = 0
         
@@ -1002,7 +1013,7 @@ class Window(pyglet.window.Window):
         self.d_yaw_player_camera = 0
         
         # Instance of the model that handles the world.
-        self.model = Model(chunk_priority_callback=self.distance_to_chunk)
+        self.model = None
         
         # The label for debug info
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
@@ -1048,7 +1059,6 @@ class Window(pyglet.window.Window):
         # Settings
         self.settingswindow = None
         self.slidervalues = {}
-        self.update_settings_options()
         self.t0 = time.time()
 
         # chat history and autocomplete
@@ -1060,6 +1070,23 @@ class Window(pyglet.window.Window):
         if not client:
             raise ValueError("There must be some client")
         self.client = client
+
+        self.reload() #resources, shaders, model
+        
+    def reload(self):
+        R.reload()
+
+        self.reload_shaders()
+        self.update_settings_options()
+        
+        generator = self.model.world_generator if self.model else None
+        hud_elements = self.model.hud_elements if self.model else {}
+        self.model = Model(chunk_priority_callback=self.distance_to_chunk, world_generator=generator)
+        
+        self.model.hud_elements = hud_elements
+        self.model.hud_resize(self.get_size())
+        
+        setup()
         
     def update_settings_options(self):
         self.slidervalues.clear()
@@ -1135,6 +1162,12 @@ class Window(pyglet.window.Window):
         if self.settingswindow:
             self.settingswindow.close()
         super(Window,self).on_close()
+
+    def restart(self):
+        """close window but tell run to restart"""
+        global restart
+        restart = True
+        self.on_close()
 
     def set_exclusive_mouse(self, exclusive):
         """
@@ -1267,6 +1300,8 @@ class Window(pyglet.window.Window):
                 elif test("textsuggestions", 1):
                     self.textsuggestions, = args
                     self.autocomplete()
+                elif test("reload"):
+                    self.reload()
                 else:
                     print("unknown command", command, args)
             self.model.process_queue()
@@ -1545,7 +1580,10 @@ class Window(pyglet.window.Window):
             if symbol == key.F3:
                 self.debug_info_visible = not self.debug_info_visible
             if symbol == key.F5:
-                self.reload_shaders()
+                if modifiers & key.MOD_SHIFT:
+                    self.restart()
+                else:
+                    self.reload()
             if symbol == key.F6:
                 self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
                 self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
@@ -1937,7 +1975,7 @@ F1: help
 F2: settings
 F3: debug
 F4: -
-F5: reload
+F5: reload [Shift] restart
 F6: shader [Shift] ~next/previous
 F7: shader bookmark
 F8: toggle framebuffer
@@ -2117,15 +2155,20 @@ def show_on_window(client):
     finally:
         if window:
             window.on_close()
-    
+
+restart = False
 def run(serverinfo):
-    load_setup(serverinfo["host"], serverinfo["http_port"])
-    addr = (serverinfo["host"], serverinfo["game_port"])
-    try:
-        with socket_connection.client(addr) as socket_client:
-            show_on_window(socket_client)
-    except socket_connection.Disconnect:
-        print("Client closed due to disconnect.")
+    global restart, R
+    restart = True
+    while restart:
+        restart = False
+        R = Resources(serverinfo["host"], serverinfo["http_port"])
+        addr = (serverinfo["host"], serverinfo["game_port"])
+        try:
+            with socket_connection.client(addr) as socket_client:
+                show_on_window(socket_client)
+        except socket_connection.Disconnect:
+            print("Client closed due to disconnect.")
 
 def main():
     serverinfo = client_utils.get_serverinfo(args)
