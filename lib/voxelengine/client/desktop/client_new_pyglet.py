@@ -21,11 +21,12 @@ import re
 
 # Adding directory with modules to python path
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+sys.path.append(os.path.join(PATH,"..","..","modules","pyglet-2.0.14b")) # <- for testing in parallel with previous version
 sys.path.append(os.path.join(PATH,"..","..","modules"))
 sys.path.append(os.path.join(PATH,"..","..",".."))
 sys.path.append(os.path.join(PATH,".."))
 
-import pyglet
+import pyglet as pyglet
 from pyglet import image
 #pyglet.options["debug_gl"] = False
 #pyglet.options['debug_media'] = True
@@ -116,7 +117,7 @@ FACES = [Vector([ 0, 1, 0]), #top
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
 
-class TextGroup(pyglet.graphics.OrderedGroup):
+class TextGroup(pyglet.graphics.Group):
     def set_state(self):
         super(TextGroup,self).set_state()
         glDisable(GL_DEPTH_TEST)
@@ -125,7 +126,7 @@ class TextGroup(pyglet.graphics.OrderedGroup):
         glEnable(GL_DEPTH_TEST)
 textgroup = TextGroup(float("inf"))
 
-class MaterialGroup(pyglet.graphics.OrderedGroup):
+class MaterialGroup(pyglet.graphics.Group):
     def set_state(self):
         super().set_state()
         prog = GLint (0);
@@ -155,6 +156,14 @@ class SemiTransparentMaterialGroup(MaterialGroup):
         super().unset_state()
         #glEnable(GL_CULL_FACE)
         glDisable(GL_BLEND)
+
+class SwappableShaderProgram(object):
+    def vertex_list(self, batch, data):
+        domain = batch.get_domain(...)
+        domain.vertex_list?
+        for fmt, bla in data:
+            ...
+BLOCK_SHADER = SwappableShaderProgram()
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -701,10 +710,11 @@ class Model(object):
         # create vertex list
         # FIXME Maybe `add_indexed()` should be used instead
         length = len(vertex_data)//3
-        self.shown[(position,face)] = self.batch.add(length, GL_QUADS, group,
-            ('v3f/static', vertex_data),
-            ('t2f/static', texture_data),
-            ('c3f/static', self.color_corrections(vertex_data,FACES_PLUS[face])))
+#M#
+#        self.shown[(position,face)] = self.batch.add(length, GL_QUADS, group,
+#            ('v3f/static', vertex_data),
+#            ('t2f/static', texture_data),
+#            ('c3f/static', self.color_corrections(vertex_data,FACES_PLUS[face])))
 
     def hide(self,position):
         for face in range(len(FACES_PLUS)):
@@ -728,31 +738,32 @@ class Model(object):
         vertex_lists=[]
         model = ENTITY_MODELS[model_id]
         # transformationsmatrix bekommen
-        glPushMatrix()
-        glLoadIdentity()
-        x, y = rotation
-        glRotatef(x, 0, 1, 0)
+#M#
+#        glPushMatrix()
+#        glLoadIdentity()
+#        x, y = rotation
+#        glRotatef(x, 0, 1, 0)
         body_matrix = (GLfloat * 16)()
-        glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
-        glPopMatrix()
-        glPushMatrix()
-        glLoadIdentity()
-        glRotatef(-y, 1, 0, 0)#, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
+#        glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
+#        glPopMatrix()
+#        glPushMatrix()
+#        glLoadIdentity()
+#        glRotatef(-y, 1, 0, 0)#, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
         head_matrix = (GLfloat * 16)()
-        glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
-        glPopMatrix()
-        glPushMatrix()
-        glLoadIdentity()
-        glRotatef(math.sin(time.time()*6.2)*20, 1, 0, 0)
+#        glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
+#        glPopMatrix()
+#        glPushMatrix()
+#        glLoadIdentity()
+#        glRotatef(math.sin(time.time()*6.2)*20, 1, 0, 0)
         legl_matrix = (GLfloat * 16)()
-        glGetFloatv(GL_MODELVIEW_MATRIX,legl_matrix)
-        glPopMatrix()
-        glPushMatrix()
-        glLoadIdentity()
-        glRotatef(math.sin(time.time()*6.2)*-20, 1, 0, 0)
+#        glGetFloatv(GL_MODELVIEW_MATRIX,legl_matrix)
+#        glPopMatrix()
+#        glPushMatrix()
+#        glLoadIdentity()
+#        glRotatef(math.sin(time.time()*6.2)*-20, 1, 0, 0)
         legr_matrix = (GLfloat * 16)()
-        glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
-        glPopMatrix()
+#        glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
+#        glPopMatrix()
         for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,block_name in model[modelpart]:
                 offset = offset if modelpart in ("head","legl","legr") else relpos
@@ -774,10 +785,12 @@ class Model(object):
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     try:
-                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, group,
-                            ('v3f/static', vertex_data),
-                            ('t2f/static', texture_data),
-                            ('c3f/static', color_data)))
+                        pass
+#M#
+#                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, group,
+#                            ('v3f/static', vertex_data),
+#                            ('t2f/static', texture_data),
+#                            ('c3f/static', color_data)))
                     except:
                         print(model_id, model_maps, vertex_data, texture_data, color_data)
                         raise
@@ -816,9 +829,11 @@ class Model(object):
             vertex_list = None
         elif not texture.startswith ("/"):
             texture_data = list(ICON[texture])
-            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_material_groups["transparent"],
-                            ('v3f/static', corners),
-                            ('t2f/static', texture_data))
+            return
+            #M#
+#            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_material_groups["transparent"],
+#                            ('v3f/static', corners),
+#                            ('t2f/static', texture_data))
         else:
             x,y,z = center_pos
             text = texture[1:]
@@ -854,11 +869,11 @@ class Model(object):
                 label.anchor_y = "center"
                 
                 # doesn't work although it should (bug in pyglet)
-                #label.valign = label.height - label.content_height
-                #label.content_valign = "bottom"
+                label.valign = label.height - label.content_height
+                label.content_valign = "bottom"
                 
                 #M# workaround for bug in pyglet
-                label.top_group.view_y = label.height - label.content_height
+                #label.top_group.view_y = label.height - label.content_height
                 
                 label.end_update()
                 
@@ -984,7 +999,7 @@ class Window(pyglet.window.Window):
         self.chat_cursor_position = 0
         self.hud_replaced_exclusive = False
 
-        glEnable(GL_NORMALIZE)
+        #glEnable(GL_NORMALIZE) #M#
         self.active_shader_is = [0,0]
         self.active_shader_ii = 0
         
@@ -1661,16 +1676,15 @@ class Window(pyglet.window.Window):
         elif motion == key.MOTION_PREVIOUS_WORD:
             m = re.match(r"\s*[^\s]*", self.chat_input_buffer[:self.chat_cursor_position][::-1])
             self.chat_cursor_position -= m.span(0)[1]
-# not supported until pyglet 2.18 (or backport)
-#        elif motion == key.MOTION_COPY:
-#            self.set_clipboard_text(self.chat_input_buffer)
-#        elif motion == key.MOTION_PASTE:
-#            text = self.get_clipboard_text()
-#            self.chat_input_buffer = (
-#                self.chat_input_buffer[:self.chat_cursor_position]
-#               +text
-#               +self.chat_input_buffer[self.chat_cursor_position:])
-#            self.chat_cursor_position += len(text)
+        elif motion == key.MOTION_COPY:
+            self.set_clipboard_text(self.chat_input_buffer)
+        elif motion == key.MOTION_PASTE:
+            text = self.get_clipboard_text()
+            self.chat_input_buffer = (
+                self.chat_input_buffer[:self.chat_cursor_position]
+               +text
+               +self.chat_input_buffer[self.chat_cursor_position:])
+            self.chat_cursor_position += len(text)
         else:
             print("encountered unknown text motion", motion)
 
@@ -1720,9 +1734,10 @@ class Window(pyglet.window.Window):
                                for line in lines
                                for point in line
                                for p, dp in zip((x,y), point))
-        self.reticle = pyglet.graphics.vertex_list(len(centered_lines)//2,
-            ('v2f', centered_lines)
-        )
+        #M#
+        #self.reticle = pyglet.graphics.vertex_list(len(centered_lines)//2,
+        #    ('v2f', centered_lines)
+        #)
 
     def set_2d(self):
         """
@@ -1732,11 +1747,12 @@ class Window(pyglet.window.Window):
         #glDisable(GL_DEPTH_TEST)
         glClear(GL_DEPTH_BUFFER_BIT)
         glViewport(0, 0, width, height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glOrtho(0, width, 0, height, -1, 1)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+#M#
+#        glMatrixMode(GL_PROJECTION)
+#        glLoadIdentity()
+#        glOrtho(0, width, 0, height, -1, 1)
+#        glMatrixMode(GL_MODELVIEW)
+#        glLoadIdentity()
 
     def set_3d(self):
         """
@@ -1745,18 +1761,19 @@ class Window(pyglet.window.Window):
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
         glViewport(0, 0, width, height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+#M#
+#        glMatrixMode(GL_PROJECTION)
+#        glLoadIdentity()
+#        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
+#        glMatrixMode(GL_MODELVIEW)
+#        glLoadIdentity()
         yaw, pitch = self.camera_rotation
         c = math.cos(math.radians(yaw))
         s = math.sin(math.radians(yaw))
-        glRotatef(yaw, 0, 1, 0)
-        glRotatef(-pitch, c, 0, s)
+#        glRotatef(yaw, 0, 1, 0)
+#        glRotatef(-pitch, c, 0, s)
         x, y, z = self.camera_position
-        glTranslatef(-x, -y, -z)
+#        glTranslatef(-x, -y, -z)
 
     def setup_framebuffer_stuff(self):
         # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
@@ -1893,7 +1910,8 @@ class Window(pyglet.window.Window):
         fog_color = get_fog(self.model.get_block(self.camera_position.round()))
         setup_fog(fog_color)
         self.set_3d()
-        glColor3d(1, 1, 1)
+#M#
+#        glColor3d(1, 1, 1)
         block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
         block_shader.bind()
         width, height = self.get_size()
@@ -1910,7 +1928,8 @@ class Window(pyglet.window.Window):
         self.update_pointer_position_3d()
         
         x = 0.25 #1/(Potenzen von 2) sind sinnvoll, je größer der Wert, desto stärker der Kontrast
-        glColor3d(x, x, x)
+#M#
+#        glColor3d(x, x, x)
         glEnable(GL_COLOR_LOGIC_OP)
         glLogicOp(GL_XOR)
 
@@ -1920,7 +1939,8 @@ class Window(pyglet.window.Window):
 
         glClear(GL_DEPTH_BUFFER_BIT)
         glDisable(GL_COLOR_LOGIC_OP)
-        glColor3d(1, 1, 1)
+#M#
+#        glColor3d(1, 1, 1)
         self.model.hud_batch.draw()
         
         if self.debug_info_visible:
@@ -1970,14 +1990,16 @@ class Window(pyglet.window.Window):
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
+#M#
+#            pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def draw_reticle(self):
         """
         Draw the crosshairs in the center of the screen.
         """
-        self.reticle.draw(GL_LINES)
+#M#
+#        self.reticle.draw(GL_LINES)
     
     def draw_help(self):
         text = """\
@@ -2110,7 +2132,8 @@ def setup_fog(fog_color):
     # post-texturing color."
     #glEnable(GL_FOG)
     # Set the fog color.
-    glFogfv(GL_FOG_COLOR, (GLfloat * 4)(*(c/255 for c in fog_color)))
+#M#
+#    glFogfv(GL_FOG_COLOR, (GLfloat * 4)(*(c/255 for c in fog_color)))
     # Say we have no preference between rendering speed and quality.
     #glHint(GL_FOG_HINT, GL_DONT_CARE)
     # Specify the equation used to compute the blending factor.
