@@ -1,0 +1,23 @@
+
+We intend publish one release per year, during the summer holidays.
+
+When creating a new Release make sure to do the following steps:
+
+- create new branch named release_20XX (where 20XX is the current year)
+
+- set version number
+
+- adjust webclient link to fixed version
+
+- add executables for linux and windows
+
+- commit
+
+- check out using git clone --depth=1 ...
+  -> zip
+  (so we can provide a zip without history but still support for automated update)
+
+- tag the release as release_20XX.0.0
+  -> add zip file from previous step
+
+Only add nonbreaking bugfixes on this branch if necessary
