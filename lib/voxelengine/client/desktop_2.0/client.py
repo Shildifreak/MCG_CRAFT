@@ -139,12 +139,16 @@ class TransparentMaterialGroup(MaterialGroup):
     def set_state(self):
         super().set_state()
         glDisable(GL_CULL_FACE)
-        glEnable(GL_ALPHA_TEST)
-        glAlphaFunc(GL_GREATER, 0)
+#        glEnable(GL_BLEND)
+#        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
+#M#
+#        glEnable(GL_ALPHA_TEST)
+#        glAlphaFunc(GL_GREATER, 0)
     def unset_state(self):
         super().unset_state()
         glEnable(GL_CULL_FACE)
-        glDisable(GL_ALPHA_TEST)
+#M#
+#        glDisable(GL_ALPHA_TEST)
 
 class SemiTransparentMaterialGroup(MaterialGroup):
     def set_state(self):
@@ -160,10 +164,115 @@ class SemiTransparentMaterialGroup(MaterialGroup):
 class SwappableShaderProgram(object):
     def vertex_list(self, batch, data):
         domain = batch.get_domain(...)
-        domain.vertex_list?
+        domain.vertex_list
         for fmt, bla in data:
             ...
 BLOCK_SHADER = SwappableShaderProgram()
+
+class Shaders:
+    def reload(self):
+        import pyglet.graphics.shader
+        # reticle shader
+        _vertex_source = """#version 330 core
+            in vec2 position;
+
+            void main()
+            {
+                gl_Position = vec4(position.x, position.y, 0.0, 1.0);
+            }
+        """
+
+        _fragment_source = """#version 330 core
+            out vec4 final_colors;
+
+            void main()
+            {
+                final_colors = vec4(1.0);
+            }
+        """
+        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
+        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
+        self.reticle_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
+        
+        # hud shader
+        _vertex_source = """#version 330 core
+            in vec3 position;
+            in vec2 tex_coords;
+            varying vec2 uv;
+
+            void main()
+            {
+                gl_Position = vec4(position.x, position.y, -position.z, 1.0);
+                uv = tex_coords;
+            }
+        """
+
+        _fragment_source = """#version 330 core
+            out vec4 final_colors;
+            varying vec2 uv;
+            uniform sampler2D our_texture;
+            
+            void main()
+            {
+                final_colors = texture(our_texture, uv.xy);
+                if (final_colors.a == 0) {
+                    discard;
+                }
+            }
+        """
+        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
+        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
+        self.hud_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+        
+        # block shaders
+        fragment_shaders = dict() # {name: source_code_bytes, ...}
+        vertex_shaders = dict()
+        shaders_dir = os.path.join(PATH,"shaders")
+        for filename in os.listdir(shaders_dir):
+            shadername, extension = os.path.splitext(filename)
+            if extension in (".frag", ".vert"):
+                path = os.path.join(shaders_dir,filename)
+                with open(path, "rb")  as f:
+                    {".frag":fragment_shaders,
+                     ".vert":vertex_shaders,
+                    }[extension][shadername] = f.read()
+
+        def replace_macros(shader_code):
+            # material macros
+            def repl(match):
+                material = match.groups()[0].decode()
+                if material in MATERIALS:
+                    i = MATERIALS.index(material)
+                else:
+                    print("shader used unknown material",material)
+                    i = -1
+                return str(i).encode()
+            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
+            return shader_code
+
+        vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
+        fragment_shaders = {k:replace_macros(v) for k,v in fragment_shaders.items()}
+
+        self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
+        default = self.block_shader_names[0]
+        self.block_shaders = tuple(
+                Shader([vertex_shaders.get(name,vertex_shaders[default])],
+                       [fragment_shaders.get(name,fragment_shaders[default])])
+            for name in self.block_shader_names
+        )
+        
+        for block_shader in self.block_shaders:
+            block_shader.bind()
+            block_shader.uniformi(b"color_texture",0)
+            block_shader.uniformi(b"loopback",1)
+            block_shader.uniformi(b"loopback2",2)
+
+        vert_shader = pyglet.graphics.shader.Shader(vertex_shaders[default].decode(), 'vertex')
+        frag_shader = pyglet.graphics.shader.Shader(fragment_shaders[default].decode(), 'fragment')
+        self.default_block_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+
+
+SHADERS = Shaders()
 
 def cube_vertices(x, y, z, n):
     """ Return the vertices of the cube at position x, y, z with size 2*n.
@@ -706,10 +815,24 @@ class Model(object):
         if not (vertex_data and texture_data):
             return
         vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
+        color_data = self.color_corrections(vertex_data,FACES_PLUS[face])
         group = self.textured_material_groups[get_material(block_name)]
         # create vertex list
-        # FIXME Maybe `add_indexed()` should be used instead
         length = len(vertex_data)//3
+        vertex_list = SHADERS.default_block_shader.vertex_list_indexed(length, GL_TRIANGLES,
+            [o*4+i for o in range(length//4) for i in (0,1,2,0,2,3)],#(0,1,4,1,2,4,2,3,4,3,0,4),
+            batch=self.batch, group=group,
+            Vertex=('f', vertex_data),
+            TexCoord=('f', texture_data),
+            Color=('f', color_data),
+            )
+#        print(list(map(len,[vertex_list.Vertex, vertex_data, 
+#                            vertex_list.TexCoord, texture_data,
+#                            vertex_list.Color, color_data])))
+#        vertex_list.Vertex = vertex_data
+#        vertex_list.TexCoord = texture_data
+#        vertex_list.Color = color_data
+        self.shown[(position,face)] = vertex_list
 #M#
 #        self.shown[(position,face)] = self.batch.add(length, GL_QUADS, group,
 #            ('v3f/static', vertex_data),
@@ -829,11 +952,17 @@ class Model(object):
             vertex_list = None
         elif not texture.startswith ("/"):
             texture_data = list(ICON[texture])
-            return
-            #M#
-#            vertex_list = self.hud_batch.add(4, GL_QUADS, self.textured_material_groups["transparent"],
-#                            ('v3f/static', corners),
-#                            ('t2f/static', texture_data))
+            #i = iter(texture_data)
+            #texture_data = [e for x in i for e in (x,next(i),0)]
+            i = iter(corners)
+            corners = [e for x in i for e in (x/window_size[0]*2-1,next(i)/window_size[1]*2-1,next(i))] 
+            #print(corners)
+            vertex_list = SHADERS.hud_shader.vertex_list_indexed(4, GL_TRIANGLES,
+                (0,1,2,0,2,3),#(0,1,4,1,2,4,2,3,4,3,0,4),
+                batch=self.hud_batch, group=self.textured_material_groups["transparent"],
+                position=('f', corners),
+                tex_coords=('f', texture_data),
+                )
         else:
             x,y,z = center_pos
             text = texture[1:]
@@ -1091,7 +1220,7 @@ class Window(pyglet.window.Window):
     def reload(self):
         R.reload()
 
-        self.reload_shaders()
+        SHADERS.reload()
         self.update_settings_options()
         
         generator = self.model.world_generator if self.model else None
@@ -1106,7 +1235,7 @@ class Window(pyglet.window.Window):
     def update_settings_options(self):
         self.slidervalues.clear()
 
-        block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        block_shader = SHADERS.block_shaders[self.active_shader_is[self.active_shader_ii]]
         active_uniforms = block_shader.get_active_uniforms()
 
         for u in active_uniforms:
@@ -1127,50 +1256,6 @@ class Window(pyglet.window.Window):
             self.switch_to() # switch opengl context
         self.set_exclusive_mouse(False)
         self.settingswindow = SettingsWindow(self.slidervalues)
-
-    def reload_shaders(self):
-        fragment_shaders = dict() # {name: source_code_bytes, ...}
-        vertex_shaders = dict()
-        shaders_dir = os.path.join(PATH,"shaders")
-        for filename in os.listdir(shaders_dir):
-            shadername, extension = os.path.splitext(filename)
-            if extension in (".frag", ".vert"):
-                path = os.path.join(shaders_dir,filename)
-                with open(path, "rb")  as f:
-                    {".frag":fragment_shaders,
-                     ".vert":vertex_shaders,
-                    }[extension][shadername] = f.read()
-
-        def replace_macros(shader_code):
-            # material macros
-            def repl(match):
-                material = match.groups()[0].decode()
-                if material in MATERIALS:
-                    i = MATERIALS.index(material)
-                else:
-                    print("shader used unknown material",material)
-                    i = -1
-                return str(i).encode()
-            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
-            return shader_code
-
-        vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
-        fragment_shaders = {k:replace_macros(v) for k,v in fragment_shaders.items()}
-
-        self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
-        default = self.block_shader_names[0]
-        self.block_shaders = tuple(
-                Shader([vertex_shaders.get(name,vertex_shaders[default])],
-                       [fragment_shaders.get(name,fragment_shaders[default])])
-            for name in self.block_shader_names
-        )
-        
-        for block_shader in self.block_shaders:
-            block_shader.bind()
-            block_shader.uniformi(b"color_texture",0)
-            block_shader.uniformi(b"loopback",1)
-            block_shader.uniformi(b"loopback2",2)
-
 
     def on_close(self):
         pyglet.clock.unschedule(self.update)
@@ -1601,7 +1686,7 @@ class Window(pyglet.window.Window):
                     self.reload()
             if symbol == key.F6:
                 self.active_shader_is[self.active_shader_ii] += -1 if modifiers & key.MOD_SHIFT else 1
-                self.active_shader_is[self.active_shader_ii] %= len(self.block_shaders)
+                self.active_shader_is[self.active_shader_ii] %= len(SHADERS.block_shaders)
                 self.update_settings_options()
             if symbol == key.F7:
                 self.active_shader_ii += -1 if modifiers & key.MOD_SHIFT else 1
@@ -1717,10 +1802,11 @@ class Window(pyglet.window.Window):
         # framebuffer
         self.resize_framebuffer_stuff()
     
-    def update_reticle(self, width, height):
+    def update_reticle(self, width, height):    
         if self.reticle:
             self.reticle.delete()
-        x, y = self.width / 2, self.height / 2
+        #x, y = self.width / 2, self.height / 2
+        x,y = 0,0
         if self.exclusive or self.hud_replaced_exclusive:
             n = 10
             lines = [((-n, 0), (n, 0)),
@@ -1734,10 +1820,11 @@ class Window(pyglet.window.Window):
                                for line in lines
                                for point in line
                                for p, dp in zip((x,y), point))
-        #M#
-        #self.reticle = pyglet.graphics.vertex_list(len(centered_lines)//2,
-        #    ('v2f', centered_lines)
-        #)
+        i = iter(centered_lines)
+        centered_lines = [e for x in i for e in (x*2/width, next(i)*2/height)]
+        self.reticle = SHADERS.reticle_shader.vertex_list(len(centered_lines)//2, GL_LINES,
+            position=('f', centered_lines),
+        )
 
     def set_2d(self):
         """
@@ -1761,19 +1848,36 @@ class Window(pyglet.window.Window):
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
         glViewport(0, 0, width, height)
+        
 #M#
 #        glMatrixMode(GL_PROJECTION)
 #        glLoadIdentity()
 #        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
+        projection_matrix = pyglet.math.Mat4.perspective_projection(width/height, ZNEAR, ZFAR, FOV)
+
 #        glMatrixMode(GL_MODELVIEW)
 #        glLoadIdentity()
         yaw, pitch = self.camera_rotation
         c = math.cos(math.radians(yaw))
         s = math.sin(math.radians(yaw))
 #        glRotatef(yaw, 0, 1, 0)
+        model_view_matrix = pyglet.math.Mat4.from_rotation(math.radians(yaw), (0,1,0))
 #        glRotatef(-pitch, c, 0, s)
+        model_view_matrix = model_view_matrix.rotate(math.radians(-pitch), (c,0,s))
         x, y, z = self.camera_position
 #        glTranslatef(-x, -y, -z)
+        model_view_matrix = model_view_matrix.translate((-x, -y, -z))
+        
+        SHADERS.default_block_shader["ModelViewMatrix"] = model_view_matrix
+        SHADERS.default_block_shader["ProjectionMatrix"] = projection_matrix
+        
+        #prog = GLint (0);
+        #glGetIntegerv(GL_CURRENT_PROGRAM, gl.byref(prog));
+        #if prog.value:
+        #    location = glGetUniformLocation(prog.value, b"ModelViewMatrix");
+        #    glUniformMatrix4fv(location, model_view_matrix)
+        #    location = glGetUniformLocation(prog.value, b"ProjectionMatrix");
+        #    glUniformMatrix4fv(location, projection_matrix)
 
     def setup_framebuffer_stuff(self):
         # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
@@ -1909,16 +2013,21 @@ class Window(pyglet.window.Window):
         self.clear()
         fog_color = get_fog(self.model.get_block(self.camera_position.round()))
         setup_fog(fog_color)
-        self.set_3d()
 #M#
 #        glColor3d(1, 1, 1)
-        block_shader = self.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        block_shader = SHADERS.default_block_shader#block_shaders[self.active_shader_is[self.active_shader_ii]]
         block_shader.bind()
+        self.set_3d()
         width, height = self.get_size()
-        block_shader.uniformf(b"screenSize", width, height)
-        block_shader.uniformf(b"time", time.time()-self.t0)
+#        block_shader.uniformf(b"screenSize", width, height)
+        if "screenSize" in block_shader.uniforms:
+            block_shader["screenSize"] = (width,height)
+#        block_shader.uniformf(b"time", time.time()-self.t0)
+        if "time" in block_shader.uniforms:
+            block_shader["time"] = time.time()-self.t0
         for name, value in self.slidervalues.items():
             block_shader.uniformf(bytes(name,"utf-8"), value)
+#M#
         self.model.batch.draw()
         block_shader.unbind()
         
@@ -1935,13 +2044,15 @@ class Window(pyglet.window.Window):
 
         self.draw_focused_block()
         self.set_2d()
-        self.draw_reticle()
+        with SHADERS.reticle_shader:
+            self.draw_reticle()
 
         glClear(GL_DEPTH_BUFFER_BIT)
         glDisable(GL_COLOR_LOGIC_OP)
 #M#
 #        glColor3d(1, 1, 1)
-        self.model.hud_batch.draw()
+        with SHADERS.hud_shader:
+            self.model.hud_batch.draw()
         
         if self.debug_info_visible:
             self.draw_debug_info()
@@ -1955,12 +2066,12 @@ class Window(pyglet.window.Window):
         draw stuff like Position, Rotation, FPS, ...
         """
         x, y, z = self.player_position
-        fps = pyglet.clock.get_fps()
+        fps = pyglet.clock.get_frequency()
         queue = len(self.model.queue)
         face_buffer = len(self.model.blockface_update_buffer)
         terrain_queue = len(self.model.init_chunk_queue.chunks)
         shader_names = "".join(
-            ("[%s]" if self.active_shader_ii==ii else " %s ") % self.block_shader_names[i]
+            ("[%s]" if self.active_shader_ii==ii else " %s ") % SHADERS.block_shader_names[i]
             for ii,i in enumerate(self.active_shader_is)
         )
         
@@ -1998,8 +2109,7 @@ class Window(pyglet.window.Window):
         """
         Draw the crosshairs in the center of the screen.
         """
-#M#
-#        self.reticle.draw(GL_LINES)
+        self.reticle.draw(GL_LINES)
     
     def draw_help(self):
         text = """\
