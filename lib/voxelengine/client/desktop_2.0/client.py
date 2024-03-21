@@ -1,5 +1,5 @@
-# -*- coding: cp1252 -*-
-# Copyright (C) 2016 - 2020 Joram Brenz
+# -*- coding: utf-8 -*-
+# Copyright (C) 2016 - 2024 Joram Brenz
 # Copyright (C) 2013 Michael Fogleman
 
 import math
@@ -853,6 +853,9 @@ class Model(object):
         # used in set_entity
         # ignores translation (4th column) of matrix and uses offset instead
         return [sum([vecs[c-(c%3)+r]*mat[r+4*(c%3)] for r in range(3)])+offset[c%3] for c,x in enumerate(vecs)]
+        #M# use actual vector math operations
+        #mat = mat.translate(offset)
+        #return flatten(mat.translate(offset) @ v for v in group(vecs,3))
 
     def set_entity(self,entity_id,model_id,position,rotation,model_maps):
         self.del_entity(entity_id)
@@ -860,33 +863,12 @@ class Model(object):
             return
         vertex_lists=[]
         model = ENTITY_MODELS[model_id]
-        # transformationsmatrix bekommen
-#M#
-#        glPushMatrix()
-#        glLoadIdentity()
-#        x, y = rotation
-#        glRotatef(x, 0, 1, 0)
-        body_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(-y, 1, 0, 0)#, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
-        head_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(math.sin(time.time()*6.2)*20, 1, 0, 0)
-        legl_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,legl_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(math.sin(time.time()*6.2)*-20, 1, 0, 0)
-        legr_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
-#        glPopMatrix()
+        x, y = rotation
+        body_matrix = pyglet.math.Mat4.from_rotation(math.radians(x), (0, 1, 0))
+        head_matrix = pyglet.math.Mat4.from_rotation(math.radians(-y), (1, 0, 0))
+        legl_matrix = pyglet.math.Mat4.from_rotation(math.radians(math.sin(time.time()*6.2)*20), (1, 0, 0))
+        legr_matrix = pyglet.math.Mat4.from_rotation(math.radians(math.sin(time.time()*6.2)*-20), (1, 0, 0))
+
         for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,block_name in model[modelpart]:
                 offset = offset if modelpart in ("head","legl","legr") else relpos
@@ -895,6 +877,8 @@ class Model(object):
                 group = self.textured_material_groups[get_material(block_name)]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
+                    if not vertex_data:
+                        continue
                     #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     vertex_data = [x*size[c%3]+offset[c%3] for c,x in enumerate(vertex_data)]
                     if modelpart == "head":
@@ -908,14 +892,19 @@ class Model(object):
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     try:
-                        pass
-#M#
-#                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, group,
-#                            ('v3f/static', vertex_data),
-#                            ('t2f/static', texture_data),
-#                            ('c3f/static', color_data)))
+                        length = len(vertex_data)//3
+                        vertex_list = SHADERS.default_block_shader.vertex_list_indexed(
+                            length,
+                            GL_TRIANGLES,
+                            [o*4+i for o in range(length//4) for i in (0,1,2,0,2,3)],#(0,1,4,1,2,4,2,3,4,3,0,4),
+                            batch=self.batch, group=group,
+                            Vertex=('f', vertex_data),
+                            TexCoord=('f', texture_data),
+                            Color=('f', color_data),
+                        )
+                        vertex_lists.append(vertex_list)
                     except:
-                        print(model_id, model_maps, vertex_data, texture_data, color_data)
+                        print("aha",model_id, model_maps, vertex_data, texture_data, color_data)
                         raise
                     #M# make only one vertex list per entity!
         self.entities[entity_id] = vertex_lists
@@ -1831,7 +1820,6 @@ class Window(pyglet.window.Window):
         Configure OpenGL to draw in 2d.
         """
         width, height = self.get_size()
-        #glDisable(GL_DEPTH_TEST)
         glClear(GL_DEPTH_BUFFER_BIT)
         glViewport(0, 0, width, height)
 #M#
@@ -1849,36 +1837,22 @@ class Window(pyglet.window.Window):
         glEnable(GL_DEPTH_TEST)
         glViewport(0, 0, width, height)
         
-#M#
-#        glMatrixMode(GL_PROJECTION)
-#        glLoadIdentity()
-#        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
         projection_matrix = pyglet.math.Mat4.perspective_projection(width/height, ZNEAR, ZFAR, FOV)
 
-#        glMatrixMode(GL_MODELVIEW)
-#        glLoadIdentity()
-        yaw, pitch = self.camera_rotation
-        c = math.cos(math.radians(yaw))
-        s = math.sin(math.radians(yaw))
-#        glRotatef(yaw, 0, 1, 0)
-        model_view_matrix = pyglet.math.Mat4.from_rotation(math.radians(yaw), (0,1,0))
-#        glRotatef(-pitch, c, 0, s)
-        model_view_matrix = model_view_matrix.rotate(math.radians(-pitch), (c,0,s))
+        yaw, pitch = map(math.radians, self.camera_rotation)
+        c = math.cos(yaw)
+        s = math.sin(yaw)
         x, y, z = self.camera_position
-#        glTranslatef(-x, -y, -z)
-        model_view_matrix = model_view_matrix.translate((-x, -y, -z))
+
+        model_view_matrix = (pyglet.math.Mat4
+            .from_rotation(yaw, (0, 1, 0))
+            .rotate(-pitch, (c, 0, s))
+            .translate((-x, -y, -z))
+        )
         
         SHADERS.default_block_shader["ModelViewMatrix"] = model_view_matrix
         SHADERS.default_block_shader["ProjectionMatrix"] = projection_matrix
         
-        #prog = GLint (0);
-        #glGetIntegerv(GL_CURRENT_PROGRAM, gl.byref(prog));
-        #if prog.value:
-        #    location = glGetUniformLocation(prog.value, b"ModelViewMatrix");
-        #    glUniformMatrix4fv(location, model_view_matrix)
-        #    location = glGetUniformLocation(prog.value, b"ProjectionMatrix");
-        #    glUniformMatrix4fv(location, projection_matrix)
-
     def setup_framebuffer_stuff(self):
         # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
         # Create the framebuffer (rendering target).
