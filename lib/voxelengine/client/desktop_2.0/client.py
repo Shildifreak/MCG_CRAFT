@@ -163,7 +163,6 @@ class SemiTransparentMaterialGroup(MaterialGroup):
 
 class Shaders:
     def reload(self):
-        import pyglet.graphics.shader
         # reticle shader
         _vertex_source = """#version 330 core
             in vec2 position;
@@ -182,9 +181,9 @@ class Shaders:
                 final_colors = vec4(1.0);
             }
         """
-        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
-        self.reticle_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
+        vert_shader = Shader(_vertex_source, 'vertex')
+        frag_shader = Shader(_fragment_source, 'fragment')
+        self.reticle_shader = ShaderProgram(vert_shader, frag_shader)
         
         # hud shader
         _vertex_source = """#version 330 core
@@ -212,9 +211,9 @@ class Shaders:
                 }
             }
         """
-        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
-        self.hud_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+        vert_shader = Shader(_vertex_source, 'vertex')
+        frag_shader = Shader(_fragment_source, 'fragment')
+        self.hud_shader = ShaderProgram(vert_shader, frag_shader)        
         
         # block shaders
         fragment_shaders = dict() # {name: source_code_bytes, ...}
@@ -233,8 +232,8 @@ class Shaders:
             # material macros
             def repl(match):
                 material = match.groups()[0]
-                if material in MATERIALS:
-                    i = MATERIALS.index(material)
+                if material in R.MATERIALS:
+                    i = R.MATERIALS.index(material)
                 else:
                     print("shader used unknown material",material)
                     i = -1
@@ -262,9 +261,6 @@ class Shaders:
             if "loopback2" in block_shader.uniforms:
                 block_shader["loopback2"] = 2
 
-        vert_shader = pyglet.graphics.shader.Shader(vertex_shaders[default], 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(fragment_shaders[default], 'fragment')
-        self.default_block_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
         self.default_block_shader = self.block_shaders[0]
 
 
@@ -308,14 +304,14 @@ def tex_coord(x, y, dx = 1, dy = 1):
     """ Return the bounding vertices of the texture square.
 
     """
-    p = TEXTURE_EDGE_CUTTING
+    p = R.TEXTURE_EDGE_CUTTING
     x += p
     y += p
     dx -= 2 * p
     dy -= 2 * p
 
-    mx = 1.0 / TEXTURE_DIMENSIONS[0]
-    my = 1.0 / TEXTURE_DIMENSIONS[1]
+    mx = 1.0 / R.TEXTURE_DIMENSIONS[0]
+    my = 1.0 / R.TEXTURE_DIMENSIONS[1]
     x  *= mx
     y  *= my
     dx *= mx
@@ -355,15 +351,15 @@ def block_model(vertices, textures):
         result.append((side_vertices,side_textures))
     return result
 
-class BlockModelDict(dict):
+class BlockInfoDict(dict):
     def __missing__(self, key):
         parts = key.rsplit(":",1)
         if len(parts) == 2:
             blockid, state = parts
-            baseModel = self[blockid]
-            model = self.rotate(baseModel, state)
-            self[key] = model
-            return model
+            baseBlockInfo = self[blockid]
+            blockmodel = self.rotate(baseBlockInfo.blockmodel, state)
+            self[key] = BlockInfo(blockmodel, *baseBlockInfo[1:])
+            return self[key]
         return self["missing_texture"]
 
     @staticmethod
@@ -413,81 +409,75 @@ class BlockModelDict(dict):
         for _ in range(c):
             model = r_y(model)
         return model
-        
+
+BlockInfo = collections.namedtuple("BlockInfo", [
+    "blockmodel", "icon", "transparency", "connected", "fog", "material"])
+
 class Resources(object):
     def __init__(self, host, port):
         self.host = host
         self.port = port
-    def reload(self):
-        load_setup(self.host, self.port)
+        
+        self.SOUNDS = {}
+        self.BLOCKS = BlockInfoDict()
+        self.TEXURE_URL = None
+        self.TEXTURE_DIMENSIONS = None
+        self.TEXTURE_EDGE_CUTTING = None
+        self.ENTITY_MODELS = {}
+        self.MATERIALS = []
+        self.material_groups = {}
 
-def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIALS, MATERIAL, material_groups
-    def url_for(filename, folder="desktop"):
+    def url_for(self, filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
-        netloc = "%s:%i" % (host,port)
+        netloc = "%s:%i" % (self.host,self.port)
         components = urllib.parse.ParseResult("http",netloc,path,"","","")
         url = urllib.request.urlunparse(components)
         return url
-    with urllib.request.urlopen(url_for("description.py")) as descriptionfile:
-        description = ast.literal_eval(descriptionfile.read().decode()) #specify encoding? (standart utf-8)
-    TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
-    TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
-    ENTITY_MODELS = description.get("ENTITY_MODELS",{})
-    TEXTURE_URL = url_for("textures.png")
-    TRANSPARENCY = {"AIR":True}
-    CONNECTED = {}
-    FOG = {}
-    MATERIAL = {}
-    ICON = collections.defaultdict(lambda:ICON["missing_texture"])
-    BLOCKMODELS = BlockModelDict()
-    #BLOCKNAMES = []
-    for name, transparency, connected, material, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
-        BLOCKMODELS[name] = block_model(vertices, textures)
-        ICON[name] = tex_coord(*icon_coords)
-        TRANSPARENCY[name] = transparency
-        CONNECTED[name] = connected
-        FOG[name] = fog
-        MATERIAL[name] = material
-    
-    SOUNDS = {}
-    sound_files = {}
-    for filename in set(description["SOUNDS"].values()):
-        url = url_for(filename,folder="sounds")
-        with urllib.request.urlopen(url) as f:
-            b = io.BytesIO(f.read())
-        sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
-    for sound, filename in description["SOUNDS"].items():
-        SOUNDS[sound] = sound_files[filename]
 
-    MATERIALS = set(MATERIAL.values()) | {"transparent"} # always add transparent for gui
-    MATERIALS = sorted(MATERIALS) #M# find better order than just alphabetically?
-    print("detected materials:", MATERIALS)
-    material_class_map = collections.defaultdict(
-        lambda:TransparentMaterialGroup,
-        {
-        "solid" : MaterialGroup,
-        "transparent" : TransparentMaterialGroup,
-        "water" : SemiTransparentMaterialGroup,
+    def reload(self):
+        with urllib.request.urlopen(self.url_for("description.py")) as descriptionfile:
+            description = ast.literal_eval(descriptionfile.read().decode()) #specify encoding? (standart utf-8)
+        self.TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
+        self.TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
+        self.ENTITY_MODELS = description.get("ENTITY_MODELS",{})
+        self.TEXTURE_URL = self.url_for("textures.png")
+        self.BLOCKS.clear()
+        self.BLOCKS["AIR"] = BlockInfo(None,None,True,None,None,"transparent")
+        for name, transparency, connected, material, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
+            self.BLOCKS[name] = BlockInfo(
+                block_model(vertices, textures),
+                tex_coord(*icon_coords),
+                transparency,
+                connected,
+                fog,
+                material,
+            )
+        
+        self.SOUNDS.clear()
+        sound_files = {}
+        for filename in set(description["SOUNDS"].values()):
+            url = self.url_for(filename,folder="sounds")
+            with urllib.request.urlopen(url) as f:
+                b = io.BytesIO(f.read())
+            sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
+        for sound, filename in description["SOUNDS"].items():
+            self.SOUNDS[sound] = sound_files[filename]
+
+        self.MATERIALS = {b.material for b in self.BLOCKS.values()} | {"transparent"} # always add transparent for gui
+        self.MATERIALS = sorted(self.MATERIALS) #M# find better order than just alphabetically?
+        print("detected materials:", self.MATERIALS)
+        material_class_map = collections.defaultdict(
+            lambda:TransparentMaterialGroup,
+            {
+            "solid" : MaterialGroup,
+            "transparent" : TransparentMaterialGroup,
+            "water" : SemiTransparentMaterialGroup,
+            }
+        )
+        self.material_groups = {
+            material : material_class_map[material](i)
+            for i, material in enumerate(self.MATERIALS)
         }
-    )
-    material_groups = {
-        material : material_class_map[material](i)
-        for i, material in enumerate(MATERIALS)
-    }
-
-
-def is_transparent(block_name):
-    return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
-
-def is_connected(block_name):
-    return CONNECTED.get(block_name.rsplit(":",1)[0],False)
-
-def get_fog(block_name):
-    return FOG.get(block_name.rsplit(":",1)[0],(255,255,255,0))
-
-def get_material(block_name):
-    return MATERIAL.get(block_name.rsplit(":",1)[0], "solid")
 
 def scroll_through(options, current, direction, insert=False):
     if current in options:
@@ -633,11 +623,11 @@ class Model(object):
         self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        with urllib.request.urlopen(TEXTURE_URL) as texture_stream:
+        with urllib.request.urlopen(R.TEXTURE_URL) as texture_stream:
             texture_buffer = io.BytesIO(texture_stream.read())
             texture = image.load("", file=texture_buffer).get_texture() #possible to use image.load(file=filedescriptor) if necessary
         self.textured_material_groups = {
-            name:TextureGroup(texture, parent = g) for name,g in material_groups.items()
+            name:TextureGroup(texture, parent = g) for name,g in R.material_groups.items()
         }
  
         self.shown = {} #{(position,face):vertex_list(batch_element)}
@@ -748,7 +738,7 @@ class Model(object):
                 for z2 in (int(math.floor(z)),int(math.ceil(z))):
                     v = Vector((x2,y2,z2))
                     w = abs(reduce(operator.mul,v-vertex))
-                    light += is_transparent(self.get_block(v)) * w
+                    light += R.BLOCKS[self.get_block(v)].transparency * w
         # add to cache
         if False:#len(self.occlusion_cache) > 100:
             self.occlusion_cache.popitem(last=False)
@@ -782,8 +772,9 @@ class Model(object):
         else:
             fv = FACES[face]
             b = self.get_block(position+fv)
+            bi = R.BLOCKS[b]
             # only show faces facing into transparent blocks and not if blocks are connected and the same
-            if is_transparent(b) and not (is_connected(b) and b == self.get_block(position)): #M# maybe get current block as argument instead of by position
+            if bi.transparency and not (bi.connected and b == self.get_block(position)): #M# maybe get current block as argument instead of by position
                 self.show_face(position,face)
             else:
                 self.hide_face(position,face)
@@ -807,12 +798,13 @@ class Model(object):
         block_name = self.get_block(position)
         if block_name == "AIR":
             return
-        vertex_data, texture_data = BLOCKMODELS[block_name][face]
+        blockinfo = R.BLOCKS[block_name]
+        vertex_data, texture_data = blockinfo.blockmodel[face]
         if not (vertex_data and texture_data):
             return
         vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
         color_data = self.color_corrections(vertex_data,FACES_PLUS[face])
-        group = self.textured_material_groups[get_material(block_name)]
+        group = self.textured_material_groups[blockinfo.material]
         # create vertex list
         length = len(vertex_data)//3
         vertex_list = SHADERS.default_block_shader.vertex_list_indexed(length, GL_TRIANGLES,
@@ -858,7 +850,7 @@ class Model(object):
         if model_id == None:
             return
         vertex_lists=[]
-        model = ENTITY_MODELS[model_id]
+        model = R.ENTITY_MODELS[model_id]
         x, y = rotation
         body_matrix = pyglet.math.Mat4.from_rotation(math.radians(x), (0, 1, 0))
         head_matrix = pyglet.math.Mat4.from_rotation(math.radians(-y), (1, 0, 0))
@@ -869,8 +861,9 @@ class Model(object):
             for relpos,offset,size,block_name in model[modelpart]:
                 offset = offset if modelpart in ("head","legl","legr") else relpos
                 block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
-                blockmodel = BLOCKMODELS[block_name]
-                group = self.textured_material_groups[get_material(block_name)]
+                blockinfo = R.BLOCKS[block_name]
+                blockmodel = blockinfo.blockmodel
+                group = self.textured_material_groups[blockinfo.material]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
                     if not vertex_data:
@@ -939,7 +932,7 @@ class Model(object):
         if texture == "AIR":
             vertex_list = None
         elif not texture.startswith ("/"):
-            texture_data = list(ICON[texture])
+            texture_data = list(R.BLOCKS[texture].icon)
             #i = iter(texture_data)
             #texture_data = [e for x in i for e in (x,next(i),0)]
             i = iter(corners)
@@ -1012,7 +1005,7 @@ class Model(object):
         self.blocks.set_block(position,block_name)
         self.update_visibility(position)
         #M# todo: make this better (different transparency classes)
-        if is_transparent(prev_block_name) or is_transparent(block_name):
+        if R.BLOCKS[prev_block_name].transparency or R.BLOCKS[block_name].transparency:
             self.update_visibility_around(position)
 
     def _remove_block(self, position):
@@ -1987,7 +1980,7 @@ class Window(pyglet.window.Window):
         r,g,b,a = self.model.world_generator.sky(self.camera_position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
         glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
-        fog_color = get_fog(self.model.get_block(self.camera_position.round()))
+        fog_color = R.BLOCKS[self.model.get_block(self.camera_position.round())].fog
         setup_fog(fog_color)
 #M#
 #        glColor3d(1, 1, 1)
@@ -2136,8 +2129,8 @@ click circle: camera mode
         label.draw()
 
     def play_sound(self, sound_name, position):
-        if sound_name in SOUNDS:
-            player = SOUNDS[sound_name].play()
+        if sound_name in R.SOUNDS:
+            player = R.SOUNDS[sound_name].play()
             player.position = position
         else:
             print("unknown sound name", sound_name)
