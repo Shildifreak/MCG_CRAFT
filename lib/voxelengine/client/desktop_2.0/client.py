@@ -34,13 +34,13 @@ pyglet.options['shadow_window'] = False
 pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
+from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.window import key, mouse
 
 import client_utils
 import socket_connection_7.socket_connection as socket_connection
 import world_generation
 from shared import *
-from shader import Shader
 from geometry import Vector, BinaryBox, Box, Point, Ray
 
 RENDERDISTANCE = Vector(2,2,2) # chunks in each direction - e.g. RENDERDISTANCE = (2,2,2) means 5*5*5 = 125 chunks
@@ -161,14 +161,6 @@ class SemiTransparentMaterialGroup(MaterialGroup):
         #glEnable(GL_CULL_FACE)
         glDisable(GL_BLEND)
 
-class SwappableShaderProgram(object):
-    def vertex_list(self, batch, data):
-        domain = batch.get_domain(...)
-        domain.vertex_list
-        for fmt, bla in data:
-            ...
-BLOCK_SHADER = SwappableShaderProgram()
-
 class Shaders:
     def reload(self):
         import pyglet.graphics.shader
@@ -232,7 +224,7 @@ class Shaders:
             shadername, extension = os.path.splitext(filename)
             if extension in (".frag", ".vert"):
                 path = os.path.join(shaders_dir,filename)
-                with open(path, "rb")  as f:
+                with open(path, "r")  as f:
                     {".frag":fragment_shaders,
                      ".vert":vertex_shaders,
                     }[extension][shadername] = f.read()
@@ -240,14 +232,14 @@ class Shaders:
         def replace_macros(shader_code):
             # material macros
             def repl(match):
-                material = match.groups()[0].decode()
+                material = match.groups()[0]
                 if material in MATERIALS:
                     i = MATERIALS.index(material)
                 else:
                     print("shader used unknown material",material)
                     i = -1
-                return str(i).encode()
-            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
+                return str(i)
+            shader_code = re.sub("MATERIAL\\((.*?)\\)",repl,shader_code)
             return shader_code
 
         vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
@@ -256,20 +248,24 @@ class Shaders:
         self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
         default = self.block_shader_names[0]
         self.block_shaders = tuple(
-                Shader([vertex_shaders.get(name,vertex_shaders[default])],
-                       [fragment_shaders.get(name,fragment_shaders[default])])
+                ShaderProgram(Shader(vertex_shaders.get(name,vertex_shaders[default]), 'vertex'),
+                              Shader(fragment_shaders.get(name,fragment_shaders[default]), 'fragment'))
             for name in self.block_shader_names
         )
         
         for block_shader in self.block_shaders:
             block_shader.bind()
-            block_shader.uniformi(b"color_texture",0)
-            block_shader.uniformi(b"loopback",1)
-            block_shader.uniformi(b"loopback2",2)
+            if "color_texture" in block_shader.uniforms:
+                block_shader["color_texture"] = 0
+            if "loopback" in block_shader.uniforms:
+                block_shader["loopback"] = 1
+            if "loopback2" in block_shader.uniforms:
+                block_shader["loopback2"] = 2
 
-        vert_shader = pyglet.graphics.shader.Shader(vertex_shaders[default].decode(), 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(fragment_shaders[default].decode(), 'fragment')
+        vert_shader = pyglet.graphics.shader.Shader(vertex_shaders[default], 'vertex')
+        frag_shader = pyglet.graphics.shader.Shader(fragment_shaders[default], 'fragment')
         self.default_block_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+        self.default_block_shader = self.block_shaders[0]
 
 
 SHADERS = Shaders()
@@ -923,6 +919,9 @@ class Model(object):
         center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
                             for pa,na,ws,xy,si in zip((RIGHT,TOP),(LEFT,BOTTOM),window_size,position,size)
                             ) + (position[2],)
+#        size = (size[0]/window_size[0]*2, size[1]/window_size[1]*2)
+#        center_pos = (center_pos[0]/window_size[0]*2-1, center_pos[1]/window_size[1]*2-1,center_pos[2])
+#        print(size)
         rotation_rad = math.radians(rotation_deg)
         c = math.cos(rotation_rad)
         s = math.sin(rotation_rad)
@@ -1225,16 +1224,16 @@ class Window(pyglet.window.Window):
         self.slidervalues.clear()
 
         block_shader = SHADERS.block_shaders[self.active_shader_is[self.active_shader_ii]]
-        active_uniforms = block_shader.get_active_uniforms()
+        active_uniforms = block_shader._uniforms
 
-        for u in active_uniforms:
+        for n, u in active_uniforms.items():
             if u.type != GL_FLOAT:
                 continue
-            if u.name.startswith(b"gl_"):
+            if n.startswith("gl_"):
                 continue
-            if u.name == b"time":
+            if n == "time":
                 continue
-            self.slidervalues[u.name.decode()] = block_shader.get_uniformf(u.name)
+            self.slidervalues[n] = block_shader[n]
         
         if self.settingswindow:
             self.settingswindow.reload()
@@ -1830,7 +1829,7 @@ class Window(pyglet.window.Window):
 #        glMatrixMode(GL_MODELVIEW)
 #        glLoadIdentity()
 
-    def set_3d(self):
+    def set_3d(self, program):
         """
         Configure OpenGL to draw in 3d.
         """
@@ -1850,9 +1849,11 @@ class Window(pyglet.window.Window):
             .rotate(-pitch, (c, 0, s))
             .translate((-x, -y, -z))
         )
-        
-        SHADERS.default_block_shader["ModelViewMatrix"] = model_view_matrix
-        SHADERS.default_block_shader["ProjectionMatrix"] = projection_matrix
+
+        if "ModelViewMatrix" in program.uniforms:
+            program["ModelViewMatrix"] = model_view_matrix
+        if "ProjectionMatrix" in program.uniforms:
+            program["ProjectionMatrix"] = projection_matrix
         
     def setup_framebuffer_stuff(self):
         # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
@@ -1990,21 +1991,17 @@ class Window(pyglet.window.Window):
         setup_fog(fog_color)
 #M#
 #        glColor3d(1, 1, 1)
-        block_shader = SHADERS.default_block_shader#block_shaders[self.active_shader_is[self.active_shader_ii]]
-        block_shader.bind()
-        self.set_3d()
-        width, height = self.get_size()
-#        block_shader.uniformf(b"screenSize", width, height)
-        if "screenSize" in block_shader.uniforms:
-            block_shader["screenSize"] = (width,height)
-#        block_shader.uniformf(b"time", time.time()-self.t0)
-        if "time" in block_shader.uniforms:
-            block_shader["time"] = time.time()-self.t0
-        for name, value in self.slidervalues.items():
-            block_shader.uniformf(bytes(name,"utf-8"), value)
-#M#
-        self.model.batch.draw()
-        block_shader.unbind()
+        block_shader = SHADERS.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        with block_shader:
+            self.set_3d(block_shader)
+            width, height = self.get_size()
+            if "screenSize" in block_shader.uniforms:
+                block_shader["screenSize"] = (width,height)
+            if "time" in block_shader.uniforms:
+                block_shader["time"] = time.time()-self.t0
+            for name, value in self.slidervalues.items():
+                block_shader[name] = value
+            self.model.batch.draw()
         
         if self.framebuffer_enabled:
             self.end_framebuffer_stuff()
