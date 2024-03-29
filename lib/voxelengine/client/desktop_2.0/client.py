@@ -1782,12 +1782,13 @@ class Window(pyglet.window.Window):
         """
         Called when the window is resized to a new `width` and `height`.
         """
+        super().on_resize(width, height)
         # label
         self.label.y = height - 10
         # reticle
         self.update_reticle(width, height)
         # hud
-        self.model.hud_resize(self.get_size())
+        self.model.hud_resize((width, height))
         # framebuffer
         self.resize_framebuffer_stuff()
     
