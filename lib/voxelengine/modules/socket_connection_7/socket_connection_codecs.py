@@ -221,11 +221,11 @@ class WebsocketServerCodec(Codec):
         elif opcode == OPCODE_PING:
             print("got pinged")
             self.send_pong("")
-            socket_buffer.read(2)
+            self.socket_buffer.read(2)
             return
         elif opcode == OPCODE_PONG:
             print("got ponged")
-            socket_buffer.read(2)
+            self.socket_buffer.read(2)
             return
         else:
             print("Unknown opcode %#x." % opcode)
