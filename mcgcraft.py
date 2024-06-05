@@ -293,6 +293,8 @@ class InventoryDisplay():
         from_inventory_and_index = self._element_to_inventory_and_index(from_element)
         to_inventory_and_index = self._element_to_inventory_and_index(to_element)
         if not from_inventory_and_index or not to_inventory_and_index:
+            if from_element:
+                print("drop", from_element, "(not implemented)")
             return
         from_inventory, from_index = from_inventory_and_index
         to_inventory, to_index = to_inventory_and_index
