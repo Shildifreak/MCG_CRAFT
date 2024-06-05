@@ -1,5 +1,5 @@
-# -*- coding: cp1252 -*-
-# Copyright (C) 2016 - 2020 Joram Brenz
+# -*- coding: utf-8 -*-
+# Copyright (C) 2016 - 2024 Joram Brenz
 # Copyright (C) 2013 Michael Fogleman
 
 import math
@@ -34,13 +34,13 @@ pyglet.options['shadow_window'] = False
 pyglet.options['audio'] = ('openal', 'pulse', 'xaudio2', 'directsound', 'silent')
 from pyglet.gl import *
 from pyglet.graphics import TextureGroup
+from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.window import key, mouse
 
 import client_utils
 import socket_connection_7.socket_connection as socket_connection
 import world_generation
 from shared import *
-from shader import Shader
 from geometry import Vector, BinaryBox, Box, Point, Ray
 
 RENDERDISTANCE = Vector(2,2,2) # chunks in each direction - e.g. RENDERDISTANCE = (2,2,2) means 5*5*5 = 125 chunks
@@ -116,6 +116,13 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
+MISSING_MODEL = {
+    "head":[((0,0,0),(0,0,0),(0.5,0.5,0.5),"missing_texture")],
+    "body":[],
+    "legl":[],
+    "legr":[],
+}
+
 
 class TextGroup(pyglet.graphics.Group):
     def set_state(self):
@@ -161,17 +168,8 @@ class SemiTransparentMaterialGroup(MaterialGroup):
         #glEnable(GL_CULL_FACE)
         glDisable(GL_BLEND)
 
-class SwappableShaderProgram(object):
-    def vertex_list(self, batch, data):
-        domain = batch.get_domain(...)
-        domain.vertex_list
-        for fmt, bla in data:
-            ...
-BLOCK_SHADER = SwappableShaderProgram()
-
 class Shaders:
     def reload(self):
-        import pyglet.graphics.shader
         # reticle shader
         _vertex_source = """#version 330 core
             in vec2 position;
@@ -190,9 +188,9 @@ class Shaders:
                 final_colors = vec4(1.0);
             }
         """
-        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
-        self.reticle_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
+        vert_shader = Shader(_vertex_source, 'vertex')
+        frag_shader = Shader(_fragment_source, 'fragment')
+        self.reticle_shader = ShaderProgram(vert_shader, frag_shader)
         
         # hud shader
         _vertex_source = """#version 330 core
@@ -220,9 +218,9 @@ class Shaders:
                 }
             }
         """
-        vert_shader = pyglet.graphics.shader.Shader(_vertex_source, 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(_fragment_source, 'fragment')
-        self.hud_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+        vert_shader = Shader(_vertex_source, 'vertex')
+        frag_shader = Shader(_fragment_source, 'fragment')
+        self.hud_shader = ShaderProgram(vert_shader, frag_shader)        
         
         # block shaders
         fragment_shaders = dict() # {name: source_code_bytes, ...}
@@ -232,7 +230,7 @@ class Shaders:
             shadername, extension = os.path.splitext(filename)
             if extension in (".frag", ".vert"):
                 path = os.path.join(shaders_dir,filename)
-                with open(path, "rb")  as f:
+                with open(path, "r")  as f:
                     {".frag":fragment_shaders,
                      ".vert":vertex_shaders,
                     }[extension][shadername] = f.read()
@@ -240,14 +238,14 @@ class Shaders:
         def replace_macros(shader_code):
             # material macros
             def repl(match):
-                material = match.groups()[0].decode()
-                if material in MATERIALS:
-                    i = MATERIALS.index(material)
+                material = match.groups()[0]
+                if material in R.MATERIALS:
+                    i = R.MATERIALS.index(material)
                 else:
                     print("shader used unknown material",material)
                     i = -1
-                return str(i).encode()
-            shader_code = re.sub(b"MATERIAL\\((.*?)\\)",repl,shader_code)
+                return str(i)
+            shader_code = re.sub("MATERIAL\\((.*?)\\)",repl,shader_code)
             return shader_code
 
         vertex_shaders = {k:replace_macros(v) for k,v in vertex_shaders.items()}
@@ -256,20 +254,21 @@ class Shaders:
         self.block_shader_names = sorted(fragment_shaders|vertex_shaders)
         default = self.block_shader_names[0]
         self.block_shaders = tuple(
-                Shader([vertex_shaders.get(name,vertex_shaders[default])],
-                       [fragment_shaders.get(name,fragment_shaders[default])])
+                ShaderProgram(Shader(vertex_shaders.get(name,vertex_shaders[default]), 'vertex'),
+                              Shader(fragment_shaders.get(name,fragment_shaders[default]), 'fragment'))
             for name in self.block_shader_names
         )
         
         for block_shader in self.block_shaders:
             block_shader.bind()
-            block_shader.uniformi(b"color_texture",0)
-            block_shader.uniformi(b"loopback",1)
-            block_shader.uniformi(b"loopback2",2)
+            if "color_texture" in block_shader.uniforms:
+                block_shader["color_texture"] = 0
+            if "loopback" in block_shader.uniforms:
+                block_shader["loopback"] = 1
+            if "loopback2" in block_shader.uniforms:
+                block_shader["loopback2"] = 2
 
-        vert_shader = pyglet.graphics.shader.Shader(vertex_shaders[default].decode(), 'vertex')
-        frag_shader = pyglet.graphics.shader.Shader(fragment_shaders[default].decode(), 'fragment')
-        self.default_block_shader = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)        
+        self.default_block_shader = self.block_shaders[0]
 
 
 SHADERS = Shaders()
@@ -312,14 +311,14 @@ def tex_coord(x, y, dx = 1, dy = 1):
     """ Return the bounding vertices of the texture square.
 
     """
-    p = TEXTURE_EDGE_CUTTING
+    p = R.TEXTURE_EDGE_CUTTING
     x += p
     y += p
     dx -= 2 * p
     dy -= 2 * p
 
-    mx = 1.0 / TEXTURE_DIMENSIONS[0]
-    my = 1.0 / TEXTURE_DIMENSIONS[1]
+    mx = 1.0 / R.TEXTURE_DIMENSIONS[0]
+    my = 1.0 / R.TEXTURE_DIMENSIONS[1]
     x  *= mx
     y  *= my
     dx *= mx
@@ -359,15 +358,15 @@ def block_model(vertices, textures):
         result.append((side_vertices,side_textures))
     return result
 
-class BlockModelDict(dict):
+class BlockInfoDict(dict):
     def __missing__(self, key):
         parts = key.rsplit(":",1)
         if len(parts) == 2:
             blockid, state = parts
-            baseModel = self[blockid]
-            model = self.rotate(baseModel, state)
-            self[key] = model
-            return model
+            baseBlockInfo = self[blockid]
+            blockmodel = self.rotate(baseBlockInfo.blockmodel, state)
+            self[key] = BlockInfo(blockmodel, *baseBlockInfo[1:])
+            return self[key]
         return self["missing_texture"]
 
     @staticmethod
@@ -417,81 +416,75 @@ class BlockModelDict(dict):
         for _ in range(c):
             model = r_y(model)
         return model
-        
+
+BlockInfo = collections.namedtuple("BlockInfo", [
+    "blockmodel", "icon", "transparency", "connected", "fog", "material"])
+
 class Resources(object):
     def __init__(self, host, port):
         self.host = host
         self.port = port
-    def reload(self):
-        load_setup(self.host, self.port)
+        
+        self.SOUNDS = {}
+        self.BLOCKS = BlockInfoDict()
+        self.TEXURE_URL = None
+        self.TEXTURE_DIMENSIONS = None
+        self.TEXTURE_EDGE_CUTTING = None
+        self.ENTITY_MODELS = {}
+        self.MATERIALS = []
+        self.material_groups = {}
 
-def load_setup(host, port):
-    global BLOCKMODELS, TRANSPARENCY, TEXTURE_DIMENSIONS, TEXTURE_URL, TEXTURE_EDGE_CUTTING, ENTITY_MODELS, ICON, BLOCKNAMES, SOUNDS, FOG, CONNECTED, MATERIALS, MATERIAL, material_groups
-    def url_for(filename, folder="desktop"):
+    def url_for(self, filename, folder="desktop"):
         path = "/".join(("/texturepacks",folder,filename))
-        netloc = "%s:%i" % (host,port)
+        netloc = "%s:%i" % (self.host,self.port)
         components = urllib.parse.ParseResult("http",netloc,path,"","","")
         url = urllib.request.urlunparse(components)
         return url
-    with urllib.request.urlopen(url_for("description.py")) as descriptionfile:
-        description = ast.literal_eval(descriptionfile.read().decode()) #specify encoding? (standart utf-8)
-    TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
-    TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
-    ENTITY_MODELS = description.get("ENTITY_MODELS",{})
-    TEXTURE_URL = url_for("textures.png")
-    TRANSPARENCY = {"AIR":True}
-    CONNECTED = {}
-    FOG = {}
-    MATERIAL = {}
-    ICON = collections.defaultdict(lambda:ICON["missing_texture"])
-    BLOCKMODELS = BlockModelDict()
-    #BLOCKNAMES = []
-    for name, transparency, connected, material, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
-        BLOCKMODELS[name] = block_model(vertices, textures)
-        ICON[name] = tex_coord(*icon_coords)
-        TRANSPARENCY[name] = transparency
-        CONNECTED[name] = connected
-        FOG[name] = fog
-        MATERIAL[name] = material
-    
-    SOUNDS = {}
-    sound_files = {}
-    for filename in set(description["SOUNDS"].values()):
-        url = url_for(filename,folder="sounds")
-        with urllib.request.urlopen(url) as f:
-            b = io.BytesIO(f.read())
-        sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
-    for sound, filename in description["SOUNDS"].items():
-        SOUNDS[sound] = sound_files[filename]
 
-    MATERIALS = set(MATERIAL.values()) | {"transparent"} # always add transparent for gui
-    MATERIALS = sorted(MATERIALS) #M# find better order than just alphabetically?
-    print("detected materials:", MATERIALS)
-    material_class_map = collections.defaultdict(
-        lambda:TransparentMaterialGroup,
-        {
-        "solid" : MaterialGroup,
-        "transparent" : TransparentMaterialGroup,
-        "water" : SemiTransparentMaterialGroup,
+    def reload(self):
+        with urllib.request.urlopen(self.url_for("description.py")) as descriptionfile:
+            description = ast.literal_eval(descriptionfile.read().decode()) #specify encoding? (standart utf-8)
+        self.TEXTURE_DIMENSIONS = description["TEXTURE_DIMENSIONS"]
+        self.TEXTURE_EDGE_CUTTING = description.get("TEXTURE_EDGE_CUTTING",0)
+        self.ENTITY_MODELS = description.get("ENTITY_MODELS",{})
+        self.TEXTURE_URL = self.url_for("textures.png")
+        self.BLOCKS.clear()
+        self.BLOCKS["AIR"] = BlockInfo(None,None,True,None,None,"transparent")
+        for name, transparency, connected, material, fog, icon_coords, vertices, textures in description["BLOCK_MODELS"]:
+            self.BLOCKS[name] = BlockInfo(
+                block_model(vertices, textures),
+                tex_coord(*icon_coords),
+                transparency,
+                connected,
+                fog,
+                material,
+            )
+        
+        self.SOUNDS.clear()
+        sound_files = {}
+        for filename in set(description["SOUNDS"].values()):
+            url = self.url_for(filename,folder="sounds")
+            with urllib.request.urlopen(url) as f:
+                b = io.BytesIO(f.read())
+            sound_files[filename] = pyglet.media.StaticSource(pyglet.media.load(filename,b))
+        for sound, filename in description["SOUNDS"].items():
+            self.SOUNDS[sound] = sound_files[filename]
+
+        self.MATERIALS = {b.material for b in self.BLOCKS.values()} | {"transparent"} # always add transparent for gui
+        self.MATERIALS = sorted(self.MATERIALS) #M# find better order than just alphabetically?
+        print("detected materials:", self.MATERIALS)
+        material_class_map = collections.defaultdict(
+            lambda:TransparentMaterialGroup,
+            {
+            "solid" : MaterialGroup,
+            "transparent" : TransparentMaterialGroup,
+            "water" : SemiTransparentMaterialGroup,
+            }
+        )
+        self.material_groups = {
+            material : material_class_map[material](i)
+            for i, material in enumerate(self.MATERIALS)
         }
-    )
-    material_groups = {
-        material : material_class_map[material](i)
-        for i, material in enumerate(MATERIALS)
-    }
-
-
-def is_transparent(block_name):
-    return TRANSPARENCY.get(block_name.rsplit(":",1)[0],0)
-
-def is_connected(block_name):
-    return CONNECTED.get(block_name.rsplit(":",1)[0],False)
-
-def get_fog(block_name):
-    return FOG.get(block_name.rsplit(":",1)[0],(255,255,255,0))
-
-def get_material(block_name):
-    return MATERIAL.get(block_name.rsplit(":",1)[0], "solid")
 
 def scroll_through(options, current, direction, insert=False):
     if current in options:
@@ -637,11 +630,11 @@ class Model(object):
         self.hud_batch = pyglet.graphics.Batch()
 
         # A TextureGroup manages an OpenGL texture.
-        with urllib.request.urlopen(TEXTURE_URL) as texture_stream:
+        with urllib.request.urlopen(R.TEXTURE_URL) as texture_stream:
             texture_buffer = io.BytesIO(texture_stream.read())
             texture = image.load("", file=texture_buffer).get_texture() #possible to use image.load(file=filedescriptor) if necessary
         self.textured_material_groups = {
-            name:TextureGroup(texture, parent = g) for name,g in material_groups.items()
+            name:TextureGroup(texture, parent = g) for name,g in R.material_groups.items()
         }
  
         self.shown = {} #{(position,face):vertex_list(batch_element)}
@@ -752,7 +745,7 @@ class Model(object):
                 for z2 in (int(math.floor(z)),int(math.ceil(z))):
                     v = Vector((x2,y2,z2))
                     w = abs(reduce(operator.mul,v-vertex))
-                    light += is_transparent(self.get_block(v)) * w
+                    light += R.BLOCKS[self.get_block(v)].transparency * w
         # add to cache
         if False:#len(self.occlusion_cache) > 100:
             self.occlusion_cache.popitem(last=False)
@@ -786,8 +779,9 @@ class Model(object):
         else:
             fv = FACES[face]
             b = self.get_block(position+fv)
+            bi = R.BLOCKS[b]
             # only show faces facing into transparent blocks and not if blocks are connected and the same
-            if is_transparent(b) and not (is_connected(b) and b == self.get_block(position)): #M# maybe get current block as argument instead of by position
+            if bi.transparency and not (bi.connected and b == self.get_block(position)): #M# maybe get current block as argument instead of by position
                 self.show_face(position,face)
             else:
                 self.hide_face(position,face)
@@ -811,12 +805,13 @@ class Model(object):
         block_name = self.get_block(position)
         if block_name == "AIR":
             return
-        vertex_data, texture_data = BLOCKMODELS[block_name][face]
+        blockinfo = R.BLOCKS[block_name]
+        vertex_data, texture_data = blockinfo.blockmodel[face]
         if not (vertex_data and texture_data):
             return
         vertex_data = tuple(map(sum,zip(vertex_data,itertools.cycle(position))))
         color_data = self.color_corrections(vertex_data,FACES_PLUS[face])
-        group = self.textured_material_groups[get_material(block_name)]
+        group = self.textured_material_groups[blockinfo.material]
         # create vertex list
         length = len(vertex_data)//3
         vertex_list = SHADERS.default_block_shader.vertex_list_indexed(length, GL_TRIANGLES,
@@ -853,48 +848,33 @@ class Model(object):
         # used in set_entity
         # ignores translation (4th column) of matrix and uses offset instead
         return [sum([vecs[c-(c%3)+r]*mat[r+4*(c%3)] for r in range(3)])+offset[c%3] for c,x in enumerate(vecs)]
+        #M# use actual vector math operations
+        #mat = mat.translate(offset)
+        #return flatten(mat.translate(offset) @ v for v in group(vecs,3))
 
     def set_entity(self,entity_id,model_id,position,rotation,model_maps):
         self.del_entity(entity_id)
         if model_id == None:
             return
         vertex_lists=[]
-        model = ENTITY_MODELS[model_id]
-        # transformationsmatrix bekommen
-#M#
-#        glPushMatrix()
-#        glLoadIdentity()
-#        x, y = rotation
-#        glRotatef(x, 0, 1, 0)
-        body_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,body_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(-y, 1, 0, 0)#, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
-        head_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,head_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(math.sin(time.time()*6.2)*20, 1, 0, 0)
-        legl_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,legl_matrix)
-#        glPopMatrix()
-#        glPushMatrix()
-#        glLoadIdentity()
-#        glRotatef(math.sin(time.time()*6.2)*-20, 1, 0, 0)
-        legr_matrix = (GLfloat * 16)()
-#        glGetFloatv(GL_MODELVIEW_MATRIX,legr_matrix)
-#        glPopMatrix()
+        model = R.ENTITY_MODELS.get(model_id, MISSING_MODEL)
+        x, y = rotation
+        body_matrix = pyglet.math.Mat4.from_rotation(math.radians(x), (0, 1, 0))
+        head_matrix = pyglet.math.Mat4.from_rotation(math.radians(-y), (1, 0, 0))
+        legl_matrix = pyglet.math.Mat4.from_rotation(math.radians(math.sin(time.time()*6.2)*20), (1, 0, 0))
+        legr_matrix = pyglet.math.Mat4.from_rotation(math.radians(math.sin(time.time()*6.2)*-20), (1, 0, 0))
+
         for modelpart in ("body","head","legl","legr"):
             for relpos,offset,size,block_name in model[modelpart]:
                 offset = offset if modelpart in ("head","legl","legr") else relpos
                 block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
-                blockmodel = BLOCKMODELS[block_name]
-                group = self.textured_material_groups[get_material(block_name)]
+                blockinfo = R.BLOCKS[block_name]
+                blockmodel = blockinfo.blockmodel
+                group = self.textured_material_groups[blockinfo.material]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]
+                    if not vertex_data:
+                        continue
                     #face_vertices_noncube(x, y, z, face, (i/2.0 for i in size))
                     vertex_data = [x*size[c%3]+offset[c%3] for c,x in enumerate(vertex_data)]
                     if modelpart == "head":
@@ -908,14 +888,19 @@ class Model(object):
                     # create vertex list
                     # FIXME Maybe `add_indexed()` should be used instead
                     try:
-                        pass
-#M#
-#                        vertex_lists.append(self.batch.add(len(vertex_data)//3, GL_QUADS, group,
-#                            ('v3f/static', vertex_data),
-#                            ('t2f/static', texture_data),
-#                            ('c3f/static', color_data)))
+                        length = len(vertex_data)//3
+                        vertex_list = SHADERS.default_block_shader.vertex_list_indexed(
+                            length,
+                            GL_TRIANGLES,
+                            [o*4+i for o in range(length//4) for i in (0,1,2,0,2,3)],#(0,1,4,1,2,4,2,3,4,3,0,4),
+                            batch=self.batch, group=group,
+                            Vertex=('f', vertex_data),
+                            TexCoord=('f', texture_data),
+                            Color=('f', color_data),
+                        )
+                        vertex_lists.append(vertex_list)
                     except:
-                        print(model_id, model_maps, vertex_data, texture_data, color_data)
+                        print("aha",model_id, model_maps, vertex_data, texture_data, color_data)
                         raise
                     #M# make only one vertex list per entity!
         self.entities[entity_id] = vertex_lists
@@ -934,6 +919,9 @@ class Model(object):
         center_pos = tuple(((1+bool(align & pa)-bool(align & na))*(ws-f) + (xy+1)*f) / 2
                             for pa,na,ws,xy,si in zip((RIGHT,TOP),(LEFT,BOTTOM),window_size,position,size)
                             ) + (position[2],)
+#        size = (size[0]/window_size[0]*2, size[1]/window_size[1]*2)
+#        center_pos = (center_pos[0]/window_size[0]*2-1, center_pos[1]/window_size[1]*2-1,center_pos[2])
+#        print(size)
         rotation_rad = math.radians(rotation_deg)
         c = math.cos(rotation_rad)
         s = math.sin(rotation_rad)
@@ -951,7 +939,7 @@ class Model(object):
         if texture == "AIR":
             vertex_list = None
         elif not texture.startswith ("/"):
-            texture_data = list(ICON[texture])
+            texture_data = list(R.BLOCKS[texture].icon)
             #i = iter(texture_data)
             #texture_data = [e for x in i for e in (x,next(i),0)]
             i = iter(corners)
@@ -1024,7 +1012,7 @@ class Model(object):
         self.blocks.set_block(position,block_name)
         self.update_visibility(position)
         #M# todo: make this better (different transparency classes)
-        if is_transparent(prev_block_name) or is_transparent(block_name):
+        if R.BLOCKS[prev_block_name].transparency or R.BLOCKS[block_name].transparency:
             self.update_visibility_around(position)
 
     def _remove_block(self, position):
@@ -1236,16 +1224,16 @@ class Window(pyglet.window.Window):
         self.slidervalues.clear()
 
         block_shader = SHADERS.block_shaders[self.active_shader_is[self.active_shader_ii]]
-        active_uniforms = block_shader.get_active_uniforms()
+        active_uniforms = block_shader._uniforms
 
-        for u in active_uniforms:
+        for n, u in active_uniforms.items():
             if u.type != GL_FLOAT:
                 continue
-            if u.name.startswith(b"gl_"):
+            if n.startswith("gl_"):
                 continue
-            if u.name == b"time":
+            if n == "time":
                 continue
-            self.slidervalues[u.name.decode()] = block_shader.get_uniformf(u.name)
+            self.slidervalues[n] = block_shader[n]
         
         if self.settingswindow:
             self.settingswindow.reload()
@@ -1793,12 +1781,13 @@ class Window(pyglet.window.Window):
         """
         Called when the window is resized to a new `width` and `height`.
         """
+        super().on_resize(width, height)
         # label
         self.label.y = height - 10
         # reticle
         self.update_reticle(width, height)
         # hud
-        self.model.hud_resize(self.get_size())
+        self.model.hud_resize((width, height))
         # framebuffer
         self.resize_framebuffer_stuff()
     
@@ -1831,7 +1820,6 @@ class Window(pyglet.window.Window):
         Configure OpenGL to draw in 2d.
         """
         width, height = self.get_size()
-        #glDisable(GL_DEPTH_TEST)
         glClear(GL_DEPTH_BUFFER_BIT)
         glViewport(0, 0, width, height)
 #M#
@@ -1841,7 +1829,7 @@ class Window(pyglet.window.Window):
 #        glMatrixMode(GL_MODELVIEW)
 #        glLoadIdentity()
 
-    def set_3d(self):
+    def set_3d(self, program):
         """
         Configure OpenGL to draw in 3d.
         """
@@ -1849,36 +1837,24 @@ class Window(pyglet.window.Window):
         glEnable(GL_DEPTH_TEST)
         glViewport(0, 0, width, height)
         
-#M#
-#        glMatrixMode(GL_PROJECTION)
-#        glLoadIdentity()
-#        gluPerspective(FOV, width / float(height), ZNEAR, ZFAR)
         projection_matrix = pyglet.math.Mat4.perspective_projection(width/height, ZNEAR, ZFAR, FOV)
 
-#        glMatrixMode(GL_MODELVIEW)
-#        glLoadIdentity()
-        yaw, pitch = self.camera_rotation
-        c = math.cos(math.radians(yaw))
-        s = math.sin(math.radians(yaw))
-#        glRotatef(yaw, 0, 1, 0)
-        model_view_matrix = pyglet.math.Mat4.from_rotation(math.radians(yaw), (0,1,0))
-#        glRotatef(-pitch, c, 0, s)
-        model_view_matrix = model_view_matrix.rotate(math.radians(-pitch), (c,0,s))
+        yaw, pitch = map(math.radians, self.camera_rotation)
+        c = math.cos(yaw)
+        s = math.sin(yaw)
         x, y, z = self.camera_position
-#        glTranslatef(-x, -y, -z)
-        model_view_matrix = model_view_matrix.translate((-x, -y, -z))
-        
-        SHADERS.default_block_shader["ModelViewMatrix"] = model_view_matrix
-        SHADERS.default_block_shader["ProjectionMatrix"] = projection_matrix
-        
-        #prog = GLint (0);
-        #glGetIntegerv(GL_CURRENT_PROGRAM, gl.byref(prog));
-        #if prog.value:
-        #    location = glGetUniformLocation(prog.value, b"ModelViewMatrix");
-        #    glUniformMatrix4fv(location, model_view_matrix)
-        #    location = glGetUniformLocation(prog.value, b"ProjectionMatrix");
-        #    glUniformMatrix4fv(location, projection_matrix)
 
+        model_view_matrix = (pyglet.math.Mat4
+            .from_rotation(yaw, (0, 1, 0))
+            .rotate(-pitch, (c, 0, s))
+            .translate((-x, -y, -z))
+        )
+
+        if "ModelViewMatrix" in program.uniforms:
+            program["ModelViewMatrix"] = model_view_matrix
+        if "ProjectionMatrix" in program.uniforms:
+            program["ProjectionMatrix"] = projection_matrix
+        
     def setup_framebuffer_stuff(self):
         # https://stackoverflow.com/questions/44604391/pyglet-draw-text-into-texture
         # Create the framebuffer (rendering target).
@@ -2011,25 +1987,21 @@ class Window(pyglet.window.Window):
         r,g,b,a = self.model.world_generator.sky(self.camera_position, time.time()) if hasattr(self.model,"world_generator") else (1,1,1,1)
         glClearColor(r,g,b,a) # Set the color of "clear", i.e. the sky, in rgba.
         self.clear()
-        fog_color = get_fog(self.model.get_block(self.camera_position.round()))
+        fog_color = R.BLOCKS[self.model.get_block(self.camera_position.round())].fog
         setup_fog(fog_color)
 #M#
 #        glColor3d(1, 1, 1)
-        block_shader = SHADERS.default_block_shader#block_shaders[self.active_shader_is[self.active_shader_ii]]
-        block_shader.bind()
-        self.set_3d()
-        width, height = self.get_size()
-#        block_shader.uniformf(b"screenSize", width, height)
-        if "screenSize" in block_shader.uniforms:
-            block_shader["screenSize"] = (width,height)
-#        block_shader.uniformf(b"time", time.time()-self.t0)
-        if "time" in block_shader.uniforms:
-            block_shader["time"] = time.time()-self.t0
-        for name, value in self.slidervalues.items():
-            block_shader.uniformf(bytes(name,"utf-8"), value)
-#M#
-        self.model.batch.draw()
-        block_shader.unbind()
+        block_shader = SHADERS.block_shaders[self.active_shader_is[self.active_shader_ii]]
+        with block_shader:
+            self.set_3d(block_shader)
+            width, height = self.get_size()
+            if "screenSize" in block_shader.uniforms:
+                block_shader["screenSize"] = (width,height)
+            if "time" in block_shader.uniforms:
+                block_shader["time"] = time.time()-self.t0
+            for name, value in self.slidervalues.items():
+                block_shader[name] = value
+            self.model.batch.draw()
         
         if self.framebuffer_enabled:
             self.end_framebuffer_stuff()
@@ -2164,8 +2136,8 @@ click circle: camera mode
         label.draw()
 
     def play_sound(self, sound_name, position):
-        if sound_name in SOUNDS:
-            player = SOUNDS[sound_name].play()
+        if sound_name in R.SOUNDS:
+            player = R.SOUNDS[sound_name].play()
             player.position = position
         else:
             print("unknown sound name", sound_name)

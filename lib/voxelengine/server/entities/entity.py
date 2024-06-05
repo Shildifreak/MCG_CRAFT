@@ -6,12 +6,12 @@ if __name__ == "__main__":
 
 import math
 from voxelengine.modules.observableCollections import ObservableDict
-from voxelengine.modules.geometry import Vector, Point, Ray
+from voxelengine.modules.geometry import Vector, Point, Ray, Box
 from voxelengine.server.event_system import Event
 
 class Entity(ObservableDict):
     __slots__ = ("world","_position_buffer")
-    HITBOX = Point((0,0,0)) #M# tmp, should be replaced with list of collision forms and corresponding action
+    HITBOX = Box((-0.25,-0.25,-0.25),(0.25,0.25,0.25)) #M# tmp, should be replaced with list of collision forms and corresponding action
 
     def __init__(self,data = None):
         assert type(self) != Entity #this is an abstract class, please instantiate specific subclasses
@@ -19,7 +19,7 @@ class Entity(ObservableDict):
         data_defaults = {
             "position" : (0,0,0),
             "rotation" : (0,0),
-            "texture" : None,
+            "texture" : "MISSING_MODEL",
             "modelmaps" : {},
             "tags" : [],
         }

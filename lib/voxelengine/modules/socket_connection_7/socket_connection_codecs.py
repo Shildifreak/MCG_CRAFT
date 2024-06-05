@@ -208,6 +208,7 @@ class WebsocketServerCodec(Codec):
             raise Disconnect()
         if not masked:
             print("Client must always be masked.")
+            print(message_buffer)
             raise Disconnect()
         if opcode == OPCODE_CONTINUATION:
             print("Continuation frames are not supported.")
@@ -219,16 +220,16 @@ class WebsocketServerCodec(Codec):
             # do message handling
             pass # see below if,elif,else construct
         elif opcode == OPCODE_PING:
-            print("got pinged")
-            self.send_pong("")
-            socket_buffer.read(2)
-            return
+            # decode like normal message but then answer with pong instead
+            print("ping")
+            pass
         elif opcode == OPCODE_PONG:
-            print("got ponged")
-            socket_buffer.read(2)
-            return
+            print("pong")
+            # decode like normal message but then ignore
+            pass
         else:
             print("Unknown opcode %#x." % opcode)
+            print(message_buffer)
             raise Disconnect
 
         if payload_length == 126:
@@ -253,6 +254,13 @@ class WebsocketServerCodec(Codec):
         message = message_buffer[payload_start:payload_end].decode('utf8')
 
         self.socket_buffer.read(payload_end)
+        if opcode == OPCODE_PING:
+            print("replying to ping:",message)
+            self.send_pong(message)
+            return
+        if opcode == OPCODE_PONG:
+            print("ignoring random pong message")
+            return
         return message
 
     def send_message(self, message):

@@ -115,6 +115,13 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
+MISSING_MODEL = {
+    "head":[((0,0,0),(0,0,0),(0.5,0.5,0.5),"missing_texture")],
+    "body":[],
+    "legl":[],
+    "legr":[],
+}
+
 
 class TextGroup(pyglet.graphics.OrderedGroup):
     def set_state(self):
@@ -726,7 +733,7 @@ class Model(object):
         if model_id == None:
             return
         vertex_lists=[]
-        model = ENTITY_MODELS[model_id]
+        model = ENTITY_MODELS.get(model_id, MISSING_MODEL)
         # transformationsmatrix bekommen
         glPushMatrix()
         glLoadIdentity()
