@@ -764,6 +764,9 @@ class Command(object):
     class GAMEMODE(AbstractENUM_STRING):
         values = lambda:("creative", "survival")
 
+    class ENTITYNAME(AbstractENUM_STRING):
+        values = lambda:entityClasses.keys()
+
     class ENTITY(object):
         @staticmethod
         def parse(self, context):

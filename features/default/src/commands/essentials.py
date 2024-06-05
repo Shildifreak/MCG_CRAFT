@@ -62,3 +62,9 @@ def spawnpoint(context):
 	position = context.position
 	context.entity["spawn"] = (world_index, position)
 	context.send_feedback("new spawnpoint was set")
+
+@register_command("spawn",2)
+def spawn(context, entity_type: Command.ENTITYNAME):
+	context.send_feedback(f"spawning {entity_type}")
+	e = EntityFactory(entity_type)
+	e.set_world(context.world, context.position)
