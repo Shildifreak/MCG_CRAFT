@@ -67,4 +67,8 @@ def spawnpoint(context):
 def spawn(context, entity_type: Command.ENTITYNAME):
 	context.send_feedback(f"spawning {entity_type}")
 	e = EntityFactory(entity_type)
-	e.set_world(context.world, context.position)
+	w = context.world
+	p = context.position
+	if context.entity:
+		p += context.entity.get_sight_vector()*2
+	e.set_world(w, p)

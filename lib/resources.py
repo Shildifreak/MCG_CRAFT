@@ -486,7 +486,7 @@ class Entity(voxelengine.Entity):
         #M# can be optimized because only one hit is needed, but it still has to pass the blocks colides_with test, so make sure find_blocks is a generator
         return any(True for _ in entity.collide_difference(new_position, previous_position))
     
-    def horizontal_move(entity,jump,shift=False): #M# name is misleading
+    def horizontal_move(entity,jump=False,shift=False): #M# name is misleading
         inwater = entity.inwater()
         if entity.onground() and not inwater:
             s = SLIDING**entity.dt
@@ -514,6 +514,8 @@ class Entity(voxelengine.Entity):
         sv = Vector([s,sy,s]) #no slowing down in y
         entity["velocity"] *= sv
         return sv
+
+    apply_physics = horizontal_move
 
     def update(self):
         pass
