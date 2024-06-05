@@ -346,7 +346,7 @@ def InventoryFactory(inventory):
     return inventory
 
 class Entity(voxelengine.Entity):
-    HITBOX = NOWHERE #Hitbox(0,0,0)
+    HITBOX = Hitbox(0.25,0.5,0.25)
     LIMIT = 0
     PASSENGER_OFFSETS = (Vector(0,1.5,0),)
     instances = []

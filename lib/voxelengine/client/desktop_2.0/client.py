@@ -116,6 +116,13 @@ FACES = [Vector([ 0, 1, 0]), #top
          Vector([ 1, 0, 0])] #right
 FACES_PLUS = FACES + [Vector([ 0, 0, 0])]
 
+MISSING_MODEL = {
+    "head":[((0,0,0),(0,0,0),(0.5,0.5,0.5),"missing_texture")],
+    "body":[],
+    "legl":[],
+    "legr":[],
+}
+
 
 class TextGroup(pyglet.graphics.Group):
     def set_state(self):
@@ -850,7 +857,7 @@ class Model(object):
         if model_id == None:
             return
         vertex_lists=[]
-        model = R.ENTITY_MODELS[model_id]
+        model = R.ENTITY_MODELS.get(model_id, MISSING_MODEL)
         x, y = rotation
         body_matrix = pyglet.math.Mat4.from_rotation(math.radians(x), (0, 1, 0))
         head_matrix = pyglet.math.Mat4.from_rotation(math.radians(-y), (1, 0, 0))
