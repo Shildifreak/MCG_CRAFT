@@ -54,9 +54,9 @@ class FishingRod(Item):
         d_block, pos, face = line_of_sight.hit_test(blocktest, self.max_distance)
         if pos:
             block = character.world.blocks[pos]
-        if block == "WATER":
-            blockname = random.choice(resources.allBlocknames)
-            character.pickup_item({"id":blockname})
+            if block == "WATER":
+                blockname = random.choice(resources.allBlocknames)
+                character.pickup_item({"id":blockname})
 
     def use_on_entity(self, character, entity):
         print("Pull Entity!")
