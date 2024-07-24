@@ -28,7 +28,7 @@ This includes:
 - [TP Viewer](http://mcgcraft.de/webclient/tools/tp_viewer/) - inspect the texture pack provided by an MCGCraft server
 - [Terrain Editor](https://mcgcraft.de/webclient/latest/terraintest/) - edit and live preview JavaScript based terrain generation
 
-In the future we hope to add lots of Tutorials and maybe even an environment for collaborative coding and running mcgcraft servers.
+In the future we hope to add lots of [Tutorials](https://mcgcraft.de/youtube) and maybe even an environment for collaborative coding and running mcgcraft servers.
 
 
 ## Getting Started
@@ -38,7 +38,7 @@ Keep in mind that this is the result of a school project.
 As stated in the licence agreement you are using this software at your own risk.  
 
 To minimize your risk:
-- **only use resource packs you trust!** (included code will be executed as part of the game)
+- **only use feature packs you trust!** (included code will be executed as part of the game)
 - **only connect to servers you trust!** (world generation code is supposedly sandboxed, but still)
 - **always run behind a firewall**
 
@@ -46,7 +46,7 @@ To minimize your risk:
 MCGCRAFT uses the following external programs and libraries. For step by step installation instructions go on to the section below.
 
 **Python** - [python.org](python.org)  
-Python3.8 is currently used for development. Older versions are not supported but may work. Newer versions should work, if not feel free to open an issue.
+Python3.10 is currently used for development. Older versions are not tested but may still work. Newer versions should work, if not feel free to open an issue.
 
 **Pygame** - [pygame.org](pygame.org)  
 Pygame is used by the server for image manipulation when compiling texture packs.
@@ -71,7 +71,9 @@ MCGCraft comes with binaries for PyMiniRacer built in, but they are probably **o
 3. Install Tkinter `apt install python3-tk` or `python3 -m pip install tk`
 
 ### Installation (Final Steps)
-4. Download MCGCraft from github.com/Shildifreak/MCG_CRAFT - you can either click Code > Download Zip or clone the repository
+4. Download MCGCraft from github.com/Shildifreak/MCG_CRAFT
+   1. you can either click Code > Download Zip
+   2. or install git and clone the repository (required for update function in the launcher to work)
 5. In the main MCGCraft directory run launcher.py
 
 ## Client Features Comparison
