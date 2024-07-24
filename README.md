@@ -89,6 +89,7 @@ MCGCraft comes with binaries for PyMiniRacer built in, but they are probably **o
 |                | Reflections                | ❌                  | ✔ (Blocks only)        |
 |                | Fog Blocks                 | ❌                  | ✔                      |
 |                | Entities                   | ✔                   | ✔                      |
+|                | Custom Shaders             | ✔                   | ❌                     |
 |                |                            |                     |                        |
 | HUD            | In Game HUD                | ✔                   | ✔                      |
 |                | Drag & Drop Items          | ✔                   | ✔                      |

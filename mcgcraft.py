@@ -727,6 +727,7 @@ def zeitstats(timer, tps_history = [0]*200):
 
 def run():
     global w, g
+    print("== Loading Features ==")
     resources.load_features_from(config["feature_paths"])
     worldtype_paths = {}
     for feature_path in config["feature_paths"]:
@@ -766,7 +767,7 @@ def run():
         print("== Creating World ==", flush=True)
         u = voxelengine.Universe(WorldFactory=World)
         w = u.new_world(data)
-        print("== Initialising world ==", flush=True)
+        print("== Initialising World ==", flush=True)
         t = time.time()
         w.blocks.world_generator.init(w)
         w.event_system.clear_events()
