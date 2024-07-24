@@ -14,7 +14,7 @@ MCGCraft was started in 2016 by students of the Marie Curie Gymnasium wanting to
 
 We now have a voxel based game engine that can be used for teaching the basics of programming.  
 A plugin approach allows students to create and later combine their own versions of the game.
-These so called resource packs allow to add
+These so called feature packs allow to add
 - new worlds with custom terrain generation
 - textures
 - 3D models for blocks and entities
