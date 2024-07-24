@@ -1,7 +1,6 @@
 from resources import *
 
-@register_block("Button")
-class ButtonBlock(Block):
+class Button(Block):
     defaults = Block.defaults.copy()
     defaults["p_ambient"] = True
     defaults["p_level"] = 0

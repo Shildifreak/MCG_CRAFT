@@ -1,9 +1,8 @@
 from resources import *
 import time, random
 
-@register_entity("Item")
 
-class ItemEntity(Entity):
+class Item(Entity):
     HITBOX = Hitbox(0.4, 0.4, 0.2)
     LIMIT = 0 # no natural Spawning of Item Entities
     instances = []

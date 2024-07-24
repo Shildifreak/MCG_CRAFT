@@ -1,7 +1,6 @@
 from resources import *
 
-@register_block("ROCKET")
-class Rocket(Block):
+class ROCKET(Block):
     blast_resistance = 1
     delay = 10
 

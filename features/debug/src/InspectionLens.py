@@ -2,8 +2,7 @@ from resources import *
 
 import pprint
 
-@register_item("Inspection_Lens")
-class InspectionLens(Item):
+class Inspection_Lens(Item):
     def _show(self, output, character):
         print(output)
         area = Point(character["position"])

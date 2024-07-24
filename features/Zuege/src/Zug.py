@@ -1,7 +1,6 @@
 from resources import *
 import random
 
-@register_entity("Zug")
 class Zug(Entity):
     HITBOX = Hitbox(3,4,2)
     LIMIT = 0
@@ -38,21 +37,18 @@ class Zug(Entity):
             self["richtung"] = self["richtung"] * -1
             #self["SPEED"] = self["SPEED"] * 2
 
-@register_entity("Zuuug")
 class Zuuug(Zug):
     def __init__(self, data = None):
         super().__init__(data)
         self["texture"] = "ZUUUG"
 
-@register_item("Zug")
-class ZugItem(Item):
+class Zug(Item):
     def use_on_block(self, character, block, face):
         print("using Zug")
         z = EntityFactory({"type":"Zug"})
-        z.set_world(block.world, block.position+(0,3,0))
+        z.set_world(block.world, block.position+(0,2,0))
 
-@register_item("Zuuug")
-class ZuuugItem(ZugItem):
+class Zuuug(Zug):
     def use_on_block(self, character, block, face):
         z = EntityFactory({"type":"Zuuug"})
-        z.set_world(block.world, block.position+(0,3,0))
+        z.set_world(block.world, block.position+(0,2,0))

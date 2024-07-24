@@ -37,7 +37,6 @@ class SnailSoul(EntitySoul):
         self.entity.ai_commands["yaw"].append(y)
         self.entity.ai_commands["pitch"].append(p)
 
-@register_entity("Snail")
 class Snail(Entity):
     HITBOX = Hitbox(14/16/2,10/16,8/16)
     LIMIT = 5

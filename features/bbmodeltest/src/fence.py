@@ -1,7 +1,6 @@
 from resources import *
 
-@register_block("Fence")
-class FenceBlock(Block):
+class Fence(Block):
 
     def handle_event_block_update(self,event):
         state = 0
@@ -19,7 +18,6 @@ class FenceBlock(Block):
         return super().get_tags() | {"block_update"}
 
 
-@register_item("Fence")
-class FenceItem(Item):
+class Fence(Item):
     def block_version(self):
         return {"id":self.item["id"],"state":"0"}
