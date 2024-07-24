@@ -291,7 +291,21 @@ class InventoryDisplay():
         to_inventory_and_index = self._element_to_inventory_and_index(to_element)
         if not from_inventory_and_index or not to_inventory_and_index:
             if from_element:
-                print("drop", from_element, "(not implemented)")
+                # drop
+                from_inventory, from_index = from_inventory_and_index
+                with from_inventory:
+                    remaining_items = dict(from_inventory[from_index])
+                    dropped_item = dict(remaining_items)
+                    remaining_items["count"] = remaining_items.get("count",1) - 1
+                    if remaining_items["count"] <= 0:
+                        remaining_items = {"id":"AIR"}
+                    from_inventory.replace(from_index, remaining_items)
+                    dropped_item["count"] = 1
+                pe = self.player.entity
+                e = resources.EntityFactory({"type":"Item","item":dropped_item})
+                e.set_world(pe.world,pe["position"])
+                e["velocity"] = pe.get_sight_vector()*10+(0,5,0)
+                #e.add_random_velocity()
             return
         from_inventory, from_index = from_inventory_and_index
         to_inventory, to_index = to_inventory_and_index
