@@ -191,6 +191,8 @@
     "Saddle"                   : {"icon":"saddle"                },
     "BallEmpty"                : {"icon":"ball_white"            },
     "BallFull"                 : {"icon":"ball_black"            },
+    "Bucket"                   : {"icon":"bucket"                },
+    "BucketOfWater"            : {"icon":"bucket_of_water"       },
     },
 
 "BLOCK_MODELS": {
