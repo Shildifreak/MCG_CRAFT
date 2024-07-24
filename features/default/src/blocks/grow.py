@@ -1,9 +1,7 @@
 from resources import *
 import tree
 
-@register_block("DIRT")
-
-class Dirt(Block):
+class DIRT(Block):
     blast_resistance = 0
     def handle_event_random_tick(self,events):
         if self.world.blocks[self.position + (0,1,0)] == "AIR":
@@ -14,8 +12,7 @@ class Dirt(Block):
     def get_tags(self):
         return super().get_tags() | {"random_tick"}
 
-@register_block("GRASS")
-class Grassblock(Block):
+class GRASS(Block):
     def handle_event_random_tick(self,events):
         block_above = self.relative[(0,1,0)]
         if block_above == "AIR":
@@ -31,16 +28,15 @@ class Grassblock(Block):
     def get_tags(self):
         return super().get_tags() | {"random_tick"}
             
-
-@register_block("grass")
-@register_block("LilaBlume")
-@register_block("WeisseBlume")
-@register_block("BlaueBlume")
-@register_block("RoteBlume")
-@register_block("GelbeBlume")
-@register_block("SonnenBlume")
-@register_block("HALM")
-class Plant(Block):
+@alias("grass")
+@alias("LilaBlume")
+@alias("WeisseBlume")
+@alias("BlaueBlume")
+@alias("RoteBlume")
+@alias("GelbeBlume")
+@alias("SonnenBlume")
+@alias("HALM")
+class _Plant(Block):
     #def collides_with(self,area):
     #    return False
     def handle_event_block_update(self,events):
@@ -51,8 +47,6 @@ class Plant(Block):
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"block_update"}
 
-
-@register_block("Setzling")
 
 class Setzling(Block):
     blast_resistance = 0

@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("STONESLAB")
-class SlabBlock(Block):
+@alias("STONESLAB")
+class _SlabBlock(Block):
     def collides_with(self, area):
         """
         if a block is solid and his bounding box collides with <area>,

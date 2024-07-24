@@ -1,8 +1,7 @@
 from resources import *
 
-
-@register_block("SAND")
-class FallingBlock(Block):
+@alias("SAND")
+class _FallingBlock(Block):
     def get_tags(self):
         return super().get_tags() | {"block_update","fall"} 
     def handle_event_block_update(self,events):

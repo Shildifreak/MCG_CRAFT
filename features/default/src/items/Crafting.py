@@ -41,8 +41,7 @@ class GlueCraftingInventar(CraftingInventar):
         frozenset({"Stick1", "STONE"}) : "Axe",
     }
 
-@register_item("String")
-class Kredidtkarte(UnplacableItem):
+class String(UnplacableItem):
     def use_on_air(self, character):
         # open inventory
         if not "inventory" in self.item.keys():
@@ -50,7 +49,6 @@ class Kredidtkarte(UnplacableItem):
         character.foreign_inventory = self.item["inventory"]
         character["open_inventory"] = True
     
-@register_item("Glue")
 class Glue(UnplacableItem):
     def use_on_air(self, character):
         # open inventory

@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("VOID")
-class VoidBlock(Block):
+
+class VOID(Block):
 	def handle_event_entity_enter(self,events):
 		for event in events:
 			entity = event.data

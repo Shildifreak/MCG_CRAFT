@@ -1,6 +1,6 @@
 from resources import *
 
-@register_block("Noteblock")
+
 class Noteblock(Block):
 
     def get_tags(self):

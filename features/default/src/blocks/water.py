@@ -1,8 +1,7 @@
 from resources import *
 
 
-@register_block("WATER")
-class WaterBlock(Block):
+class WATER(Block):
     def get_tags(self):
         return (super().get_tags() - {"solid"}) | {"water"}
 

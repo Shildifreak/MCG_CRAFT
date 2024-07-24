@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("SCHILDBLOCK")
-class Sign(Block):
+
+class SCHILDBLOCK(Block):
     defaults = Block.defaults.copy()
     defaults["text"] = "Schreibe eine Nachricht, während du neben dem Schild stehst."
 

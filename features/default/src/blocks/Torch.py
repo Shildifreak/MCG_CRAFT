@@ -2,8 +2,8 @@ from resources import *
 from voxelengine.modules.geometry import Point
 from voxelengine.server.event_system import Event
 
-@register_block("TORCH")
-class Torch(Block):
+
+class TORCH(Block):
     defaults = Block.defaults.copy()
     defaults["p_directions"] = (Vector((0,1,0)),)
     defaults["p_ambient"] = True

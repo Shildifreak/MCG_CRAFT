@@ -2,8 +2,8 @@ from resources import *
 
 import random
 
-@register_block("LAUB")
-class Laub(Block):
+
+class LAUB(Block):
     defaults = Block.defaults.copy()
     defaults["d_wood"] = 0
     MAXDISTANCE = 10

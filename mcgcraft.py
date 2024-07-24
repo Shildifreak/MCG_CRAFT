@@ -1,9 +1,6 @@
 #! /usr/bin/env python3
 #* encoding: utf-8 *#
 
-#if __name__ != "__main__":
-#    raise Warning("mcgcraft.py should not be imported")
-
 # Imports
 import sys, os, ast, inspect, select
 import threading
@@ -376,7 +373,7 @@ class Player(voxelengine.Player):
                 {"id":"Redstone","count":128},
                 {"id":"Repeater"},
                 ]
-            functional = lambda i: (i in resources.blockClasses) or (i in resources.itemClasses)
+            functional = lambda i: (i in resources.Block.subclasses) or (i in resources.Item.subclasses)
             for b in (True, False):
                 for itemname in resources.allItemnames:
                     if functional(itemname) == b:

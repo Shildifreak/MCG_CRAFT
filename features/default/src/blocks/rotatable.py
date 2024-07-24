@@ -1,16 +1,16 @@
 from resources import *
 
-@register_item("STONESLAB")
-@register_item("HERZ")
-@register_item("GESICHT")
-@register_item("HEBEL")
-@register_item("Button")
-@register_item("FAN")
-@register_item("TORCH")
-@register_item("HOLZ")
-@register_item("Repeater")
-@register_item("ROCKET")
-class RotatableBlockItem(Item):
+@alias("STONESLAB")
+@alias("HERZ")
+@alias("GESICHT")
+@alias("HEBEL")
+@alias("Button")
+@alias("FAN")
+@alias("TORCH")
+@alias("HOLZ")
+@alias("Repeater")
+@alias("ROCKET")
+class _RotatableBlockItem(Item):
     def block_version_on_place(self,character,block,face):
         block_id = self.item["id"]
         faces = {( 0, 1, 0):"t",
@@ -29,8 +29,8 @@ class RotatableBlockItem(Item):
             r = 0
         return {"id":block_id,"rotation":r,"base":base}
 
-@register_block("GESICHT")
-class RotatableBlock(Block):
+@alias("GESICHT")
+class _RotatableBlock(Block):
     def clicked(self,character,face,item):
         self["rotation"] += 1
         self["rotation"] %= 4

@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("LAMP")
-class Lamp(SolidBlock):
+
+class LAMP(SolidBlock):
     def handle_event_block_update(self,event):
         SolidBlock.handle_event_block_update(self,event)
         if self.redstone_activated():

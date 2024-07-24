@@ -2,9 +2,9 @@ from resources import *
 from voxelengine.modules.observableCollections import ObservableDict
 import random
 
-@register_item("Muenzen")
-@register_item("Scheine")
-class Geld(UnplacableItem):
+@alias("Muenzen")
+@alias("Scheine")
+class _Geld(UnplacableItem):
     pass
 
 class Kreditkarteninventar(ObservableDict):
@@ -20,7 +20,7 @@ class Kreditkarteninventar(ObservableDict):
         else:
             return False
 
-@register_item("Kredidtkarte")
+
 class Kredidtkarte(UnplacableItem):
      def use_on_air(self, character):
         # open inventory

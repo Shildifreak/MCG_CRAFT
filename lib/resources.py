@@ -11,6 +11,7 @@ from voxelengine.modules.shared import *
 from voxelengine.modules.geometry import Vector, Hitbox, BinaryBox, Sphere, Point, Box, avg360, NOWHERE
 from voxelengine.modules.observableCollections import observable_from, Observable
 from voxelengine.modules.serializableCollections import Serializable, serialize, extended_literal_eval
+from voxelengine.modules.utils import SubclassTracker
 from voxelengine.server.event_system import Event
 
 GRAVITY = 35
@@ -39,7 +40,7 @@ def wait(dt):
     while time.time() - t0 < dt:
         yield
 
-class Block(voxelengine.Block):
+class Block(voxelengine.Block, metaclass=SubclassTracker):
     blast_resistance = 0
     defaults = {"p_level":0, # redstone power level
                 "p_stronglevel":None, # only used on solid blocks so solid blocks powered by redstone don't power other redstone
@@ -53,7 +54,7 @@ class Block(voxelengine.Block):
         super().__init__(default_data, *args, **kwargs)
         
         assert type(self) != Block #this is an abstract class, please instantiate specific subclasses or use BlockFactory
-        assert blockClasses[self["id"]] == type(self) #blocks must have a matching type id
+        assert Block.subclasses[self["id"]] == type(self) #blocks must have a matching type id
     
     def turn_into(self, new_block):
         self.clear()
@@ -64,7 +65,7 @@ class Block(voxelengine.Block):
         self._morph()
     
     def _morph(self):
-        self.__class__ = blockClasses[self["id"]]
+        self.__class__ = Block.subclasses[self["id"]]
 
     def __getitem__(self, key):
         return self.get(key,None)
@@ -244,9 +245,7 @@ class SolidBlock(Block):
     def get_tags(self):
         return super(SolidBlock, self).get_tags().union({"block_update"})
 
-# Default Item and Block (also usefull for inheritance)
-
-class Item(object):
+class Item(object, metaclass=SubclassTracker):
     # Init function, don't care too much about this
     def __init__(self,item):
         if isinstance(item, Item):
@@ -256,7 +255,7 @@ class Item(object):
         #self.tags = item.setdefault("tags",{})
         self.item.setdefault("count",1)
 
-        assert itemClasses[self.item["id"]] == type(self) #item class must match id
+        assert Item.subclasses[self.item["id"]] == type(self) #item class must match id
 
     # FUNCTIONS TO BE OVERWRITTEN IN SUBCLASSES:
     def block_version(self):
@@ -920,28 +919,40 @@ class CommandContext(object):
             error_msg = " ".join(str(a) for a in e.args)
             self.send_feedback(f"Command {command_name}: {error_msg}")
 
-
-blockClasses    = None # initialized in load_features_from
-itemClasses     = None # initialized in load_features_from
+Block.subclasses = collections.defaultdict(lambda: SolidBlock, Block.subclasses)
+Item.subclasses = collections.defaultdict(lambda: Item, Item.subclasses)
+#itemClasses     = None # initialized in load_features_from
 entityClasses   = None # initialized in load_features_from
+#None # initialized in load_features_from
 allBlocknames   = None # initialized in load_features_from
 allItemnames    = None # initialized in load_features_from
+
+def alias(name):
+    def _alias(cls):
+        assert isinstance(cls, SubclassTracker)
+        SubclassTracker.register(cls, name)
+        return cls
+    return _alias
 
 def register_item(name):
     def _register_item(item_subclass):
         assert issubclass(item_subclass, Item)
-        if name in itemClasses:
-            print("Warning: %s replaces previous definition %s" % (item_subclass, itemClasses[name]))
-        itemClasses[name] = item_subclass
+        assert name == item_subclass.__name__
+#        if name in itemClasses:
+#            print("Warning: %s replaces previous definition %s" % (item_subclass, itemClasses[name]))
+#        itemClasses[name] = item_subclass
+        warnings.warn("function register_item is deprecated, Item subclasses are registered automatically using their class name, further aliases can be added with the alias decorator", DeprecationWarning)
         return item_subclass
     return _register_item
 
 def register_block(name):
     def _register_block(block_subclass):
         assert issubclass(block_subclass, Block)
-        if name in blockClasses:
-            print("Warning: %s replaces previous definition %s" % (block_subclass, blockClasses[name]))
-        blockClasses[name] = block_subclass
+        assert name == block_subclass.__name__
+#        if name in blockClasses:
+#            print("Warning: %s replaces previous definition %s" % (block_subclass, blockClasses[name]))
+#        blockClasses[name] = block_subclass
+        warnings.warn("function register_block is deprecated, Block subclasses are registered automatically using their class name, further aliases can be added with the alias decorator", DeprecationWarning)
         return block_subclass
     return _register_block
 
@@ -960,7 +971,7 @@ def BlockFactory(data, *args, **kwargs):
     if isinstance(data, str):
         data = {"id":data}
     block_type = data["id"]
-    blockClass = blockClasses[block_type]
+    blockClass = Block.subclasses[block_type]
     return blockClass(data, *args, **kwargs) #M# change to directly initialize the correct block
 
 def EntityFactory(data):
@@ -976,7 +987,7 @@ def ItemFactory(data):
     if isinstance(data, str):
         data = {"id":data}
     item_type = data["id"]
-    itemClass = itemClasses[item_type]
+    itemClass = Item.subclasses[item_type]
     return itemClass(data)
 
 texturepackDirectory = tempfile.TemporaryDirectory()
@@ -984,10 +995,9 @@ texturepackPath = texturepackDirectory.name
 tp_compiler = None # initialized in load_features_from
 
 def load_features_from(feature_paths):
-    global blockClasses, itemClasses, entityClasses, tp_compiler, allBlocknames, allItemnames
+    global entityClasses, tp_compiler, allBlocknames, allItemnames
 
-    blockClasses  = collections.defaultdict(lambda:SolidBlock)
-    itemClasses   = collections.defaultdict(lambda:Item)
+#    itemClasses   = collections.defaultdict(lambda:Item)
     entityClasses = collections.defaultdict(lambda:Entity)
         
     for feature_path in feature_paths:

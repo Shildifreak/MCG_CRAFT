@@ -1,6 +1,6 @@
 from resources import *
 
-class Door(Block):
+class _Door(Block):
     defaults = Block.defaults.copy()
     defaults["state"] = ""
     blast_resistance = 0
@@ -49,23 +49,18 @@ class Door(Block):
 #    def collides_with(self,area):
 #        return self["state"] != "OPEN"
 
-@register_block("DOORTOP")
-
-class DoorTop(Door):
+class DOORTOP(_Door):
     offset_top    =  0
     offset_bottom = -1
 
-@register_block("DOORBOTTOM")
-
-class DoorBottom(Door):
+class DOORBOTTOM(_Door):
     offset_top    =  1
     offset_bottom =  0
 
 
-@register_item("DOOR")
-@register_item("DOORTOP")
-@register_item("DOORBOTTOM")
-class DoorItem(Item):
+@alias("DOORTOP")
+@alias("DOORBOTTOM")
+class DOOR(Item):
     def block_version(self):
         # always place as DOORBOTTOM
         return "DOORBOTTOM"

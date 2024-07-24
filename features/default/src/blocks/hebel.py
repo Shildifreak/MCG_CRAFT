@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("HEBEL")
-class HebelBlock(Block):
+
+class HEBEL(Block):
     defaults = Block.defaults.copy()
     defaults["p_ambient"] = True
     defaults["p_level"] = -15

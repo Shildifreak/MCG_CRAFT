@@ -74,3 +74,28 @@ def get_ip():
     finally:
         s.close()
     return IP
+
+class SubclassTracker(type):
+    """
+    A metaclass that allows to keep track of subclasses. Usage:
+    >>> class Base(metaclass=SubclassTracker)
+    >>> class _Abstract(Base) # classes starting with _ are not registered
+    >>> class Sub(_Abstract)
+    >>> SubclassTracker.register(Sub, "alias") # it is possible to register classes manually
+
+    >>> Base.subclasses -> {"Base":class main.Base, "Sub":class main.Sub, "alias":class main.Sub}
+    >>> Sub.subclasses -> {"Sub":class main.Sub, "alias":class main.Sub}
+    """
+    def __init__(cls, name, bases, namespace):
+        type.__init__(cls, name, bases, namespace)
+        cls.subclasses = {}
+        if name[0] != "_":
+            SubclassTracker.register(cls, name)
+    
+    @staticmethod
+    def register(cls, name):
+        for parent in cls.mro():
+            if isinstance(parent, SubclassTracker):
+                if name in parent.subclasses:
+                    print(f"Shadowing existing subclass of {parent} with name {name}. {parent.subclasses[name]} -> {cls}")
+                parent.subclasses[name] = cls

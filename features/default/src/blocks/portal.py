@@ -1,7 +1,7 @@
 from resources import *
 
-@register_block("PORTAL")
-class Portal(Block):
+
+class PORTAL(Block):
 	
 	def handle_event_entity_enter(self,events):
 		for event in events:

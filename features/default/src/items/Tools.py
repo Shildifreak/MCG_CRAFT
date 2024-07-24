@@ -4,7 +4,7 @@ import resources
 import random
 import time
 
-@register_item("Axe")
+
 class Axe(Item):
     TTM = 0.2
     def use_on_block(self, character, block, face):
@@ -17,11 +17,11 @@ class Axe(Item):
         entity.take_damage(5)
         #self.decrease_count()
 
-@register_item("InstaPick")
+
 class InstaPick(Axe):
     TTM = 0
 
-@register_item("InfiniPick")
+
 class InfiniPick(Item):
     """A Pickaxe that continues mining as long as the key/button is held down."""
     max_distance = 5
@@ -40,8 +40,8 @@ class InfiniPick(Item):
                 block.mined(character, face)
                 yield from wait(self.interval)
 
-@register_item("Fishing_Rod")
-class FishingRod(Item):
+
+class Fishing_Rod(Item):
     max_distance = 5
     def use_on_block(self, character, block, face):
         return self.use_on_air(character)
@@ -61,7 +61,7 @@ class FishingRod(Item):
     def use_on_entity(self, character, entity):
         print("Pull Entity!")
 
-@register_item("Bow")
+
 class Bow(Item):
     MAXPOWER = 40
 
@@ -85,7 +85,7 @@ class Bow(Item):
         arrow["rotation"] = character["rotation"]
         arrow["velocity"] = character.get_sight_vector() * power * self.MAXPOWER
 
-@register_entity("Arrow")
+
 class Arrow(Entity):
     HITBOX = Hitbox(1,1,0.5)
     LIMIT = 0
@@ -119,12 +119,12 @@ class Arrow(Entity):
             self.kill()
             return
 
-@register_item("Saddle")
+
 class Saddle(Item):
     def use_on_entity(self, character, entity):
         character.ride(entity)
 
-@register_item("BallEmpty")
+
 class BallEmpty(Item):
     def use_on_entity(self, character, entity):
         entity.set_world(None,(0,0,0))
@@ -132,7 +132,7 @@ class BallEmpty(Item):
         self.decrease_count()
         character.pickup_item({"id":"BallFull", "entity":entity})
 
-@register_item("BallFull")
+
 class BallFull(Item):
     def use_on_air(self, character):
         self._use(character, character["position"]+character.get_sight_vector()*3)

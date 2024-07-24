@@ -1,9 +1,7 @@
 from resources import *
 
 
-@register_block("BEDROCK")
-@register_block("mcgcraft:bedrock")
-class StoneBlock(Block):
+class BEDROCK(Block):
     blast_resistance = 1
 
     def mined(self,character,face):

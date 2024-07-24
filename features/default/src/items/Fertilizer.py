@@ -1,7 +1,7 @@
 from resources import *
 import random
 
-@register_item("Fertilizer")
+
 class Fertilizer(Item):
     def use_on_block(self, character, block, face):
         character.world.random_tick_at(block.position)

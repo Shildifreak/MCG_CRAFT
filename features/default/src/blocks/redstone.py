@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from resources import *
 
-@register_block("Redstone")
 class Redstone(Block):
     defaults = Block.defaults.copy()
     defaults["p_directions"] = (Vector((1,0,0)),Vector((-1,0,0)),Vector((0,0,1)),Vector((0,0,-1)),Vector((0,-1,0)))
@@ -33,12 +32,10 @@ class Redstone(Block):
 
 #        Block.block_update(self,faces)
 
-@register_item("Redstone")
-class Redstone_Item(Item):
+class Redstone(Item):
     def block_version(self):
         return {"id":self.item["id"],"state":"0"}
 
-@register_block("Repeater")
 class Repeater(Block):
     def handle_event_block_update(self,event):
         d = self.get_front_facing_vector()
