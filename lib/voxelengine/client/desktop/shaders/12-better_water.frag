@@ -47,7 +47,8 @@ void main (void)
                 break;
             }
         }
-//        fragColor.a = 1;
+        fragColor.a = clamp(0, 1, 0.7-abs(-1.8*dot(viewDir, normal)));
+//        fragColor.a *= fragColor.a;
     }
 //    outColor.xyz = vec3(1/abs(texelFetch(loopback2, st, 0).z));
         

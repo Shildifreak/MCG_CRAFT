@@ -40,7 +40,7 @@ vec4 get_normal(float x, float z) {
         dydx   += s[0]*5*height * s[1]*cos(s[1]*x + s[2]*z + s[3]*10*speed*time);
         dydz   += s[0]*5*height * s[2]*cos(s[1]*x + s[2]*z + s[3]*10*speed*time);
     }
-    return gl_ModelViewMatrix * vec4(dydx,1,dydz,0);
+    return normalize(gl_ModelViewMatrix * vec4(dydx,1,dydz,0));
 }
 
 
