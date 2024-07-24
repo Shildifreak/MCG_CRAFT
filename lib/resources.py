@@ -1,6 +1,23 @@
-import sys, os, inspect, imp
+import sys, os, inspect
 import math, random, time, collections, itertools
 import tempfile
+import warnings
+
+# deprecated
+#from imp import load_source
+
+# importlib (has problems with feature modules importing each other, causing false positive shadow warnings, something about path vs meta_path)
+#import importlib.util
+#def load_source(module_name, module_path):
+#    spec = importlib.util.spec_from_file_location(module_name, module_path)
+#    module = importlib.util.module_from_spec(spec)
+#    spec.loader.exec_module(module)
+
+# workaround/solution using path manipulation and standart import mechanism
+def load_source(module_name, module_path):
+    sys.path.insert(0, os.path.dirname(module_path))
+    __import__(module_name)
+    sys.path.pop(0)
 
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -1009,7 +1026,7 @@ def load_features_from(feature_paths):
             sys.path.append(dirpath)
             for fn in filenames:
                 if fn.endswith(".py") and not fn.startswith("_"):
-                    imp.load_source(fn[:-3],os.path.join(dirpath,fn)) #like adding to path and removing afterwards, but shorter (also it's deprecated in 3.3)
+                    load_source(fn[:-3],os.path.join(dirpath,fn)) #load module from path
             sys.path.remove(dirpath)
         sys.path.remove(structure_path)
 
