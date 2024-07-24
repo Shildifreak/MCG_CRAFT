@@ -371,7 +371,7 @@ class Entity(voxelengine.Entity):
         data_defaults = {
             "velocity" : Vector([0,0,0]),
             "flying" : False,
-            "lives" : 10,
+            "health" : 10,
             "ACCELERATION" : 20,
             "SPEED" : 10,
         }
@@ -383,6 +383,7 @@ class Entity(voxelengine.Entity):
         
         self.register_item_sanitizer(Vector,"velocity")
         self.register_item_sanitizer(InventoryFactory, "inventory")
+        self.register_item_callback(self._check_health,"health")
 
         self.ai_commands = collections.defaultdict(list)
 
@@ -428,13 +429,17 @@ class Entity(voxelengine.Entity):
             if p.riding != self:
                 self.passengers.remove(p)
 
-    def kill(self, verbose = True):
+    def kill(self):
         self.unmount_all()
         if self in self.instances:
             self.instances.remove(self)
             self.set_world(None, Vector((0,0,0)))
-        elif verbose:
+        elif __debug__:
             print("this entity is already dead")
+    
+    def _check_health(self, health):
+        if health < 0:
+            self.kill()
     
     def handle_event_default(self, events):
         tag = events.pop().tag
@@ -562,8 +567,8 @@ class Entity(voxelengine.Entity):
         if pos != entity["position"]:
             entity["position"] = pos
         if velocity != entity["velocity"]:
-            entity["velocity"] = velocity
             dv = (velocity - entity["velocity"]).length()
+            entity["velocity"] = velocity
             # Geschwindigkeit 20 entspricht etwa einer Fallhoehe von 6 Block, also ab 7 nimmt der Spieler Schaden
             if dv > 1 and entity.riding:
                 entity.unmount_riding()
@@ -645,9 +650,7 @@ class Entity(voxelengine.Entity):
         pass
 
     def take_damage(self, damage):
-        self["lives"] -= damage
-        if self["lives"] < 0:
-            self.kill(verbose=False)
+        self["health"] -= damage
 
     def find_inventory_slot(self, item={"id":"AIR"}):
         """return first inventory slot that contains matching item (ignoring count)"""

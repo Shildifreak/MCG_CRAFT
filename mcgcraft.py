@@ -399,7 +399,7 @@ class Player(voxelengine.Player):
             self.entity.unregister_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.unregister_item_callback(self.inventory_display.callback,"left_hand")
             self.entity.unregister_item_callback(self.inventory_display.callback,"right_hand")
-            self.entity.unregister_item_callback(self._update_lives,"lives")
+            self.entity.unregister_item_callback(self._update_hearts,"health")
         super().control(entity)
         if self.entity:
             self.entity.foreign_inventory = None
@@ -407,7 +407,7 @@ class Player(voxelengine.Player):
             self.entity.register_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.register_item_callback(self.inventory_display.callback,"left_hand")
             self.entity.register_item_callback(self.inventory_display.callback,"right_hand")
-            self.entity.register_item_callback(self._update_lives,"lives")
+            self.entity.register_item_callback(self._update_hearts,"health")
 
     def handle_events(self, events):
         other_events = []
@@ -437,11 +437,11 @@ class Player(voxelengine.Player):
             self.entity.foreign_inventory = None
         else:
             self.inventory_display.close()
-    def _update_lives(self, lives):
+    def _update_hearts(self, health):
         #todo: fix!
-        for x in range(lives,10):
+        for x in range(health,10):
             self.del_hud("heart"+str(x))
-        for x in range(lives):
+        for x in range(health):
             self.set_hud("heart"+str(x),"heart",Vector((-0.95+x/10.0,0.95,0)),0,(0.05,0.05),INNER|LEFT)
 
     def update(self):

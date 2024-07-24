@@ -67,7 +67,9 @@ ITEMS
 	CRAFTING
 		???
 PVP/PVE
-	all entities have a "lives" attribute that can be manipulated to damage or heal them
+	all entities have a "health" attribute that can be manipulated to damage or heal them
+	entities automatically die if their health falls below 0
+	using entity.take_damage allows entities to consider effects of armor etc.
 
 REDSTONE
 	WIRING

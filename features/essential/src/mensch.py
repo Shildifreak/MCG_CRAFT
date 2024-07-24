@@ -24,7 +24,7 @@ class Mensch(Entity):
             "left_hand" : 0,
             "right_hand" : 1,
             "open_inventory" : False, #set player.entity.foreign_inventory then trigger opening by setting this attribute
-            "lives" : 9,
+            "health" : 9,
             "tags" : {"random_tick_source","update"},
             "spawn" : (None, None), # (world_index, position)
         }
@@ -54,13 +54,11 @@ class Mensch(Entity):
     def update(self):
         self.execute_ai_commands()
 
-    def take_damage(self, damage):
-        self["lives"] -= damage
-        if self["lives"] <= 0:
-            self.die_and_respawn()
+    def kill(self):
+        self["health"] = 9
+        self.respawn()
 
-    def die_and_respawn(self):
-        # die
+    def respawn(self):
         world_index, position = self["spawn"]
         if world_index is None:
             world = self.world.universe.get_spawn_world()
@@ -70,5 +68,3 @@ class Mensch(Entity):
             position = self.world.blocks.world_generator.spawnpoint
         self.set_world(world,position)
         print("respawn", world_index, position)
-        # respawn
-        self["lives"] = 9
