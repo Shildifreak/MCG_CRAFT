@@ -1,7 +1,6 @@
 from resources import *
 import time, random
 
-@register_entity("DAME")
 
 class Dame(Entity):
     HITBOX = Hitbox(0.6,3,1.5)

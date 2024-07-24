@@ -361,7 +361,10 @@ def InventoryFactory(inventory):
     inventory.register_default_item_sanitizer(ItemData)
     return inventory
 
-class Entity(voxelengine.Entity):
+class SubclassTracker_Entity(SubclassTracker, type(voxelengine.Entity)): #observable inherits from abc with uses abc.ABCMeta metaclass
+    pass
+
+class Entity(voxelengine.Entity, metaclass=SubclassTracker_Entity):
     HITBOX = Hitbox(0.25,0.5,0.25)
     LIMIT = 0
     PASSENGER_OFFSETS = (Vector(0,1.5,0),)
@@ -379,7 +382,7 @@ class Entity(voxelengine.Entity):
             data_defaults.update(data)
         super().__init__(data_defaults)
         
-        assert entityClasses[self["type"]] == type(self) #entities must have a matching type item
+        assert Entity.subclasses[self["type"]] == type(self) #entities must have a matching type item
         
         self.register_item_sanitizer(Vector,"velocity")
         self.register_item_sanitizer(InventoryFactory, "inventory")
@@ -941,9 +944,8 @@ class CommandContext(object):
 
 Block.subclasses = collections.defaultdict(lambda: SolidBlock, Block.subclasses)
 Item.subclasses = collections.defaultdict(lambda: Item, Item.subclasses)
-#itemClasses     = None # initialized in load_features_from
-entityClasses   = None # initialized in load_features_from
-#None # initialized in load_features_from
+Entity.subclasses = collections.defaultdict(lambda: Entity, Entity.subclasses)
+
 allBlocknames   = None # initialized in load_features_from
 allItemnames    = None # initialized in load_features_from
 
@@ -979,9 +981,11 @@ def register_block(name):
 def register_entity(name):
     def _register_entity(entity_subclass):
         assert issubclass(entity_subclass, Entity)
-        if name in entityClasses:
-            print("Warning: %s replaces previous definition %s" % (entity_subclass, entityClasses[name]))
-        entityClasses[name] = entity_subclass
+        assert name == entity_subclass.__name__
+#        if name in entityClasses:
+#            print("Warning: %s replaces previous definition %s" % (entity_subclass, entityClasses[name]))
+#        entityClasses[name] = entity_subclass
+        warnings.warn("function register_entity is deprecated, Entity subclasses are registered automatically using their class name, further aliases can be added with the alias decorator", DeprecationWarning)
         return entity_subclass
     return _register_entity
 
@@ -998,7 +1002,7 @@ def EntityFactory(data):
     if isinstance(data, str):
         data = {"type":data}
     entity_type = data["type"]
-    entityClass = entityClasses[entity_type]
+    entityClass = Entity.subclasses[entity_type]
     if entityClass == Entity:
         print("no entity class found for:", entity_type)
     return entityClass(data)
@@ -1015,10 +1019,7 @@ texturepackPath = texturepackDirectory.name
 tp_compiler = None # initialized in load_features_from
 
 def load_features_from(feature_paths):
-    global entityClasses, tp_compiler, allBlocknames, allItemnames
-
-#    itemClasses   = collections.defaultdict(lambda:Item)
-    entityClasses = collections.defaultdict(lambda:Entity)
+    global tp_compiler, allBlocknames, allItemnames
         
     for feature_path in feature_paths:
         structure_path = os.path.join(PATH, "..", "features", feature_path, "structures")

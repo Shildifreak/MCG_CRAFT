@@ -2,7 +2,6 @@ from resources import *
 from voxelengine.modules.geometry import Vector, Hitbox, Point
 from voxelengine.server.event_system import Event
 
-@register_entity("Geist")
 
 class Geist(Entity):
     HITBOX = Hitbox(1.49,2.99,1.49)

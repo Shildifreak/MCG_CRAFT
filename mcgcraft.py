@@ -864,7 +864,7 @@ def run():
             for w in u.get_loaded_worlds():
                 # mob spawning
                 if config["mobspawning"] and len(w.entities.entities) < config["entitylimit"]:
-                    for entity_type, entity_class in resources.entityClasses.items():
+                    for entity_type, entity_class in resources.Entity.subclasses.items():
                         if len(entity_class.instances) < entity_class.LIMIT:
                             x = random.randint(-40,40)
                             y = random.randint(-10,20)

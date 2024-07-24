@@ -48,7 +48,7 @@ class SchafSoul(EntitySoul):
         self.entity.ai_commands["yaw"].append(y)
         self.entity.ai_commands["pitch"].append(p)        
 
-@register_entity("Schaf")
+
 class Schaf(Entity):
     HITBOX = Hitbox(0.6,1.5,1)
     LIMIT = 5
