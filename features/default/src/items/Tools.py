@@ -86,6 +86,7 @@ class Bow(Item):
         arrow["velocity"] = character.get_sight_vector() * power * self.MAXPOWER
 
 
+@register_entity("Arrow")
 class Arrow(Entity):
     HITBOX = Hitbox(1,1,0.5)
     LIMIT = 0
