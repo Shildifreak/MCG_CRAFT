@@ -193,6 +193,7 @@
     "BallFull"                 : {"icon":"ball_black"            },
     "Bucket"                   : {"icon":"bucket"                },
     "BucketOfWater"            : {"icon":"bucket_of_water"       },
+    "Apple"                    : {"icon":"apple"                 },
     },
 
 "BLOCK_MODELS": {
