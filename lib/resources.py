@@ -375,6 +375,7 @@ class Entity(voxelengine.Entity, metaclass=SubclassTracker_Entity):
             "velocity" : Vector([0,0,0]),
             "flying" : False,
             "health" : 10,
+            "max_health" : 10,
             "ACCELERATION" : 20,
             "SPEED" : 10,
         }
@@ -386,6 +387,7 @@ class Entity(voxelengine.Entity, metaclass=SubclassTracker_Entity):
         
         self.register_item_sanitizer(Vector,"velocity")
         self.register_item_sanitizer(InventoryFactory, "inventory")
+        self.register_item_sanitizer(lambda h: min(h, self["max_health"]), "health")
         self.register_item_callback(self._check_health,"health")
 
         self.ai_commands = collections.defaultdict(list)

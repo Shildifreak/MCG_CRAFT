@@ -53,8 +53,13 @@ class Fishing_Rod(UnplacableItem):
         if pos:
             block = character.world.blocks[pos]
             if block == "WATER":
-                blockname = random.choice(resources.allBlocknames)
-                character.pickup_item({"id":blockname})
+                if random.random() < 0.8:
+                    # fish
+                    character.pickup_item({"id":"Fish"})
+                else:
+                    # treasure
+                    blockname = random.choice(resources.allBlocknames)
+                    character.pickup_item({"id":blockname})
 
     def use_on_entity(self, character, entity):
         print("Pull Entity!")

@@ -194,6 +194,7 @@
     "Bucket"                   : {"icon":"bucket"                },
     "BucketOfWater"            : {"icon":"bucket_of_water"       },
     "Apple"                    : {"icon":"apple"                 },
+    "Fish"                     : {"icon":"fish"                  },
     },
 
 "BLOCK_MODELS": {
