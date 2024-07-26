@@ -36,7 +36,7 @@ def face(vertices, texture, uvs):
 
 	d = (i10-i00)
 	if (d%2 != 1):
-		print("retrying mirroring decision with other neighbour")
+		#print("retrying mirroring decision with other neighbour")
 		d = (i00-i01)
 		if (d%2 != 1):
 			print("could not decide mirroring")
@@ -125,7 +125,7 @@ class BBModel(object):
 				if element.get("boxuv"  ,False) != False : print("unexpected value",element["boxuv"]  ,"for boxuv"  )
 				if element.get("rescale",False) != False : print("unexpected value",element["rescale"],"for rescale")
 				if element.get("rotation",False) != False : print("unexpected value",element["rotation"],"for rotation")
-				pprint(element)
+				#pprint(element)
 				x0,y0,z0 = element["from"]
 				x1,y1,z1 = element["to"]
 				for direction, facedata in element["faces"].items():

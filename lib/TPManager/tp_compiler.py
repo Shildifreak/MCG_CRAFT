@@ -19,18 +19,11 @@ class TP_Compiler(object):
 		self.description = {"ICONS":{},"BLOCKS":{},"BLOCK_MODELS":{},"ENTITY_MODELS":{},"SOUNDS":{}}
 		self.texture_directories = []
 		self.sound_files = {}
+		self.model_files = {}
 	
 	def add_textures_from(self, path):
-		description_path = os.path.join(path, "description.py")
-		if not os.path.isfile(description_path):
-			print("textures are missing description",description_path)
-			return
-
-		with open(description_path) as description_file:
-			description = ast.literal_eval(description_file.read())
 		self.texture_directories.append(textureIO.TextureDirectory(path))
-		
-		model_files = {}
+
 		for dirpath, dirnames, filenames in os.walk(path, topdown=True):
 			for filename in filenames:
 				_, ext = os.path.splitext(filename)
@@ -39,9 +32,18 @@ class TP_Compiler(object):
 						print("multiple files for sound", filename)
 					self.sound_files[filename] = os.path.join(dirpath, filename)
 				if ext in (".bbmodel",):
-					if filename in model_files:
+					if filename in self.model_files:
 						print("multiple files with name", filename)
-					model_files[filename] = os.path.join(dirpath, filename)
+					self.model_files[filename] = os.path.join(dirpath, filename)
+
+		for dirpath, dirnames, filenames in os.walk(path, topdown=False):
+			description_path = os.path.join(dirpath, "description.py")
+			if os.path.isfile(description_path):
+				self._add_description(description_path)
+
+	def _add_description(self, description_path):
+		with open(description_path) as description_file:
+			description = ast.literal_eval(description_file.read())
 		
 		# refine description
 		description.setdefault("BLOCKS", {})
@@ -119,7 +121,7 @@ class TP_Compiler(object):
 
 		for blockmodelname, blockmodel in description["BLOCK_MODELS"].items():
 			if "include" in blockmodel:
-				include_model = load_blockmodel(model_files[blockmodel["include"]])
+				include_model = load_blockmodel(self.model_files[blockmodel["include"]])
 				for k,v in include_model.items():
 					blockmodel.setdefault(k,v)
 			if not "icon" in blockmodel:
@@ -172,10 +174,10 @@ class TP_Compiler(object):
 			self.sound_files.pop(filename)
 	
 	def generate_sound_folder(self, target_path):
-		print("\nGenerating Sound Folder for Texturepack")
+		#print("\nGenerating Sound Folder for Texturepack")
 		os.makedirs(target_path, exist_ok=True)
 		for filename, src_path in self.sound_files.items():
-			print("copy sound file from", src_path, "to", os.path.join(target_path,filename))
+			#print("copy sound file from", src_path, "to", os.path.join(target_path,filename))
 			shutil.copyfile(src_path, os.path.join(target_path,filename))
 	
 	def save_to(self, path):
