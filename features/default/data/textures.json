@@ -112,10 +112,6 @@
             9,
             4
         ],
-        "mitteldunkellila": [
-            10,
-            4
-        ],
         "rot": [
             11,
             4
@@ -140,20 +136,8 @@
             3,
             3
         ],
-        "hellbraun": [
-            3,
-            4
-        ],
         "orange": [
             5,
-            3
-        ],
-        "hellorange": [
-            6,
-            3
-        ],
-        "besch": [
-            7,
             3
         ],
         "petrol": [
@@ -395,10 +379,6 @@
         "bucherregal": [
             8,
             13
-        ],
-        "gold": [
-            15,
-            4
         ],
         "silber": [
             15,
@@ -868,14 +848,6 @@
             8,
             14
         ],
-        "helleres braun": [
-            4,
-            3
-        ],
-        "savannenfaren": [
-            14,
-            4
-        ],
         "arrow_icon": [
             11,
             15
@@ -911,6 +883,30 @@
         "fish": [
             11,
             8
+        ],
+        "ocker": [
+            6,
+            3
+        ],
+        "beige": [
+            7,
+            3
+        ],
+        "hellbraun": [
+            4,
+            3
+        ],
+        "violett": [
+            10,
+            4
+        ],
+        "gold": [
+            14,
+            4
+        ],
+        "kupfer": [
+            15,
+            4
         ]
     }
 }

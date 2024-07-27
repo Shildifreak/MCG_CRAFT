@@ -27,7 +27,7 @@ class TP_Compiler(object):
 		for dirpath, dirnames, filenames in os.walk(path, topdown=True):
 			for filename in filenames:
 				_, ext = os.path.splitext(filename)
-				if ext in (".mp3", ".ogg", ".wav"):
+				if ext in (".mp3", ".ogg", ".wav", ".m4a"):
 					if filename in self.sound_files:
 						print("multiple files for sound", filename)
 					self.sound_files[filename] = os.path.join(dirpath, filename)
@@ -177,7 +177,6 @@ class TP_Compiler(object):
 		#print("\nGenerating Sound Folder for Texturepack")
 		os.makedirs(target_path, exist_ok=True)
 		for filename, src_path in self.sound_files.items():
-			#print("copy sound file from", src_path, "to", os.path.join(target_path,filename))
 			shutil.copyfile(src_path, os.path.join(target_path,filename))
 	
 	def save_to(self, path):

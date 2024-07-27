@@ -228,6 +228,9 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
     def get_break_sound(self):
         return self["id"]+"_block_broken"
 
+    def get_place_sound(self):
+        return self["id"]+"_block_placed"
+
     def get_tags(self):
         """
         return tags of this entity, this can be events that it reacts to or just for finding it in the world
@@ -317,6 +320,10 @@ class Item(object, metaclass=SubclassTracker):
         # place block in world and decrease item count
         if self.decrease_count():
             block.save()
+            
+            # play sound
+            sound_event = Event("sound",Point(block.position),block.get_place_sound())
+            block.world.event_system.add_event(sound_event)
         return
     
     def decrease_count(self):
