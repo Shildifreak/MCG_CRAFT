@@ -907,6 +907,14 @@
         "kupfer": [
             15,
             4
+        ],
+        "redstone_dust": [
+            7,
+            9
+        ],
+        "redstone_erz": [
+            4,
+            8
         ]
     }
 }
