@@ -46,6 +46,7 @@ class Player(object):
 	def quit(self):
 		self.control(None)
 		self.quit_flag = True
+		self.new_area_updates_event.set() #trigger thread to look at quit_flag
 
 	def control(self,entity):
 		if self.entity:
@@ -182,7 +183,6 @@ class Player(object):
 				since_tick = old[2]
 			self.area_updates[repr(area)] = (self.world, area, since_tick, bookmark) #M# is this thread save?
 			self.new_area_updates_event.set()
-			self.new_area_updates_event.clear()
 		else:
 			self._async_update_area(self.world, area, since_tick, bookmark)
 
@@ -199,6 +199,7 @@ class Player(object):
 		dt = 0.0001
 		while not self.quit_flag:
 			self.new_area_updates_event.wait()
+			self.new_area_updates_event.clear()
 			while self.area_updates:
 				_, args = self.area_updates.popitem(last=False)
 				self._async_update_area(*args,sleep=dt)
@@ -305,6 +306,8 @@ class Player(object):
 				if self.entity.world != self.world:
 					self._set_world(self.entity.world)
 				self.outbox.add("goto",self.entity["position"])
+		else:
+			self._set_world(None)
 
 	def _set_world(self, new_world):
 		"""to be called when self.entity.world has changed """
@@ -323,9 +326,12 @@ class Player(object):
 		self.monitor_ticks = {0:0} # reset monitor ticks
 
 		# client side
-		generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
-							"seed"   : self.world.blocks.world_generator.generator_data["seed"],
-							"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
+		if self.world:
+			generator_data = {	"name"   : self.world.blocks.world_generator.generator_data["name"],
+								"seed"   : self.world.blocks.world_generator.generator_data["seed"],
+								"code_js": self.world.blocks.world_generator.generator_data["code_js"]}
+		else:
+			generator_data = {}
 		self.outbox.add("clear",generator_data)
 	
 	def _set_entity(self,entity):

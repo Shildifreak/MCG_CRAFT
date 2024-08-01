@@ -365,6 +365,11 @@ class Player(voxelengine.Player):
         self.gamemode = config["gamemode"]
         self.ongoing_hand_actions = {"left_hand":None, "right_hand":None} #generators that are fed with current hand pressure
 
+    def quit(self):
+        super().quit()
+        del self.inventory_display
+        del self.chat
+
     def create_character(self):
         world = self.universe.get_spawn_world()
         character = resources.EntityFactory({"type":"Mensch"})
@@ -875,6 +880,7 @@ def run():
             # player update
             for player in g.get_players():
                 player.update()
+            player = None # fix for loop variable keeping deleted player from being garbage collected if get_players is empty
 
             # worlds
             for w in u.get_loaded_worlds():

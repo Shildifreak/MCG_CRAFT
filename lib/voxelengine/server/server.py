@@ -229,7 +229,31 @@ class GameServer(object):
             print(addr, "disconnected")
         # do something with player
         player = self.players.pop(addr)
+        self.new_players.discard(player)
         player.quit()
+
+        if __debug__:
+            # debugging player object not getting deleted
+            import gc
+            playertype = type(player)
+            del player
+            gc.collect()
+            players = tuple(o for o in gc.get_objects() if (isinstance(o, playertype) and o not in self.players.values()))
+            if players:
+                print(len(players), "players not correctly deleted")
+                try:
+                    import objgraph
+                except ImportError:
+                    print("Missing module objectgraph to show backrefs")
+                else:
+                    objgraph.show_backrefs(players, filename='sample-backref-graph.png')
+                print(len(gc.garbage))
+                for p in  players:
+                    a = sys.getrefcount(p)
+                    b = len(gc.get_referrers(p))
+                    print(a, b)
+                    if a != b:
+                        print("Could not delete Player because of references outside of garbage collector scope! (for example loop variable)")
 
     def update(self):
         """ communicate with clients """
