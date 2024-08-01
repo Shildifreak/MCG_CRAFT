@@ -410,6 +410,7 @@ class Player(voxelengine.Player):
 
     def control(self, entity):
         if self.entity:
+            self.inventory_display.unregister()
             self.entity.unregister_item_callback(self._open_inventory_callback,"open_inventory")
             self.entity.unregister_item_callback(self.inventory_display.callback,"left_hand")
             self.entity.unregister_item_callback(self.inventory_display.callback,"right_hand")
