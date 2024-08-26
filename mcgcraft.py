@@ -858,7 +858,7 @@ def run():
                         print("use like this: play clienttype [username] [password]")
                 elif command.startswith("/"):
                     print(repr(command))
-                    cmd = cmd[1:]#command.removeprefix("/")
+                    cmd = command[1:]#command.removeprefix("/")
                     ctx = resources.CommandContext(u)
                     if cmd.endswith("\t"):
                         cmd = cmd.rstrip("\t")
