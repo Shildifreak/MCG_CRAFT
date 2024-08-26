@@ -1,0 +1,33 @@
+# Description #
+
+The files in this directory are meant to help with running MCGCraft as a service on a linux server.
+When installed successfully, this will make MCGCraft start automatically when someone tries to connect.
+You may want to familiarize yourself with systemd using the links provided at the end.
+
+
+# Installation #
+
+Copy the scripts into the correct locations:
+cp mcgcraft.service mcgcraft.socket -t ~/.config/systemd/user/
+cp mcgcraft mcgcraft-server -t ~/.local/bin/
+
+Reload systemd configuration and enable the service
+$ systemctl --user daemon-reload
+$ systemctl --user enable mcgcraft.socket
+
+To keep the server active even if you are not logged in enable lingering
+$ loginctl enable-linger
+
+
+# Usage #
+
+To interact with the MCGCraft server shell use
+$ mcgcraft-server
+Logs can be inspected in the journal
+$ journalctl --user -u mcgcraft
+
+
+# Further Reading #
+
+https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#Options
+https://linuxhandbook.com/create-systemd-services/

@@ -1,0 +1,25 @@
+[Unit]
+Description=MCGCraft Server as a systemd Service
+StartLimitBurst=100
+StartLimitIntervalSec=300
+#OnFailure=mcgcraftfail.service
+PartOf=mcgcraft.socket
+
+[Service]
+Type=exec
+
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=%h/.local/bin/mcgcraft --http_port="'fd:3'"
+ExecReload=sh -c 'echo "reload" > %t/mcgcraft.stdin'
+ExecStop=sh -c 'echo "quit" > %t/mcgcraft.stdin'
+ExecStop=/usr/bin/sh -c 'while kill -0 $MAINPID 2>/dev/null; do sleep 1; done'
+TimeoutStopSec=15
+
+Restart=no
+
+Sockets=mcgcraft.socket
+
+StandardInput=file:%t/mcgcraft.stdin
+StandardOutput=journal
+StandardError=journal

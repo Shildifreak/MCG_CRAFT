@@ -11,6 +11,7 @@ import collections, functools
 import http.server
 import socketserver
 import threading
+import socket
 import pathlib, urllib.parse
 import json
 
@@ -78,9 +79,12 @@ class MyHTTPHandler(http.server.SimpleHTTPRequestHandler):
     
 class MyHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
-    def __init__(self, server_address, RequestHandlerClass, subnet_whitelist):
-        super().__init__(server_address, RequestHandlerClass)
+    def __init__(self, socket, RequestHandlerClass, subnet_whitelist):
         self.subnet_whitelist = subnet_whitelist
+        address_info = socket.getsockname()
+        super().__init__(address_info, RequestHandlerClass, bind_and_activate=False)
+        self.socket = socket
+        self.server_activate()
     def handle_error(self, request, client_address):
         try:
             # surpress socket/ssl related errors
@@ -93,7 +97,7 @@ class MyHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
             # if unhandled exception occurs make sure to take main thread with you
             voxelengine.modules.utils.interrupt_main()
     def verify_request(self, request, client_address):
-        ip, port = client_address
+        ip = client_address[0]
         print(self.subnet_whitelist, ip)
         ok = socket_connection.check_list_for_ip(self.subnet_whitelist, ip)
         print(ok)
@@ -159,10 +163,16 @@ class GameServer(object):
         self.game_port = self.game_server.get_entry_port()
         # Serve texturepack and serverinfo using http
         Handler = functools.partial(MyHTTPHandler, texturepack_path, serverinfo)
-        http_port = try_ports(http_port)
-        if http_port is False:
-            raise ConnectionError("Couldn't open any of the given http_port options.")
-        self.http_server = MyHTTPServer(("", http_port), Handler, self.subnet_whitelist)
+        if isinstance(http_port, str) and http_port.startswith("fd:"):
+            fd = int(http_port[3:])
+            s = socket.fromfd(fd, socket.AF_INET6, MyHTTPServer.socket_type)#MyHTTPServer.address_family, MyHTTPServer.socket_type)
+        else:
+            http_port = try_ports(http_port)
+            if http_port is False:
+                raise ConnectionError("Couldn't open any of the given http_port options.")
+            s = socket.socket(MyHTTPServer.address_family, MyHTTPServer.socket_type)
+            s.bind(("",http_port))
+        self.http_server = MyHTTPServer(s, Handler, self.subnet_whitelist)
         self.http_thread = threading.Thread(target=self.http_server.serve_forever)
         self.http_thread.start()
         self.http_port = self.http_server.socket.getsockname()[1]

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+MCGCRAFTPATH="~/MCG_CRAFT"
+
+if test -d "$MCGCRAFTPATH"; then
+	python3 "$MCGCRAFTPATH/mcgcraft.py" "$@"
+	exit $?
+else
+	echo "$MCGCRAFTPATH does not exist / is not mounted"
+	exit 0
+fi

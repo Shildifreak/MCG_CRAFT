@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cat > /run/user/1000/mcgcraft.stdin | journalctl --user -f -o cat -u mcgcraft.service
