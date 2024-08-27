@@ -17,6 +17,7 @@ import json
 
 import voxelengine.modules.socket_connection_7.socket_connection as socket_connection
 import voxelengine.modules.utils
+import voxelengine.modules.socketfromfd as socketfromfd
 from voxelengine.modules.utils import try_ports
 from voxelengine.server.players.player import Player
 
@@ -165,7 +166,8 @@ class GameServer(object):
         Handler = functools.partial(MyHTTPHandler, texturepack_path, serverinfo)
         if isinstance(http_port, str) and http_port.startswith("fd:"):
             fd = int(http_port[3:])
-            s = socket.fromfd(fd, socket.AF_INET6, MyHTTPServer.socket_type)#MyHTTPServer.address_family, MyHTTPServer.socket_type)
+            s = socketfromfd.fromfd(fd)
+            #s = socket.fromfd(fd, socket.AF_INET6, MyHTTPServer.socket_type)#MyHTTPServer.address_family, MyHTTPServer.socket_type)
         else:
             http_port = try_ports(http_port)
             if http_port is False:
