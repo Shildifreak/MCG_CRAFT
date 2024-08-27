@@ -7,9 +7,13 @@ You may want to familiarize yourself with systemd using the links provided at th
 
 # Installation #
 
-Copy the scripts into the correct locations:
-cp mcgcraft.service mcgcraft.socket -t ~/.config/systemd/user/
+Create directories and copy the scripts into the correct locations:
+mkdir -p ~/.local/bin/
 cp mcgcraft mcgcraft-server -t ~/.local/bin/
+mkdir -p ~/.config/systemd/user/
+cp mcgcraft.service mcgcraft.socket -t ~/.config/systemd/user/
+Make scripts executable:
+chmod +x ~/.local/bin/mcgcraft ~/.local/bin/mcgcraft-server
 
 Reload systemd configuration and enable the service
 $ systemctl --user daemon-reload
@@ -25,6 +29,21 @@ To interact with the MCGCraft server shell use
 $ mcgcraft-server
 Logs can be inspected in the journal
 $ journalctl --user -u mcgcraft
+
+
+# Issues #
+
+Journalctl may tell you that you are not allowed to read logs.
+Access Control for journalctl --user only works with persistent logs.
+[Get your admin to] change the Storage directive of the [Journal] section 
+of /etc/systemd/journald.conf to persistent (instead of auto or volatile). 
+Reboot after editing the configuration file.
+Alternatively you can manually create and activate the journal directory:
+$ mkdir /var/log/journal
+$ systemd-tmpfiles --create
+$ journalctl --flush
+
+The scripts we provide here were tested with systemd version 241.
 
 
 # Further Reading #
