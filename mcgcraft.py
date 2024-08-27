@@ -725,6 +725,8 @@ class Timer(object):
         self.dt = None # length of last tick
         self.dt_work = None
         self.dt_idle = None
+        self.t_save = self.t # to be updated by save externally
+        self.dt_save = 0
     def tick(self, TPS):
         spt = 1.0/TPS
         self.dt_work = time.time() - self.t #time since last tick
@@ -732,6 +734,7 @@ class Timer(object):
         time.sleep(self.dt_idle)
         self.dt = time.time() - self.t
         self.t += self.dt
+        self.dt_save = self.t - self.t_save
 
 def zeitstats(timer, tps_history = [0]*200):
     tps = round(1/timer.dt,2)
@@ -744,6 +747,7 @@ def zeitstats(timer, tps_history = [0]*200):
     stats.set("mspt", int(round(1000*timer.dt_idle+1000*timer.dt_work)))
     stats.set("work",  int(1000*timer.dt_work))
     stats.set("sleep", int(1000*timer.dt_idle))
+    stats.set("dtsave", int(timer.dt_save))
 
 def run():
     global w, g
@@ -795,6 +799,7 @@ def run():
         print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
 
     def save():
+        timer.t_save = timer.t
         print("Preparing Savestate", flush=True)
         data = u.serialize()
         data_string = repr(data)
@@ -922,6 +927,10 @@ def run():
             blockread_counter = 0
             #stats.set("block reads", blockread_counter)
             
+            # autosave
+            if timer.dt_save > (config["autosaveintervall"] or float("inf")):
+                save()
+
         save()
     print("Game stopped")
     time.sleep(1)

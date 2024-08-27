@@ -141,6 +141,31 @@ class GUI(object):
         filenewbutton.grid(column = 3, row = self.row-1, sticky = Tkinter.W+Tkinter.E)
         self.disabled_when_running.append(fileopenbutton)
 
+    def addwidgets_autosave(self):
+        # Autosave
+        def setautosave(*args):
+            self.serverconfig["autosaveintervall"] = autosavevar.get()
+            if self.serverconfig["autosaveintervall"]:
+                autosave_entry.configure(state="normal")
+            else:
+                autosave_entry.configure(state="disabled")
+        autosavevar = Tkinter.IntVar(self.root)
+        autosavevar.trace("w",setautosave)
+        def only_numbers(char):
+            return char.isdigit()
+        validation = self.root.register(str.isdigit) # Register func
+        autosave_entry = Tkinter.Entry(self.root, 
+            textvariable = autosavevar, 
+            validate="key", 
+            validatecommand=(validation, '%P'),
+            )
+        autosave_entry.grid(column = 2, row = self.row, sticky = Tkinter.W)
+        self.add_label("Autosave")
+        autosave_checkbutton = Tkinter.Checkbutton(self.root, variable = autosavevar, onvalue = 300)
+        autosave_checkbutton.grid(column = 1, row = self.row, sticky = Tkinter.W)
+        autosavevar.set(int(self.serverconfig["autosaveintervall"] or 0))
+        self.row += 1
+
     def addwidgets_worldtype(self):
         # Worldtype #http://effbot.org/tkinterbook/optionmenu.htm
         def setworldtype(*args):
@@ -529,6 +554,7 @@ class ServerGUI(GUI):
     def init_widgets(self):
         self.addwidgets_name()
         self.addwidgets_file()
+        self.addwidgets_autosave()
         self.addwidgets_featurepaths()
         self.addwidgets_worldtype()
         self.addwidgets_mobspawning()
@@ -554,12 +580,13 @@ if __name__ == "__main__":
                 "file"     : "",
                 "worldtype": "Colorland",
                 "mobspawning": False,
-                "moblimit" : 5,
+                "entitylimit" : 5,
                 "gamemode" : "creative",
                 "whitelist": ["127.0.0.1"],
                 "parole"   : "",
                 "feature_paths": ["essential","default"],
                 "feature_path_options": ["essential","default", "weihnachtsdeko","/home/user/games/MCGCRAFT/custom"],
+                "autosaveintervall": None,
     }
     clientconfig = {
                 "username" : "",
