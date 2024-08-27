@@ -1,11 +1,6 @@
-#!/bin/bash
+#! /bin/sh
 
-MCGCRAFTPATH="~/MCG_CRAFT"
+MCGCRAFTPATH=~/MCG_CRAFT
 
-if test -d "$MCGCRAFTPATH"; then
-	python3 "$MCGCRAFTPATH/mcgcraft.py" "$@"
-	exit $?
-else
-	echo "$MCGCRAFTPATH does not exist / is not mounted"
-	exit 0
-fi
+python3 "$MCGCRAFTPATH/mcgcraft.py" --whitelist "['0.0.0.0/0','::/0']" --name "Demo Server" --public True --mobspawning False --host play.mcgcraft.de --worldtype "BeispielWelt_Biome" "$@"
+exit "$?"

@@ -850,6 +850,8 @@ def run():
                     load_config()
                 elif command == "stats":
                     print(stats)
+                elif command == "debug":
+                    breakpoint()
                 elif command.startswith("play"):
                     play,*args = command.split(" ")
                     if 1 <= len(args) <= 3:
@@ -866,7 +868,7 @@ def run():
                     else:
                         ctx.execute(cmd)                        
                 else:
-                    print("valid commands include: quit, kill, save, reload, stats, play, /help")
+                    print("valid commands include: quit, kill, save, debug, reload, stats, play, /help")
             
             # game server update - communicate with clients
             g.update()
@@ -934,7 +936,7 @@ def load_config():
             if not isinstance(config[key], str):
                 value = ast.literal_eval(value)
             config[key] = value
-    if config["public"] and (config["whitelist"] != ["0.0.0.0/0"]):
+    if config["public"] and ("0.0.0.0/0" not in config["whitelist"]):
         if config["parole"]:
             print("You have a whitelist enabled. Some people may have problem joining even if the know the parole.")
         else:

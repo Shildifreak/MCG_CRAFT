@@ -1,7 +1,8 @@
 [Socket]
 ListenStream=8080
 FlushPending=yes
-ListenFIFO=%t/mcgcraft.stdin
+#ListenFIFO=%t/mcgcraft.stdin
+#FlushPending=yes
 
 [Install]
 WantedBy=default.target

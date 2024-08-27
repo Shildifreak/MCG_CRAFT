@@ -10,16 +10,17 @@ Type=exec
 
 Environment=PYTHONUNBUFFERED=1
 
-ExecStart=%h/.local/bin/mcgcraft --http_port="'fd:3'"
+ExecStartPre=sh -c 'if ! [ -p %t/mcgcraft.stdin ]; then mkfifo %t/mcgcraft.stdin; fi'
+ExecStart=sh -c 'while :; do sleep 1; done > %t/mcgcraft.stdin & %h/.local/bin/mcgcraft --http_port="\'fd:3\'" <%t/mcgcraft.stdin'
 ExecReload=sh -c 'echo "reload" > %t/mcgcraft.stdin'
-ExecStop=sh -c 'echo "quit" > %t/mcgcraft.stdin'
-ExecStop=/usr/bin/sh -c 'while kill -0 $MAINPID 2>/dev/null; do sleep 1; done'
+ExecStop=sh -c 'echo "quit" > %t/mcgcraft.stdin &'
+ExecStop=sh -c 'while kill -0 $MAINPID 2>/dev/null; do sleep 1; done'
 TimeoutStopSec=15
 
 Restart=no
 
 Sockets=mcgcraft.socket
 
-StandardInput=file:%t/mcgcraft.stdin
+#StandardInput=file:%t/mcgcraft.stdin
 StandardOutput=journal
 StandardError=journal
