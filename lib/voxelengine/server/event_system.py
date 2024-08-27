@@ -29,14 +29,13 @@ class EventSystem(Serializable):
 		random_tick    # get's randomly created around players
 		chat           # someone or something posted a chat message
 	"""
-	def __init__(self, world, event_data_list):
+	def __init__(self, world, event_queue_data):
 		self.world = world
 		self.observers = set()
-		event_list = [Event(event_data) for event_data in event_data_list]
-		self.event_queue = EventQueue(event_list) #[[event,...],...] #event queue sorted by remaining delay
+		self.event_queue = EventQueue(event_queue_data) #[[event,...],...] #event queue sorted by remaining delay
 	
 	def __serialize__(self):
-		return [tuple(event) for event in self.event_queue]
+		return self.event_queue
 	
 	def add_event(self, event, delay=0):
 		"""
