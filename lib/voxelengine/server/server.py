@@ -1,7 +1,7 @@
 import sys, os, inspect
 if __name__ == "__main__":
-	sys.path.append(os.path.abspath("../.."))
-	__package__ = "voxelengine.server"
+    sys.path.append(os.path.abspath("../.."))
+    __package__ = "voxelengine.server"
 # PATH to this file
 PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 VOXELENGINE_PATH = os.path.join(PATH, "..")
@@ -17,7 +17,8 @@ import json
 
 import voxelengine.modules.socket_connection_7.socket_connection as socket_connection
 import voxelengine.modules.utils
-import voxelengine.modules.socketfromfd as socketfromfd
+if sys.platform == "linux" or sys.platform == "linux2":
+    import voxelengine.modules.socketfromfd as socketfromfd
 from voxelengine.modules.utils import try_ports
 from voxelengine.server.players.player import Player
 
@@ -165,9 +166,12 @@ class GameServer(object):
         # Serve texturepack and serverinfo using http
         Handler = functools.partial(MyHTTPHandler, texturepack_path, serverinfo)
         if isinstance(http_port, str) and http_port.startswith("fd:"):
-            fd = int(http_port[3:])
-            s = socketfromfd.fromfd(fd)
-            #s = socket.fromfd(fd, socket.AF_INET6, MyHTTPServer.socket_type)#MyHTTPServer.address_family, MyHTTPServer.socket_type)
+            if sys.platform == "linux" or sys.platform == "linux2":
+                fd = int(http_port[3:])
+                s = socketfromfd.fromfd(fd)
+                #s = socket.fromfd(fd, socket.AF_INET6, MyHTTPServer.socket_type)#MyHTTPServer.address_family, MyHTTPServer.socket_type)
+            else:
+                raise ValueError("Passing socket from file descriptor only supported on linux.")
         else:
             http_port = try_ports(http_port)
             if http_port is False:
