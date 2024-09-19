@@ -721,7 +721,7 @@ class World(voxelengine.World):
 
 class Timer(object):
     def __init__(self):
-        self.t = time.time() # timestamp of last tick
+        self.t = time.perf_counter() # timestamp of last tick
         self.dt = None # length of last tick
         self.dt_work = None
         self.dt_idle = None
@@ -729,10 +729,10 @@ class Timer(object):
         self.dt_save = 0
     def tick(self, TPS):
         spt = 1.0/TPS
-        self.dt_work = time.time() - self.t #time since last tick
+        self.dt_work = time.perf_counter() - self.t #time since last tick
         self.dt_idle = max(0, spt - self.dt_work)
         time.sleep(self.dt_idle)
-        self.dt = time.time() - self.t
+        self.dt = time.perf_counter() - self.t
         self.t += self.dt
         self.dt_save = self.t - self.t_save
 
@@ -792,10 +792,10 @@ def run():
         u = voxelengine.Universe(WorldFactory=World)
         w = u.new_world(data)
         print("== Initialising World ==", flush=True)
-        t = time.time()
+        t = time.perf_counter()
         w.blocks.world_generator.init(w)
         w.event_system.clear_events()
-        dt = time.time() - t
+        dt = time.perf_counter() - t
         print("(", len(w.blocks.block_storage.structures), "blocks in", dt, "s )")
 
     def save():
