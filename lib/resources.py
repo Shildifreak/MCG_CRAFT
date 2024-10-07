@@ -798,7 +798,7 @@ class Command(object):
         values = lambda:("creative", "survival")
 
     class ENTITYNAME(AbstractENUM_STRING):
-        values = lambda:entityClasses.keys()
+        values = lambda:Entity.subclasses.keys()
 
     class ENTITY(object):
         @staticmethod
