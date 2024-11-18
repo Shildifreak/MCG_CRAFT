@@ -371,6 +371,8 @@ class BlockInfoDict(dict):
 
     @staticmethod
     def rotate(model,state):
+        if not model:
+            return
         if "1" in state:
             c = 3
         elif "2" in state:
@@ -870,6 +872,8 @@ class Model(object):
                 block_name = model_maps.get(block_name, block_name) #replace block_name if in model_maps
                 blockinfo = R.BLOCKS[block_name]
                 blockmodel = blockinfo.blockmodel
+                if blockmodel == None:
+                    continue
                 group = self.textured_material_groups[blockinfo.material]
                 for face in range(len(FACES_PLUS)):
                     vertex_data, texture_data = blockmodel[face]

@@ -114,7 +114,7 @@ class TP_Compiler(object):
 						  "connecting": False,
 						  "material": "transparent",
 						  "fog_color": (255,255,255,0),
-						  "faces": {"inside": [(((0,0,0.5),(0,1,0.5),(1,1,0.5),(1,0,0.5)),icon)],
+						  "faces": {"inside": [(((1,0,0.5),(0,0,0.5),(0,1,0.5),(1,1,0.5)),icon)],
 								   }
 						 }
 			description["BLOCK_MODELS"][itemname] = blockmodel

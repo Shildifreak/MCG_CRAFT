@@ -34,11 +34,18 @@ class Mensch(Entity):
         self.register_item_callback(self._update_modelmaps,"skin")
         self.register_item_callback(self._update_modelmaps,"emote")
         self.register_item_callback(self._update_modelmaps,"show_emote")
-
+        self.register_item_callback(self._update_modelmaps,"left_hand")
+        self.register_item_callback(self._update_modelmaps,"right_hand")
 
     def _update_modelmaps(self, _):
+        _get = lambda l, i, d: l[i] if 0 <= i < len(l) else d
+        lh = _get(self["inventory"],self["left_hand"],{"id":"AIR"})["id"]
+        rh = _get(self["inventory"],self["right_hand"],{"id":"AIR"})["id"]
         modelmaps = {"<<body>>":self["skin"],
-                     "<<head>>":"GESICHT:2"}
+                     "<<head>>":"GESICHT:2",
+                     "<<lefthand>>":lh+":1",
+                     "<<righthand>>":rh+":1",
+                     }
         if self["show_emote"]:
             modelmaps["<<head>>"] = self["emote"]
         self["modelmaps"] = modelmaps
