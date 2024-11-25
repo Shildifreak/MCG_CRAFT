@@ -99,7 +99,7 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
         # only print message if the block still has the tag, because if the block just
         # changed in this subtick it may still receive events that don't effect it anymore
         if tag in self.get_tags():
-            print("No handler for event", event.tag)
+            print("No handler for event", tag)
         return False
     
     def handle_events(self, events):
