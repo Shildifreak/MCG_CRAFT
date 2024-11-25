@@ -168,6 +168,7 @@
     "AIM"                      : {"faces":{"all":"gold"}},
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
 
+    "FIRE"                     : {"icon":"fire","faces":{"top":"transparent","bottom":"transparent","other":"fire"}, "transparent":True},
     "WATER"                    : {"faces":{"all":"water_surface"}, "transparent":True, "fog_color":(136,170,255,80), "connecting":True},
     "VOID"                     : {"icon":None, "faces":{"all":"transparent"}},
     },
@@ -337,6 +338,12 @@
     "ARROW":{
         "head":[((0,0,0),(0,0,0),(1,1,1),"Arrow")],
         "body":[],
+        "legl":[],
+        "legr":[],
+        },
+    "BURN":{
+        "head":[],
+        "body":[((0,0,0),(0,0,0),(1,2,1),"FIRE")],
         "legl":[],
         "legr":[],
         },
