@@ -36,6 +36,7 @@ class Mensch(Entity):
         self.register_item_callback(self._update_modelmaps,"show_emote")
         self.register_item_callback(self._update_modelmaps,"left_hand")
         self.register_item_callback(self._update_modelmaps,"right_hand")
+        self.register_item_callback(self._update_modelmaps,"inventory")
 
     def _update_modelmaps(self, _):
         _get = lambda l, i, d: l[i] if 0 <= i < len(l) else d
