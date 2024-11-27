@@ -169,6 +169,7 @@
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
 
     "WATER"                    : {"faces":{"all":"water_surface"}, "transparent":True, "fog_color":(136,170,255,80), "connecting":True},
+    "LAVA"                     : {"faces":{"all": "redstone_block" }},
     "VOID"                     : {"icon":None, "faces":{"all":"transparent"}},
     },
 
