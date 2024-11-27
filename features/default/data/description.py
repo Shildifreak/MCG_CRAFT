@@ -137,6 +137,7 @@
     "Repeater"                 : {"faces":{"bottom":"repeater_off", "other":"transparent"}, "icon":"repeater_off", "transparent":True},
     "Piston"                   : {"faces":{"top":"piston_top","bottom":"piston_bottom","other":"piston_side"}, "icon":"piston_side"},
     "Noteblock"                : {"faces":{"all":"noteblock"}},
+    "Record"                   : {"icon":"record_icon", "faces":{"bottom":"record","other":"transparent"}, "transparent":True},
 
     # EXPLOSIV
     "RACKETENWERFER"           : {"faces":{"back":"racketenwerfer_back","left":"racketenwerfer_side","right":"racketenwerfer_side","other":"racketenwerfer_front"}},
@@ -168,6 +169,7 @@
     "AIM"                      : {"faces":{"all":"gold"}},
     "KAKTUS"                   : {"faces":{"bottom":"kaktus_querschnitt","other":"kaktus_side"}},
 
+    "FIRE"                     : {"icon":"fire","faces":{"top":"transparent","bottom":"transparent","other":"fire"}, "transparent":True},
     "WATER"                    : {"faces":{"all":"water_surface"}, "transparent":True, "fog_color":(136,170,255,80), "connecting":True},
     "LAVA"                     : {"faces":{"all": "redstone_block" }},
     "VOID"                     : {"icon":None, "faces":{"all":"transparent"}},
@@ -338,6 +340,12 @@
     "ARROW":{
         "head":[((0,0,0),(0,0,0),(1,1,1),"Arrow")],
         "body":[],
+        "legl":[],
+        "legr":[],
+        },
+    "BURN":{
+        "head":[],
+        "body":[((0,0,0),(0,0,0),(1,2,1),"FIRE")],
         "legl":[],
         "legr":[],
         },

@@ -32,6 +32,9 @@ class _RotatableBlockItem(Item):
 @alias("GESICHT")
 class _RotatableBlock(Block):
     def clicked(self,character,face,item):
-        self["rotation"] += 1
-        self["rotation"] %= 4
-        self.save()
+        while True:
+            self["rotation"] += 1
+            self["rotation"] %= 4
+            self.save()
+            yield from wait(0.5)
+            self.turn_into(self.world.blocks[self.position]) #block can be altered externally during wait

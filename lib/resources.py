@@ -99,7 +99,7 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
         # only print message if the block still has the tag, because if the block just
         # changed in this subtick it may still receive events that don't effect it anymore
         if tag in self.get_tags():
-            print("No handler for event", event.tag)
+            print("No handler for event", tag)
         return False
     
     def handle_events(self, events):
@@ -119,30 +119,30 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
         return any_changed
 
     # helper functions
-    def ambient_power_level(self):
+    def ambient_power_level(self, t=0):
         ambient_power = PowerLevelAccumulator()
         for face in FACES:
-            neighbour = self.relative[-face]
+            neighbour = self.relative.get(-face,t)
             if neighbour["p_ambient"] or (face in neighbour["p_directions"]):
                 ambient_power.add(neighbour["p_level"])
         return ambient_power.level
     
-    def power_levels(self):
+    def power_levels(self, t=0):
         power = PowerLevelAccumulator()
         strong_power = PowerLevelAccumulator()
         for face in FACES:
-            neighbour = self.relative[-face]
+            neighbour = self.relative.get(-face,t)
             if face in neighbour["p_directions"]:
                 power.add(neighbour["p_level"])
                 if neighbour != "Redstone":
                     strong_power.add(neighbour["p_level"])
         return power.level, strong_power.level
     
-    def redstone_activated(self):
-        return self.ambient_power_level() > 0
+    def redstone_activated(self, t=0):
+        return self.ambient_power_level(t) > 0
 
-    def bluestone_activated(self):
-        return self.ambient_power_level() < 0
+    def bluestone_activated(self, t=0):
+        return self.ambient_power_level(t) < 0
 
     def block_to_world_vector(self, vector):
         def r_x(v):
@@ -211,8 +211,9 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
         """drop item or something... also remember to set it to air. Return value see activated"""
         character.pickup_item(self.item_version())
         self.blockworld[self.position] = "AIR"
-        sound_event = Event("sound",Point(self.position),self.get_break_sound())
-        self.world.event_system.add_event(sound_event)
+        for sound in self.get_break_sounds():
+            sound_event = Event("sound",Point(self.position),sound)
+            self.world.event_system.add_event(sound_event)
 
     def handle_event_explosion(self,events):
         """default implementation for handling explosion events"""
@@ -226,10 +227,26 @@ class Block(voxelengine.Block, metaclass=SubclassTracker):
         return False
 
     def get_break_sound(self):
-        return self["id"]+"_block_broken"
+        print("Block.get_break_sound is deprecated, please iterate over Block.get_break_sounds instead.") 
+        sounds = self.get_break_sounds()
+        if sounds:
+            return sounds[0]
+        else:
+            return "silence"
 
     def get_place_sound(self):
-        return self["id"]+"_block_placed"
+        print("Block.get_place_sound is deprecated, please iterate over Block.get_place_sounds instead.") 
+        sounds = self.get_place_sounds()
+        if sounds:
+            return sounds[0]
+        else:
+            return "silence"
+
+    def get_break_sounds(self):
+        return (self["id"]+"_block_broken",)
+
+    def get_place_sounds(self):
+        return (self["id"]+"_block_placed",)
 
     def get_tags(self):
         """
@@ -322,8 +339,9 @@ class Item(object, metaclass=SubclassTracker):
             block.save()
             
             # play sound
-            sound_event = Event("sound",Point(block.position),block.get_place_sound())
-            block.world.event_system.add_event(sound_event)
+            for sound in block.get_place_sounds():
+                sound_event = Event("sound",Point(block.position),sound)
+                block.world.event_system.add_event(sound_event)
         return
     
     def decrease_count(self):
@@ -798,7 +816,7 @@ class Command(object):
         values = lambda:("creative", "survival")
 
     class ENTITYNAME(AbstractENUM_STRING):
-        values = lambda:entityClasses.keys()
+        values = lambda:Entity.subclasses.keys()
 
     class ENTITY(object):
         @staticmethod

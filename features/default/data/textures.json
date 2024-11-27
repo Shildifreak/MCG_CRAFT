@@ -915,6 +915,22 @@
         "redstone_erz": [
             4,
             8
+        ],
+        "record_player": [
+            8,
+            10
+        ],
+        "fire": [
+            10,
+            6
+        ],
+        "record_icon": [
+            9,
+            10
+        ],
+        "record": [
+            9,
+            8
         ]
     }
 }
